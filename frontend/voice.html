@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>VOICE XTB 4.9 PRO</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<h1>VOICE XTB 4.9 PRO — składanie danych</h1>
+
+<button id="micStart">START mikrofon</button>
+<button id="micStop">STOP mikrofon</button>
+
+<h3>Rozpoznano:</h3>
+<pre id="raw"></pre>
+
+<h3>Wynik parsowania (bufor 4.6+):</h3>
+<pre id="parsed"></pre>
+
+<h3>Status bufora:</h3>
+<div id="status"></div>
+
+<h3>Dane z głosu</h3>
+<table id="voiceTable">
+  <thead>
+    <tr>
+      <th>Ticker</th>
+      <th>Interwał</th>
+      <th>Godzina</th>
+      <th>O</th>
+      <th>L</th>
+      <th>H</th>
+      <th>C</th>
+      <th>MA20</th>
+      <th>DEMA9</th>
+      <th>RSI</th>
+      <th>Wolumen</th>
+      <th>Sygnał</th>
+      <th>Widełki</th>
+      <th>TP1/TP2/TP3</th>
+      <th>📊</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<h3>Komentarz systemu</h3>
+<div id="comment"></div>
+
+<!-- POPUP -->
+<div id="popup45" class="popup">
+  <div class="popup-content">
+    <span id="popupClose" class="close">&times;</span>
+    <h2>Analiza 4.5+</h2>
+    <pre id="popupData"></pre>
+  </div>
+</div>
+
+<style>
+.popup {
+  display: none;
+  position: fixed;
+  z-index: 9999;
+  left: 0; top: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.6);
+}
+.popup-content {
+  background: #1e1e1e;
+  color: #fff;
+  width: 480px;
+  margin: 80px auto;
+  padding: 20px;
+  border-radius: 12px;
+  font-size: 15px;
+  line-height: 1.4;
+  border: 1px solid #444;
+}
+.close {
+  float: right;
+  font-size: 28px;
+  cursor: pointer;
+}
+</style>
+
+<script src="js/main.js"></script>
+<script src="js/voice.js"></script>
+
+</body>
+</html>
