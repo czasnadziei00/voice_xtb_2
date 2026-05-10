@@ -85,7 +85,7 @@ function trendMomentumSil(d) {
 }
 
 /* ============================
-   PARSER FRONT (lekki) — tylko tekst surowy
+   PARSER FRONT (lekki)
    ============================ */
 function updateStatusFromBackend(d) {
   const required = [
@@ -226,6 +226,6 @@ document.getElementById("tabLive")?.addEventListener("click", () => {
 });
 
 document.getElementById("tabTomorrow")?.addEventListener("click", () => {
-  document.getElementById("voiceTable").style.display = "table"; // możesz schować, jeśli chcesz
+  document.getElementById("voiceTable").style.display = "table";
   document.getElementById("tomorrowView").style.display = "block";
 });
