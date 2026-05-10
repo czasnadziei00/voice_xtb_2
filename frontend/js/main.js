@@ -37,6 +37,54 @@ function loadTable() {
   data.forEach(d => addRowFromMemory(d));
 }
 
+/* ============================
+   USUŃ WIERSZ
+   ============================ */
+function deleteRow(btn) {
+  const r = btn.closest("tr");
+  r.remove();
+  saveTable();
+}
+
+/* ============================
+   EDYCJA ENTRY (C)
+   ============================ */
+function editEntry(btn) {
+  const r = btn.closest("tr");
+  const ticker = r.dataset.ticker;
+  const price = prompt("Podaj ENTRY dla " + ticker);
+
+  if (price === null) return;
+
+  if (price === "0") {
+    r.cells[6].innerText = "";
+    r.cells[11].innerText = "CZEKAJ";
+    r.dataset.comment = "Pozycja zamknięta (ENTRY=0)";
+    saveTable();
+    return;
+  }
+
+  r.cells[6].innerText = price;
+  saveTable();
+}
+
+/* ============================
+   EDYCJA CENY (O)
+   ============================ */
+function editPrice(btn) {
+  const r = btn.closest("tr");
+  const ticker = r.dataset.ticker;
+  const price = prompt("Podaj AKTUALNĄ CENĘ dla " + ticker);
+
+  if (price !== null) {
+    r.cells[3].innerText = price;
+    saveTable();
+  }
+}
+
+/* ============================
+   DODAWANIE WIERSZA Z PAMIĘCI
+   ============================ */
 function addRowFromMemory(d) {
   const tbody = document.querySelector("#voiceTable tbody");
   const r = tbody.insertRow(-1);
@@ -47,10 +95,10 @@ function addRowFromMemory(d) {
   r.insertCell(0).innerText = d.ticker;
   r.insertCell(1).innerText = d.interval;
   r.insertCell(2).innerText = d.time;
-  r.insertCell(3).innerText = d.O;
+  r.insertCell(3).innerHTML = `<span onclick="editPrice(this)">${d.O}</span>`;
   r.insertCell(4).innerText = d.L;
   r.insertCell(5).innerText = d.H;
-  r.insertCell(6).innerText = d.C;
+  r.insertCell(6).innerHTML = `<span onclick="editEntry(this)">${d.C}</span>`;
   r.insertCell(7).innerText = d.MA20;
   r.insertCell(8).innerText = d.DEMA9;
   r.insertCell(9).innerText = d.RSI;
@@ -59,6 +107,7 @@ function addRowFromMemory(d) {
   r.insertCell(12).innerText = d.range;
   r.insertCell(13).innerText = d.tp;
   r.insertCell(14).innerHTML = `<button onclick="openPopup(this)">📊</button>`;
+  r.insertCell(15).innerHTML = `<button onclick="deleteRow(this)">🗑</button>`;
 
   colorSignal(r, d.signal);
 }
@@ -74,17 +123,18 @@ function upsertRowFromBackend(d) {
     r = tbody.insertRow(-1);
     r.dataset.ticker = d.ticker;
     r.dataset.comment = d.comment || "";
-    for (let i = 0; i < 15; i++) r.insertCell(i);
+    for (let i = 0; i < 16; i++) r.insertCell(i);
     r.cells[14].innerHTML = `<button onclick="openPopup(this)">📊</button>`;
+    r.cells[15].innerHTML = `<button onclick="deleteRow(this)">🗑</button>`;
   }
 
   r.cells[0].innerText = d.ticker || "";
   r.cells[1].innerText = d.interval || "";
   r.cells[2].innerText = d.time || "";
-  r.cells[3].innerText = d.open ?? "";
+  r.cells[3].innerHTML = `<span onclick="editPrice(this)">${d.open ?? ""}</span>`;
   r.cells[4].innerText = d.low ?? "";
   r.cells[5].innerText = d.high ?? "";
-  r.cells[6].innerText = d.close ?? "";
+  r.cells[6].innerHTML = `<span onclick="editEntry(this)">${d.close ?? ""}</span>`;
   r.cells[7].innerText = d.ma20 ?? "";
   r.cells[8].innerText = d.dema9 ?? "";
   r.cells[9].innerText = d.rsi ?? "";
