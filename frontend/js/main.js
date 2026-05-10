@@ -1,5 +1,5 @@
 /* ============================================================
-   TURBO MOBILE 6.0+ — main.js
+   TURBO MOBILE 6.1 — main.js
    ============================================================ */
 
 const STORAGE_KEY = "tm6_voice_table";
@@ -8,25 +8,23 @@ const STORAGE_KEY = "tm6_voice_table";
    PAMIĘĆ TABELI
    ============================ */
 function saveTable() {
-  const rows = [...document.querySelector("#voiceTable tbody").rows].map(r => {
-    return {
-      ticker: r.dataset.ticker || "",
-      interval: r.cells[1].innerText,
-      time: r.cells[2].innerText,
-      O: r.cells[3].innerText,
-      L: r.cells[4].innerText,
-      H: r.cells[5].innerText,
-      C: r.cells[6].innerText,
-      MA20: r.cells[7].innerText,
-      DEMA9: r.cells[8].innerText,
-      RSI: r.cells[9].innerText,
-      VOL: r.cells[10].innerText,
-      signal: r.cells[11].innerText,
-      range: r.cells[12].innerText,
-      tp: r.cells[13].innerText,
-      comment: r.dataset.comment || ""
-    };
-  });
+  const rows = [...document.querySelector("#voiceTable tbody").rows].map(r => ({
+    ticker: r.dataset.ticker || "",
+    interval: r.cells[1].innerText,
+    time: r.cells[2].innerText,
+    O: r.cells[3].innerText,
+    L: r.cells[4].innerText,
+    H: r.cells[5].innerText,
+    C: r.cells[6].innerText,
+    MA20: r.cells[7].innerText,
+    DEMA9: r.cells[8].innerText,
+    RSI: r.cells[9].innerText,
+    VOL: r.cells[10].innerText,
+    signal: r.cells[11].innerText,
+    range: r.cells[12].innerText,
+    tp: r.cells[13].innerText,
+    comment: r.dataset.comment || ""
+  }));
   localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
 }
 
@@ -200,7 +198,7 @@ window.addEventListener("click", (e) => {
 });
 
 /* ============================
-   RESET 6.0
+   RESET 6.1
    ============================ */
 document.getElementById("resetTable")?.addEventListener("click", () => {
   document.querySelectorAll("#voiceTable tbody tr").forEach(r => {
