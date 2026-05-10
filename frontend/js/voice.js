@@ -1,5 +1,6 @@
 /* ============================================================
-   TURBO MOBILE 6.0+ — voice.js
+   TURBO MOBILE 6.1 — voice.js
+   Najlepsza jakość rozpoznawania PL (wariant A)
    ============================================================ */
 
 const LIVE_BACKEND = "https://voice-xtb.onrender.com/voice-parse";
@@ -99,18 +100,23 @@ function updateStatusFromBackend(d) {
 }
 
 /* ============================
-   MIKROFON LIVE
+   MIKROFON LIVE — WERSJA 6.1
    ============================ */
 if (!("webkitSpeechRecognition" in window)) {
   alert("Brak wsparcia rozpoznawania mowy.");
 } else {
   recognition = new webkitSpeechRecognition();
   recognition.lang = "pl-PL";
-  recognition.interimResults = false;
-  recognition.maxAlternatives = 1;
+
+  // 🔥 Najlepsza jakość PL
+  recognition.interimResults = true;
+  recognition.continuous = false;
+  recognition.maxAlternatives = 3;
 
   recognition.onresult = async (e) => {
-    const text = e.results[0][0].transcript;
+    // 🔥 Bierzemy ostatni wynik — najlepszy jakościowo
+    const text = e.results[e.results.length - 1][0].transcript.trim();
+
     document.getElementById("raw").innerText = text;
 
     try {
@@ -119,6 +125,7 @@ if (!("webkitSpeechRecognition" in window)) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text })
       });
+
       const data = await res.json();
 
       document.getElementById("parsed").innerText = JSON.stringify(data, null, 2);
@@ -133,7 +140,9 @@ if (!("webkitSpeechRecognition" in window)) {
     }
   };
 
-  recognition.onerror = (e) => console.warn("Błąd mikrofonu:", e.error);
+  recognition.onerror = (e) => {
+    console.warn("Błąd mikrofonu:", e.error);
+  };
 
   document.getElementById("micStart").onclick = () => recognition.start();
   document.getElementById("micStop").onclick = () => recognition.stop();
@@ -150,12 +159,14 @@ document.getElementById("startTomorrow")?.addEventListener("click", () => {
     alert("Brak wsparcia rozpoznawania mowy.");
     return;
   }
+
   tomorrowRec = new webkitSpeechRecognition();
   tomorrowRec.lang = "pl-PL";
-  tomorrowRec.interimResults = false;
+  tomorrowRec.interimResults = true;
+  tomorrowRec.continuous = false;
 
   tomorrowRec.onresult = async (e) => {
-    const text = e.results[0][0].transcript;
+    const text = e.results[e.results.length - 1][0].transcript.trim();
     document.getElementById("tomorrowRaw").innerText = text;
 
     try {
@@ -164,6 +175,7 @@ document.getElementById("startTomorrow")?.addEventListener("click", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text })
       });
+
       const data = await res.json();
       document.getElementById("tomorrowResult").innerText = JSON.stringify(data, null, 2);
 
@@ -187,6 +199,7 @@ document.getElementById("stopTomorrow")?.addEventListener("click", () => {
 
 document.getElementById("tomorrowYes")?.addEventListener("click", () => {
   if (!tomorrowTicker) return;
+
   const tbody = document.querySelector("#voiceTable tbody");
   const r = tbody.insertRow(-1);
 
@@ -208,6 +221,7 @@ document.getElementById("tomorrowYes")?.addEventListener("click", () => {
   r.insertCell(12).innerText = "";
   r.insertCell(13).innerText = "";
   r.insertCell(14).innerHTML = `<button onclick="openPopup(this)">📊</button>`;
+  r.insertCell(15).innerHTML = `<button onclick="deleteRow(this)">🗑</button>`;
 
   saveTable();
   document.getElementById("tomorrowDecision").style.display = "none";
