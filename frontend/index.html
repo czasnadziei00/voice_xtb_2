@@ -2,23 +2,24 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8">
-  <title>VOICE XTB 4.9 PRO</title>
+  <title>VOICE XTB 6.0 PRO</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-<h1>VOICE XTB 4.9 PRO — składanie danych</h1>
+<h1>VOICE XTB 6.0 PRO — składanie danych</h1>
 
 <button id="micStart">START mikrofon</button>
 <button id="micStop">STOP mikrofon</button>
+<button id="resetTable">RESET</button>
 
 <h3>Rozpoznano:</h3>
 <pre id="raw"></pre>
 
-<h3>Wynik parsowania (bufor 4.6+):</h3>
+<h3>Wynik parsowania (backend 6.0+):</h3>
 <pre id="parsed"></pre>
 
-<h3>Status bufora:</h3>
+<h3>Status:</h3>
 <div id="status"></div>
 
 <h3>Dane z głosu</h3>
@@ -31,7 +32,7 @@
       <th>O</th>
       <th>L</th>
       <th>H</th>
-      <th>C</th>
+      <th>C (ENTRY)</th>
       <th>MA20</th>
       <th>DEMA9</th>
       <th>RSI</th>
@@ -40,6 +41,7 @@
       <th>Widełki</th>
       <th>TP1/TP2/TP3</th>
       <th>📊</th>
+      <th>🗑</th>
     </tr>
   </thead>
   <tbody></tbody>
