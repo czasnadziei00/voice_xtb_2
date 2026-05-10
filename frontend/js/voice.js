@@ -1,8 +1,8 @@
 // ===============================
 // USTAWIENIA BACKENDU
 // ===============================
-const LIVE_BACKEND = "https://voice-xtb-2.onrender.com/voice-parse";
-const TOMORROW_BACKEND = "https://voice-xtb-2.onrender.com/parse";
+const LIVE_BACKEND = "https://voice-xtb.onrender.com/voice-parse";
+const TOMORROW_BACKEND = "https://voice-xtb.onrender.com/parse";
 
 // ===============================
 // STAN GLOBALNY (OPCJA A — jeden ticker na raz)
