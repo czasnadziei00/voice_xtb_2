@@ -1,12 +1,12 @@
 /* ============================================================
-   TURBO MOBILE 6.0 — main.js
+   TURBO MOBILE 6.0+ — main.js
    ============================================================ */
+
+const STORAGE_KEY = "tm6_voice_table";
 
 /* ============================
    PAMIĘĆ TABELI
    ============================ */
-const STORAGE_KEY = "tm6_voice_table";
-
 function saveTable() {
   const rows = [...document.querySelector("#voiceTable tbody").rows].map(r => {
     return {
@@ -23,7 +23,8 @@ function saveTable() {
       VOL: r.cells[10].innerText,
       signal: r.cells[11].innerText,
       range: r.cells[12].innerText,
-      tp: r.cells[13].innerText
+      tp: r.cells[13].innerText,
+      comment: r.dataset.comment || ""
     };
   });
   localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
@@ -33,7 +34,7 @@ function loadTable() {
   const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
   const tbody = document.querySelector("#voiceTable tbody");
   tbody.innerHTML = "";
-  data.forEach(addRowFromMemory);
+  data.forEach(d => addRowFromMemory(d));
 }
 
 function addRowFromMemory(d) {
@@ -41,6 +42,7 @@ function addRowFromMemory(d) {
   const r = tbody.insertRow(-1);
 
   r.dataset.ticker = d.ticker;
+  r.dataset.comment = d.comment || "";
 
   r.insertCell(0).innerText = d.ticker;
   r.insertCell(1).innerText = d.interval;
@@ -62,95 +64,49 @@ function addRowFromMemory(d) {
 }
 
 /* ============================
-   DODAWANIE WIERSZA Z GŁOSU
+   DODAWANIE WIERSZA Z BACKENDU
    ============================ */
-function addParsedRow(d) {
+function upsertRowFromBackend(d) {
   const tbody = document.querySelector("#voiceTable tbody");
 
   let r = [...tbody.rows].find(x => x.dataset.ticker === d.ticker);
   if (!r) {
     r = tbody.insertRow(-1);
     r.dataset.ticker = d.ticker;
-
+    r.dataset.comment = d.comment || "";
     for (let i = 0; i < 15; i++) r.insertCell(i);
     r.cells[14].innerHTML = `<button onclick="openPopup(this)">📊</button>`;
   }
 
-  r.cells[0].innerText = d.ticker;
-  r.cells[1].innerText = d.interval;
-  r.cells[2].innerText = d.time;
-  r.cells[3].innerText = d.O;
-  r.cells[4].innerText = d.L;
-  r.cells[5].innerText = d.H;
-  r.cells[6].innerText = d.C;
-  r.cells[7].innerText = d.MA20;
-  r.cells[8].innerText = d.DEMA9;
-  r.cells[9].innerText = d.RSI;
-  r.cells[10].innerText = d.VOL;
+  r.cells[0].innerText = d.ticker || "";
+  r.cells[1].innerText = d.interval || "";
+  r.cells[2].innerText = d.time || "";
+  r.cells[3].innerText = d.open ?? "";
+  r.cells[4].innerText = d.low ?? "";
+  r.cells[5].innerText = d.high ?? "";
+  r.cells[6].innerText = d.close ?? "";
+  r.cells[7].innerText = d.ma20 ?? "";
+  r.cells[8].innerText = d.dema9 ?? "";
+  r.cells[9].innerText = d.rsi ?? "";
+  r.cells[10].innerText = d.volume ?? "";
+  r.cells[11].innerText = d.signal ?? "";
+  r.cells[12].innerText = d.widełki ?? "";
+  r.cells[13].innerText = d.tp ?? "";
+  r.dataset.comment = d.comment || "";
 
-  computeSignal(r);
+  colorSignal(r, d.signal);
   saveTable();
 }
 
 /* ============================
-   SYGNAŁ 6.0
-   ============================ */
-function computeSignal(r) {
-  const C = parseFloat(r.cells[6].innerText);
-  const L = parseFloat(r.cells[4].innerText);
-  const H = parseFloat(r.cells[5].innerText);
-  const MA20 = parseFloat(r.cells[7].innerText);
-  const DEMA9 = parseFloat(r.cells[8].innerText);
-  const RSI = parseFloat(r.cells[9].innerText);
-  const VOL = parseFloat(r.cells[10].innerText);
-
-  if (!isFinite(C) || !isFinite(L) || !isFinite(H)) return;
-
-  const dol = L + (H - L) * 0.20;
-  const gor = L + (H - L) * 0.35;
-  r.cells[12].innerText = `${dol.toFixed(2)}–${gor.toFixed(2)}`;
-
-  let momentum = (DEMA9 && C > DEMA9) ? "MOCNE" : "SŁABE";
-  let bias = (MA20 && C > MA20) ? "UP" : "DOWN";
-  let rsiPower = RSI >= 55 ? "MOCNE" : RSI >= 50 ? "OK" : "SŁABE";
-  let volPower = VOL >= 1500 ? "MOCNE" : VOL >= 500 ? "OK" : "SŁABE";
-
-  let s = "CZEKAJ";
-
-  if (C < dol) s = "CZEKAJ DO";
-  if (C >= dol && C <= gor && (momentum === "SŁABE" || rsiPower === "SŁABE")) s = "PRAWIE BUY";
-  if (C >= dol && C <= gor && momentum === "MOCNE" && bias === "UP" && rsiPower !== "SŁABE" && volPower !== "SŁABE") s = "BUY";
-  if (C > gor) s = "CZEKAJ";
-  if (C < dol * 0.995 && momentum === "SŁABE" && rsiPower === "SŁABE") s = "UWAGA RESET";
-  if (C < L && momentum === "SŁABE" && rsiPower === "SŁABE") s = "RESET";
-
-  r.cells[11].innerText = s;
-  colorSignal(r, s);
-
-  computeTP(r, C);
-}
-
-/* ============================
-   TP1 / TP2 / TP3
-   ============================ */
-function computeTP(r, C) {
-  const entry = parseFloat(r.cells[6].innerText);
-  if (!isFinite(entry)) return;
-
-  const range = Math.abs(C - entry) || entry * 0.01;
-  const tp1 = entry + range * 0.5;
-  const tp2 = entry + range * 1.0;
-  const tp3 = entry + range * 1.5;
-
-  r.cells[13].innerText = `${tp1.toFixed(2)} / ${tp2.toFixed(2)} / ${tp3.toFixed(2)}`;
-}
-
-/* ============================
-   KOLORY
+   KOLORY SYGNAŁÓW
    ============================ */
 function colorSignal(r, s) {
-  r.cells[11].className = "";
-  r.cells[11].classList.add(
+  const cell = r.cells[11];
+  cell.className = "";
+  if (!s) return;
+  s = s.toUpperCase();
+  cell.classList.add(
     s === "BUY" ? "signal-buy" :
     s === "PRAWIE BUY" ? "signal-prawiebuy" :
     s === "CZEKAJ" ? "signal-czekaj" :
@@ -161,18 +117,59 @@ function colorSignal(r, s) {
 }
 
 /* ============================
-   POPUP
+   POPUP 4.5+
    ============================ */
 function openPopup(btn) {
   const r = btn.closest("tr");
-  const data = [...r.cells].map(td => td.innerText).join("\n");
-  document.getElementById("popupData").innerText = data;
+  const d = {
+    ticker: r.cells[0].innerText,
+    interval: r.cells[1].innerText,
+    time: r.cells[2].innerText,
+    open: r.cells[3].innerText,
+    low: r.cells[4].innerText,
+    high: r.cells[5].innerText,
+    close: r.cells[6].innerText,
+    ma20: r.cells[7].innerText,
+    dema9: r.cells[8].innerText,
+    rsi: r.cells[9].innerText,
+    volume: r.cells[10].innerText,
+    signal: r.cells[11].innerText,
+    widełki: r.cells[12].innerText,
+    tp: r.cells[13].innerText,
+    comment: r.dataset.comment || ""
+  };
+  document.getElementById("popupData").innerText = analiza45PRO(d);
   document.getElementById("popup45").style.display = "block";
 }
 
 document.getElementById("popupClose").onclick = () => {
   document.getElementById("popup45").style.display = "none";
 };
+window.addEventListener("click", (e) => {
+  if (e.target.id === "popup45") document.getElementById("popup45").style.display = "none";
+});
+
+/* ============================
+   RESET 6.0
+   ============================ */
+document.getElementById("resetTable")?.addEventListener("click", () => {
+  document.querySelectorAll("#voiceTable tbody tr").forEach(r => {
+    const entry = r.cells[6].innerText;
+    r.cells[3].innerText = "";
+    r.cells[4].innerText = "";
+    r.cells[5].innerText = "";
+    r.cells[6].innerText = entry;
+    r.cells[7].innerText = "";
+    r.cells[8].innerText = "";
+    r.cells[9].innerText = "";
+    r.cells[10].innerText = "";
+    r.cells[11].innerText = "CZEKAJ";
+    r.cells[12].innerText = "";
+    r.cells[13].innerText = "";
+    r.dataset.comment = r.dataset.comment || "";
+  });
+  saveTable();
+});
 
 /* ============================
    START
