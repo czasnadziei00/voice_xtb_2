@@ -139,6 +139,7 @@ function updateRow(tr, data) {
   if (data.entry !== undefined) {
     const td = tr.querySelector(".entry");
     if (td) td.textContent = data.entry ?? "";
+  }
 }
 
 
@@ -152,7 +153,7 @@ function updateStatus(data) {
     "ma20","dema9","rsi","volume"
   ];
 
-  const missing = required.filter(k => data[k] === null);
+  const missing = required.filter(k => data[k] === null || data[k] === undefined);
   document.getElementById("status").textContent =
     missing.length === 0 ? "Komplet danych — zapisano." : "Brakuje: " + missing.join(", ");
 }
