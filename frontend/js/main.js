@@ -101,11 +101,19 @@ function createRow(data) {
     tr.appendChild(td);
   });
 
+  // popup
   const tdIcon = document.createElement("td");
   tdIcon.classList.add("popupIcon");
   tdIcon.textContent = "📊";
   tdIcon.style.cursor = "pointer";
   tr.appendChild(tdIcon);
+
+  // usuń
+  const del = document.createElement("td");
+  del.classList.add("deleteRow");
+  del.textContent = "🗑";
+  del.style.cursor = "pointer";
+  tr.appendChild(del);
 
   tbody.appendChild(tr);
   return tr;
@@ -173,6 +181,12 @@ function handleParsedData(data) {
 
   const tbody = document.querySelector("#voiceTable tbody");
 
+  if (data.deleted) {
+    const tr = tbody.querySelector(`tr[data-ticker="${data.ticker}"]`);
+    if (tr) tr.remove();
+    return;
+  }
+
   if (data.ticker !== lastTicker) {
     lastTicker = data.ticker;
     const tr = createRow(data);
@@ -199,17 +213,30 @@ popupClose.onclick = () => popup.style.display = "none";
 window.onclick = (e) => { if (e.target === popup) popup.style.display = "none"; };
 
 document.querySelector("#voiceTable tbody").addEventListener("click", (e) => {
-  if (!e.target.classList.contains("popupIcon")) return;
+  if (e.target.classList.contains("popupIcon")) {
+    const tr = e.target.closest("tr");
+    const d = {};
 
-  const tr = e.target.closest("tr");
-  const d = {};
+    tr.querySelectorAll("td").forEach(td => {
+      if (td.classList.length > 0 && td.classList[0] !== "popupIcon" && td.classList[0] !== "deleteRow") {
+        d[td.classList[0]] = td.textContent;
+      }
+    });
 
-  tr.querySelectorAll("td").forEach(td => {
-    if (td.classList.length > 0 && td.classList[0] !== "popupIcon") {
-      d[td.classList[0]] = td.textContent;
-    }
-  });
+    popupData.textContent = analiza45PRO(d);
+    popup.style.display = "block";
+  }
 
-  popupData.textContent = analiza45PRO(d);
-  popup.style.display = "block";
+  if (e.target.classList.contains("deleteRow")) {
+    const tr = e.target.closest("tr");
+    const ticker = tr.dataset.ticker;
+
+    tr.remove();
+
+    fetch(backend + "/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ticker })
+    });
+  }
 });
