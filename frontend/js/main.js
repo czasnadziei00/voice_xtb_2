@@ -88,6 +88,7 @@ function createRow(data) {
     "ticker",
     "interval",
     "time",
+    "entry",
     "signal",
     "widełki",
     "tp"
@@ -134,6 +135,10 @@ function updateRow(tr, data) {
   }
 
   tr.dataset.signal = data.signal;
+
+  if (data.entry !== undefined) {
+    const td = tr.querySelector(".entry");
+    if (td) td.textContent = data.entry ?? "";
 }
 
 
