@@ -1,345 +1,167 @@
-// ===============================
-// USTAWIENIA BACKENDU
-// ===============================
-const LIVE_BACKEND = "https://voice-xtb.onrender.com/voice-parse";
-const TOMORROW_BACKEND = "https://voice-xtb.onrender.com/parse";
+// =========================
+//  ROZPOZNAWANIE MOWY 6.5 PRO
+// =========================
 
-// ===============================
-// STAN GLOBALNY (OPCJA A — jeden ticker na raz)
-// ===============================
-let activeMode = "live"; // "live" albo "tomorrow"
-let activeTicker = null;
-let activeInterval = null;
-let activeTime = null;
+let recognition;
+let isListening = false;
 
-// LIVE — aktualny wiersz
-let activeLiveRow = {
-  open: null,
-  low: null,
-  high: null,
-  close: null,
-  ma20: null,
-  dema9: null,
-  rsi: null,
-  vwap: null,
-  volume: null,
-  signal: "CZEKAJ",
-  comment: ""
-};
-
-// NA JUTRO — D1 i H1
-let activeD1 = {
-  open: null,
-  low: null,
-  high: null,
-  close: null,
-  ma20: null,
-  dema9: null,
-  rsi: null,
-  vwap: null,
-  volume: null
-};
-
-let activeH1 = {
-  open: null,
-  low: null,
-  high: null,
-  close: null,
-  ma20: null,
-  dema9: null,
-  rsi: null,
-  vwap: null,
-  volume: null
-};
-
-// ===============================
-// ROZPOZNAWANIE MOWY
-// ===============================
-let recognition = null;
-
-function initRecognition() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) {
-    alert("Twoja przeglądarka nie obsługuje rozpoznawania mowy.");
-    return;
-  }
-
-  recognition = new SR();
-  recognition.lang = "pl-PL";
-  recognition.interimResults = false;
-  recognition.maxAlternatives = 1;
-
-  recognition.onresult = (event) => {
-    const text = event.results[0][0].transcript;
-    document.getElementById("recognizedText").textContent = text;
-    handleTranscript(text);
-  };
-
-  recognition.onerror = (e) => console.error("Speech error:", e.error);
+if ("webkitSpeechRecognition" in window) {
+    recognition = new webkitSpeechRecognition();
+} else if ("SpeechRecognition" in window) {
+    recognition = new SpeechRecognition();
 }
 
-function startMic() {
-  if (!recognition) initRecognition();
-  recognition.start();
+if (recognition) {
+    recognition.lang = "pl-PL";
+    recognition.continuous = true;
+    recognition.interimResults = false;
 }
 
-function stopMic() {
-  if (recognition) recognition.stop();
-}
 
-// ===============================
-// OBSŁUGA TEKSTU
-// ===============================
-function handleTranscript(text) {
-  if (activeMode === "live") {
-    sendToLiveBackend(text);
-  } else {
-    sendToTomorrowBackend(text);
-  }
-}
+// =========================
+//  GŁÓWNA OBSŁUGA MOWY
+// =========================
+recognition.onresult = async (event) => {
+    const text = event.results[event.results.length - 1][0].transcript;
+    document.getElementById("raw").textContent = text;
 
-// ===============================
-// LIVE — BACKEND
-// ===============================
-async function sendToLiveBackend(text) {
-  try {
-    const res = await fetch(LIVE_BACKEND, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text })
-    });
+    try {
+        const res = await fetch(backend, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text })
+        });
 
-    const data = await res.json();
-    mergeLiveData(data);
-    updateLivePreview();
-    maybeAskAddToLive();
-  } catch (e) {
-    console.error("LIVE backend error:", e);
-  }
-}
+        if (!res.ok) {
+            console.warn("Backend HTTP error:", res.status, res.statusText);
+            return;
+        }
 
-function mergeLiveData(data) {
-  if (!activeTicker || activeTicker === "UNKNOWN") activeTicker = data.ticker;
-  if (!activeInterval && data.interval) activeInterval = data.interval;
-  if (!activeTime && data.time) activeTime = data.time;
+        let data;
+        try {
+            data = await res.json();
+        } catch (e) {
+            console.error("Błąd JSON (pusta odpowiedź backendu):", e);
+            return;
+        }
 
-  const row = data.row || {};
-  for (const key of Object.keys(activeLiveRow)) {
-    if (row[key] != null) activeLiveRow[key] = row[key];
-  }
+        handleParsedData(data);
 
-  if (data.signal) activeLiveRow.signal = data.signal;
-  if (data.comment) activeLiveRow.comment = data.comment;
-}
-
-function updateLivePreview() {
-  document.getElementById("liveResult").textContent = JSON.stringify({
-    ticker: activeTicker,
-    interval: activeInterval,
-    time: activeTime,
-    ...activeLiveRow
-  }, null, 2);
-}
-
-function liveDataIsComplete() {
-  return (
-    activeTicker &&
-    activeInterval &&
-    activeLiveRow.low != null &&
-    activeLiveRow.high != null &&
-    (activeLiveRow.open != null || activeLiveRow.close != null)
-  );
-}
-
-function maybeAskAddToLive() {
-  if (!liveDataIsComplete()) return;
-
-  const ok = confirm(`Dodać ${activeTicker} ${activeInterval} ${activeTime} do LIVE?`);
-  if (ok) {
-    addLiveRowToTable();
-    resetLiveContext();
-  }
-}
-
-function addLiveRowToTable() {
-  const tbody = document.getElementById("liveTableBody");
-  const tr = document.createElement("tr");
-
-  function td(v) {
-    const c = document.createElement("td");
-    c.textContent = v;
-    return c;
-  }
-
-  tr.appendChild(td(activeTicker));
-  tr.appendChild(td(activeInterval));
-  tr.appendChild(td(activeTime));
-  tr.appendChild(td(activeLiveRow.open ?? ""));
-  tr.appendChild(td(activeLiveRow.low ?? ""));
-  tr.appendChild(td(activeLiveRow.high ?? ""));
-  tr.appendChild(td(activeLiveRow.close ?? ""));
-  tr.appendChild(td(activeLiveRow.ma20 ?? ""));
-  tr.appendChild(td(activeLiveRow.dema9 ?? ""));
-  tr.appendChild(td(activeLiveRow.rsi ?? ""));
-  tr.appendChild(td(activeLiveRow.volume ?? ""));
-  tr.appendChild(td(activeLiveRow.signal ?? ""));
-  tr.appendChild(td("")); // widełki
-  tr.appendChild(td("")); // TP
-
-  const chartBtn = document.createElement("td");
-  chartBtn.innerHTML = `<button class="chartBtn">📊</button>`;
-  tr.appendChild(chartBtn);
-
-  const delBtn = document.createElement("td");
-  delBtn.innerHTML = `<button class="delete-row">🗑</button>`;
-  tr.appendChild(delBtn);
-
-  tbody.appendChild(tr);
-}
-
-function resetLiveContext() {
-  activeTicker = null;
-  activeInterval = null;
-  activeTime = null;
-
-  activeLiveRow = {
-    open: null,
-    low: null,
-    high: null,
-    close: null,
-    ma20: null,
-    dema9: null,
-    rsi: null,
-    vwap: null,
-    volume: null,
-    signal: "CZEKAJ",
-    comment: ""
-  };
-}
-
-// ===============================
-// NA JUTRO — BACKEND
-// ===============================
-async function sendToTomorrowBackend(text) {
-  try {
-    const res = await fetch(TOMORROW_BACKEND, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text })
-    });
-
-    const data = await res.json();
-    mergeTomorrowData(data);
-    updateTomorrowPreview();
-    maybeAskAddToTomorrow();
-  } catch (e) {
-    console.error("TOMORROW backend error:", e);
-  }
-}
-
-function mergeTomorrowData(data) {
-  if (!activeTicker || activeTicker === "UNKNOWN") activeTicker = data.ticker;
-
-  if (data.d1) {
-    for (const k of Object.keys(activeD1)) {
-      if (data.d1[k] != null) activeD1[k] = data.d1[k];
+    } catch (e) {
+        console.error("LIVE backend error:", e);
     }
-  }
+};
 
-  if (data.h1) {
-    for (const k of Object.keys(activeH1)) {
-      if (data.h1[k] != null) activeH1[k] = data.h1[k];
+
+// =========================
+//  BŁĘDY MIKROFONU
+// =========================
+recognition.onerror = (event) => {
+    console.warn("Błąd mikrofonu:", event.error);
+};
+
+
+// =========================
+//  AUTO-RESTART
+// =========================
+recognition.onend = () => {
+    if (isListening) recognition.start();
+};
+
+
+// =========================
+//  START / STOP
+// =========================
+document.getElementById("micStart").onclick = () => {
+    isListening = true;
+    recognition.start();
+};
+
+document.getElementById("micStop").onclick = () => {
+    isListening = false;
+    recognition.stop();
+};
+
+
+// =========================
+//  ANALIZA 4.5+ (POPUP)
+// =========================
+function analiza45PRO(d) {
+    return `
+📌 TICKER: ${d.ticker}
+⏱ INTERWAŁ: ${d.interval}
+🕒 CZAS: ${d.time}
+
+────────────────────────
+📊 ŚWIECA
+O: ${d.open}
+L: ${d.low}
+H: ${d.high}
+C: ${d.close}
+
+────────────────────────
+📘 ŚREDNIE
+MA20: ${d.ma20}
+DEMA9: ${d.dema9}
+RSI: ${d.rsi}
+Wolumen: ${d.volume}
+
+────────────────────────
+🔥 TREND / MOMENTUM / SIŁA
+${trendMomentumSil(d)}
+
+────────────────────────
+🎯 WIDEŁKI (20–35%)
+${calcWidełki(d)}
+
+🎯 TP1/TP2/TP3
+${calcTP(d).tp1}
+${calcTP(d).tp2}
+${calcTP(d).tp3}
+
+────────────────────────
+🎬 SYGNAŁ
+${d.signal ?? "BRAK"}
+
+💬 KOMENTARZ
+${d.comment}
+`;
+}
+
+
+// =========================
+//  TREND / MOMENTUM / SIŁA
+// =========================
+function trendMomentumSil(d) {
+    const close = parseFloat(d.close);
+    const ma20 = parseFloat(d.ma20);
+    const dema9 = parseFloat(d.dema9);
+    const rsi = parseFloat(d.rsi);
+
+    let trend = "";
+    let momentum = "";
+    let sila = "";
+
+    if (!isNaN(close) && !isNaN(ma20) && !isNaN(dema9)) {
+        if (close > ma20 && close > dema9) trend = "Trend: WZROSTOWY 📈";
+        else if (close < ma20 && close < dema9) trend = "Trend: SPADKOWY 📉";
+        else trend = "Trend: NEUTRALNY ➖";
+
+        if (dema9 > ma20) momentum = "Momentum: SILNE 📗";
+        else if (dema9 < ma20) momentum = "Momentum: SŁABE 📕";
+        else momentum = "Momentum: NEUTRALNE ➖";
+    } else {
+        trend = "Trend: brak danych";
+        momentum = "Momentum: brak danych";
     }
-  }
+
+    if (!isNaN(rsi)) {
+        if (rsi > 60) sila = "Siła: PRZEWAGA BYKÓW 🟢";
+        else if (rsi < 40) sila = "Siła: PRZEWAGA NIEDŹWIEDZI 🔴";
+        else sila = "Siła: RÓWNOWAGA ⚪";
+    } else {
+        sila = "Siła: brak danych";
+    }
+
+    return `${trend}\n${momentum}\n${sila}`;
 }
-
-function updateTomorrowPreview() {
-  document.getElementById("tomorrowResult").textContent = JSON.stringify({
-    ticker: activeTicker,
-    d1: activeD1,
-    h1: activeH1
-  }, null, 2);
-}
-
-function tomorrowDataIsComplete() {
-  return (
-    activeTicker &&
-    activeD1.low != null &&
-    activeD1.high != null &&
-    activeD1.rsi != null &&
-    (activeD1.open != null || activeD1.close != null)
-  );
-}
-
-function maybeAskAddToTomorrow() {
-  if (!tomorrowDataIsComplete()) return;
-
-  const ok = confirm(`Dodać ${activeTicker} do NA JUTRO?`);
-  if (ok) {
-    addTomorrowRowToTable();
-    resetTomorrowContext();
-  }
-}
-
-function addTomorrowRowToTable() {
-  const tbody = document.getElementById("tomorrowTableBody");
-  const tr = document.createElement("tr");
-
-  function td(v) {
-    const c = document.createElement("td");
-    c.textContent = v;
-    return c;
-  }
-
-  tr.appendChild(td(activeTicker));
-  tr.appendChild(td("D1/H1"));
-  tr.appendChild(td(activeD1.open ?? ""));
-  tr.appendChild(td(activeD1.low ?? ""));
-  tr.appendChild(td(activeD1.high ?? ""));
-  tr.appendChild(td(activeD1.close ?? ""));
-  tr.appendChild(td(activeD1.ma20 ?? ""));
-  tr.appendChild(td(activeD1.dema9 ?? ""));
-  tr.appendChild(td(activeD1.rsi ?? ""));
-  tr.appendChild(td(activeD1.volume ?? ""));
-  tr.appendChild(td("")); // TAK/NIE
-  tr.appendChild(td("")); // TP
-
-  const delBtn = document.createElement("td");
-  delBtn.innerHTML = `<button class="delete-row">🗑</button>`;
-  tr.appendChild(delBtn);
-
-  tbody.appendChild(tr);
-}
-
-function resetTomorrowContext() {
-  activeTicker = null;
-
-  activeD1 = {
-    open: null,
-    low: null,
-    high: null,
-    close: null,
-    ma20: null,
-    dema9: null,
-    rsi: null,
-    vwap: null,
-    volume: null
-  };
-
-  activeH1 = {
-    open: null,
-    low: null,
-    high: null,
-    close: null,
-    ma20: null,
-    dema9: null,
-    rsi: null,
-    vwap: null,
-    volume: null
-  };
-}
-
-// ===============================
-// START
-// ===============================
-document.addEventListener("DOMContentLoaded", initRecognition);
