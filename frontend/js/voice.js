@@ -1,6 +1,6 @@
 /* ============================================================
-   TURBO MOBILE 6.1 — voice.js
-   Najlepsza jakość rozpoznawania PL (wariant A)
+   TURBO MOBILE 6.2 — voice.js FULL
+   Najlepsza jakość PL + filtry OLHC/DEMA + auto-restart
    ============================================================ */
 
 const LIVE_BACKEND = "https://voice-xtb.onrender.com/voice-parse";
@@ -8,114 +8,73 @@ const TOMORROW_BACKEND = "https://voice-xtb.onrender.com/parse";
 
 let recognition = null;
 
-/* ============================
-   ANALIZA 4.5+ (popup)
-   ============================ */
-function analiza45PRO(d) {
-  return `
-📌 TICKER: ${d.ticker}
-⏱ INTERWAŁ: ${d.interval}
-🕒 CZAS: ${d.time}
+/* ============================================================
+   🔥 FILTR MOWY 6.2 — poprawia błędy Chrome PL
+   ============================================================ */
+function fixSpeech(text) {
+  let t = text.toLowerCase();
 
-────────────────────────
-📊 ŚWIECA
-O: ${d.open}
-L: ${d.low}
-H: ${d.high}
-C: ${d.close}
+  // --- DEMA / BEMA / BMA / DEMA dziewięć ---
+  t = t.replace(/\bbema\b/g, "dema");
+  t = t.replace(/\bbma\b/g, "dema");
+  t = t.replace(/\bdema dziewięć\b/g, "dema9");
+  t = t.replace(/\bdema 9\b/g, "dema9");
 
-────────────────────────
-📘 ŚREDNIE
-MA20: ${d.ma20}
-DEMA9: ${d.dema9}
-RSI: ${d.rsi}
-Wolumen: ${d.volume}
+  // --- MA / EMA ---
+  t = t.replace(/\bema 20\b/g, "ma20");
+  t = t.replace(/\bema\b/g, "ma");
 
-────────────────────────
-🔥 TREND / MOMENTUM / SIŁA
-${trendMomentumSil(d)}
+  // --- LOW (wszystkie warianty Chrome) ---
+  t = t.replace(/\blo\b/g, "low");
+  t = t.replace(/\blou\b/g, "low");
+  t = t.replace(/\bło\b/g, "low");
+  t = t.replace(/\blowe\b/g, "low");
 
-────────────────────────
-🎯 WIDEŁKI (20–35%)
-${d.widełki || ""}
+  // --- HIGH ---
+  t = t.replace(/\bhaj\b/g, "high");
 
-🎯 TP1/TP2/TP3
-${d.tp || ""}
+  // --- OPEN ---
+  t = t.replace(/\bopen\b/g, "o");
 
-────────────────────────
-🎬 SYGNAŁ
-${d.signal ?? "BRAK"}
+  // --- CLOSE ---
+  t = t.replace(/\bklous\b/g, "close");
 
-💬 KOMENTARZ
-${d.comment || ""}
-`;
-}
+  // --- liczby słowne ---
+  const nums = {
+    "jeden": "1", "dwa": "2", "trzy": "3", "cztery": "4", "pięć": "5",
+    "sześć": "6", "siedem": "7", "osiem": "8", "dziewięć": "9",
+    "dziesięć": "10", "jedenaście": "11", "dwanaście": "12",
+    "trzynaście": "13", "czternaście": "14", "piętnaście": "15",
+    "szesnaście": "16", "siedemnaście": "17", "osiemnaście": "18",
+    "dziewiętnaście": "19", "dwadzieścia": "20", "trzydzieści": "30",
+    "czterdzieści": "40", "pięćdziesiąt": "50", "sześćdziesiąt": "60",
+    "siedemdziesiąt": "70", "osiemdziesiąt": "80", "dziewięćdziesiąt": "90",
+    "sto": "100"
+  };
 
-function trendMomentumSil(d) {
-  const close = parseFloat(d.close);
-  const ma20 = parseFloat(d.ma20);
-  const dema9 = parseFloat(d.dema9);
-  const rsi = parseFloat(d.rsi);
-
-  let trend = "";
-  let momentum = "";
-  let sila = "";
-
-  if (!isNaN(close) && !isNaN(ma20) && !isNaN(dema9)) {
-    if (close > ma20 && close > dema9) trend = "Trend: WZROSTOWY 📈";
-    else if (close < ma20 && close < dema9) trend = "Trend: SPADKOWY 📉";
-    else trend = "Trend: NEUTRALNY ➖";
-
-    if (dema9 > ma20) momentum = "Momentum: SILNE 📗";
-    else if (dema9 < ma20) momentum = "Momentum: SŁABE 📕";
-    else momentum = "Momentum: NEUTRALNE ➖";
-  } else {
-    trend = "Trend: brak danych";
-    momentum = "Momentum: brak danych";
+  for (const [k, v] of Object.entries(nums)) {
+    t = t.replace(new RegExp("\\b" + k + "\\b", "g"), v);
   }
 
-  if (!isNaN(rsi)) {
-    if (rsi > 60) sila = "Siła: PRZEWAGA BYKÓW 🟢";
-    else if (rsi < 40) sila = "Siła: PRZEWAGA NIEDŹWIEDZI 🔴";
-    else sila = "Siła: RÓWNOWAGA ⚪";
-  } else {
-    sila = "Siła: brak danych";
-  }
-
-  return `${trend}\n${momentum}\n${sila}`;
+  return t;
 }
 
-/* ============================
-   PARSER FRONT (lekki)
-   ============================ */
-function updateStatusFromBackend(d) {
-  const required = [
-    "ticker","interval","time",
-    "open","high","low","close",
-    "ma20","dema9","rsi","volume"
-  ];
-  const missing = required.filter(k => d[k] == null);
-  document.getElementById("status").textContent =
-    missing.length === 0 ? "Komplet danych — zapisano." : "Brakuje: " + missing.join(", ");
-}
-
-/* ============================
-   MIKROFON LIVE — WERSJA 6.1
-   ============================ */
+/* ============================================================
+   MIKROFON LIVE — WERSJA 6.2
+   ============================================================ */
 if (!("webkitSpeechRecognition" in window)) {
   alert("Brak wsparcia rozpoznawania mowy.");
 } else {
   recognition = new webkitSpeechRecognition();
   recognition.lang = "pl-PL";
 
-  // 🔥 Najlepsza jakość PL
   recognition.interimResults = true;
   recognition.continuous = false;
   recognition.maxAlternatives = 3;
 
   recognition.onresult = async (e) => {
-    // 🔥 Bierzemy ostatni wynik — najlepszy jakościowo
-    const text = e.results[e.results.length - 1][0].transcript.trim();
+    let text = e.results[e.results.length - 1][0].transcript.trim();
+    text = fixSpeech(text);
 
     document.getElementById("raw").innerText = text;
 
@@ -129,44 +88,49 @@ if (!("webkitSpeechRecognition" in window)) {
       const data = await res.json();
 
       document.getElementById("parsed").innerText = JSON.stringify(data, null, 2);
-      updateStatusFromBackend(data);
       document.getElementById("comment").innerText = data.comment || "";
 
-      if (data.ticker) {
-        upsertRowFromBackend(data);
-      }
+      if (data.ticker) upsertRowFromBackend(data);
+
     } catch (err) {
       document.getElementById("parsed").innerText = "Błąd backendu: " + err;
     }
   };
 
-  recognition.onerror = (e) => {
-    console.warn("Błąd mikrofonu:", e.error);
+  // 🔥 AUTO-RESTART
+  recognition.onend = () => {
+    if (recognition._forceActive) {
+      setTimeout(() => recognition.start(), 150);
+    }
   };
 
-  document.getElementById("micStart").onclick = () => recognition.start();
-  document.getElementById("micStop").onclick = () => recognition.stop();
+  document.getElementById("micStart").onclick = () => {
+    recognition._forceActive = true;
+    recognition.start();
+  };
+
+  document.getElementById("micStop").onclick = () => {
+    recognition._forceActive = false;
+    recognition.stop();
+  };
 }
 
-/* ============================
-   NA JUTRO — VWAP ONLY
-   ============================ */
+/* ============================================================
+   TRYB NA JUTRO
+   ============================================================ */
 let tomorrowRec = null;
 let tomorrowTicker = "";
 
 document.getElementById("startTomorrow")?.addEventListener("click", () => {
-  if (!("webkitSpeechRecognition" in window)) {
-    alert("Brak wsparcia rozpoznawania mowy.");
-    return;
-  }
-
   tomorrowRec = new webkitSpeechRecognition();
   tomorrowRec.lang = "pl-PL";
   tomorrowRec.interimResults = true;
   tomorrowRec.continuous = false;
 
   tomorrowRec.onresult = async (e) => {
-    const text = e.results[e.results.length - 1][0].transcript.trim();
+    let text = e.results[e.results.length - 1][0].transcript.trim();
+    text = fixSpeech(text);
+
     document.getElementById("tomorrowRaw").innerText = text;
 
     try {
@@ -180,11 +144,13 @@ document.getElementById("startTomorrow")?.addEventListener("click", () => {
       document.getElementById("tomorrowResult").innerText = JSON.stringify(data, null, 2);
 
       tomorrowTicker = data.ticker || "";
+
       if (data.good_for_tomorrow) {
         document.getElementById("tomorrowDecision").style.display = "block";
       } else {
         document.getElementById("tomorrowDecision").style.display = "none";
       }
+
     } catch (err) {
       document.getElementById("tomorrowResult").innerText = "Błąd backendu: " + err;
     }
@@ -194,7 +160,7 @@ document.getElementById("startTomorrow")?.addEventListener("click", () => {
 });
 
 document.getElementById("stopTomorrow")?.addEventListener("click", () => {
-  if (tomorrowRec) tomorrowRec.stop();
+  tomorrowRec?.stop();
 });
 
 document.getElementById("tomorrowYes")?.addEventListener("click", () => {
@@ -231,15 +197,15 @@ document.getElementById("tomorrowNo")?.addEventListener("click", () => {
   document.getElementById("tomorrowDecision").style.display = "none";
 });
 
-/* ============================
-   ZAKŁADKI LIVE / NA JUTRO
-   ============================ */
+/* ============================================================
+   PRZEŁĄCZANIE ZAKŁADEK
+   ============================================================ */
 document.getElementById("tabLive")?.addEventListener("click", () => {
-  document.getElementById("voiceTable").style.display = "table";
+  document.getElementById("liveView").style.display = "block";
   document.getElementById("tomorrowView").style.display = "none";
 });
 
 document.getElementById("tabTomorrow")?.addEventListener("click", () => {
-  document.getElementById("voiceTable").style.display = "table";
+  document.getElementById("liveView").style.display = "none";
   document.getElementById("tomorrowView").style.display = "block";
 });
