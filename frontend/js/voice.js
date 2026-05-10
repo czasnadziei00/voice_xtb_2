@@ -1,5 +1,5 @@
 /* ============================================================
-   TURBO MOBILE 6.2 — voice.js FULL
+   TURBO MOBILE 6.3 — voice.js FULL
    Najlepsza jakość PL + filtry OLHC/DEMA + auto-restart
    ============================================================ */
 
@@ -9,14 +9,15 @@ const TOMORROW_BACKEND = "https://voice-xtb.onrender.com/parse";
 let recognition = null;
 
 /* ============================================================
-   🔥 FILTR MOWY 6.2 — poprawia błędy Chrome PL
+   🔥 FILTR MOWY 6.3 — poprawia błędy Chrome PL
    ============================================================ */
 function fixSpeech(text) {
   let t = text.toLowerCase();
 
-  // --- DEMA / BEMA / BMA / DEMA dziewięć ---
+  // --- DEMA / BEMA / BMA / DEMO ---
   t = t.replace(/\bbema\b/g, "dema");
   t = t.replace(/\bbma\b/g, "dema");
+  t = t.replace(/\bdemo\b/g, "dema");
   t = t.replace(/\bdema dziewięć\b/g, "dema9");
   t = t.replace(/\bdema 9\b/g, "dema9");
 
@@ -60,7 +61,7 @@ function fixSpeech(text) {
 }
 
 /* ============================================================
-   MIKROFON LIVE — WERSJA 6.2
+   MIKROFON LIVE — WERSJA 6.3
    ============================================================ */
 if (!("webkitSpeechRecognition" in window)) {
   alert("Brak wsparcia rozpoznawania mowy.");
