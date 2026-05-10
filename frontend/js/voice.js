@@ -1,218 +1,381 @@
-/* ============================================================
-   TURBO MOBILE 6.4 — voice.js FULL
-   LIVE + NA JUTRO 2.0 (D1/H1, Styl B)
-   ============================================================ */
+// ====== USTAWIENIA ======
+const LIVE_BACKEND = "https://voice-xtb-2.onrender.com/voice-parse";
+const TOMORROW_BACKEND = "https://voice-xtb-2.onrender.com/parse";
 
-const LIVE_BACKEND = "https://voice-xtb.onrender.com/voice-parse";
-const TOMORROW_BACKEND = "https://voice-xtb.onrender.com/parse";
+// ====== STAN GLOBALNY (OPCJA A: jeden ticker na raz) ======
+let activeMode = "live"; // "live" albo "tomorrow"
+let activeTicker = null;
+let activeInterval = null;
+let activeTime = null;
 
+// LIVE: aktualny wiersz
+let activeLiveRow = {
+  open: null,
+  low: null,
+  high: null,
+  close: null,
+  ma20: null,
+  dema9: null,
+  rsi: null,
+  vwap: null,
+  volume: null,
+  signal: "CZEKAJ",
+  comment: ""
+};
+
+// NA JUTRO: aktualne D1/H1
+let activeD1 = {
+  open: null,
+  low: null,
+  high: null,
+  close: null,
+  ma20: null,
+  dema9: null,
+  rsi: null,
+  vwap: null,
+  volume: null
+};
+
+let activeH1 = {
+  open: null,
+  low: null,
+  high: null,
+  close: null,
+  ma20: null,
+  dema9: null,
+  rsi: null,
+  vwap: null,
+  volume: null
+};
+
+// ====== ROZPOZNAWANIE MOWY (szkielet) ======
 let recognition = null;
 
-/* ============================================================
-   🔥 FILTR MOWY 6.4 — poprawia błędy Chrome PL
-   ============================================================ */
-function fixSpeech(text) {
-  let t = text.toLowerCase();
+function initRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("Brak wsparcia dla rozpoznawania mowy.");
+    return;
+  }
+  recognition = new SpeechRecognition();
+  recognition.lang = "pl-PL";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
 
-  // --- DEMA / BEMA / BMA / DEMO ---
-  t = t.replace(/\bbema\b/g, "dema");
-  t = t.replace(/\bbma\b/g, "dema");
-  t = t.replace(/\bdemo\b/g, "dema");
-  t = t.replace(/\bdema dziewięć\b/g, "dema9");
-  t = t.replace(/\bdema 9\b/g, "dema9");
-
-  // --- MA / EMA ---
-  t = t.replace(/\bema 20\b/g, "ma20");
-  t = t.replace(/\bema\b/g, "ma");
-
-  // --- LOW (wszystkie warianty Chrome) ---
-  t = t.replace(/\blo\b/g, "low");
-  t = t.replace(/\blou\b/g, "low");
-  t = t.replace(/\bło\b/g, "low");
-  t = t.replace(/\blowe\b/g, "low");
-
-  // --- HIGH ---
-  t = t.replace(/\bhaj\b/g, "high");
-
-  // --- OPEN ---
-  t = t.replace(/\bopen\b/g, "open");
-
-  // --- CLOSE ---
-  t = t.replace(/\bklous\b/g, "close");
-
-  // --- liczby słowne ---
-  const nums = {
-    "jeden": "1", "dwa": "2", "trzy": "3", "cztery": "4", "pięć": "5",
-    "sześć": "6", "siedem": "7", "osiem": "8", "dziewięć": "9",
-    "dziesięć": "10", "jedenaście": "11", "dwanaście": "12",
-    "trzynaście": "13", "czternaście": "14", "piętnaście": "15",
-    "szesnaście": "16", "siedemnaście": "17", "osiemnaście": "18",
-    "dziewiętnaście": "19", "dwadzieścia": "20", "trzydzieści": "30",
-    "czterdzieści": "40", "pięćdziesiąt": "50", "sześćdziesiąt": "60",
-    "siedemdziesiąt": "70", "osiemdziesiąt": "80", "dziewięćdziesiąt": "90",
-    "sto": "100"
+  recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    handleTranscript(transcript);
   };
 
-  for (const [k, v] of Object.entries(nums)) {
-    t = t.replace(new RegExp("\\b" + k + "\\b", "g"), v);
+  recognition.onerror = (event) => {
+    console.error("Speech error:", event.error);
+  };
+
+  recognition.onend = () => {
+    // nic — ręcznie włączasz ponownie
+  };
+}
+
+function startMic() {
+  if (!recognition) initRecognition();
+  if (recognition) recognition.start();
+}
+
+function stopMic() {
+  if (recognition) recognition.stop();
+}
+
+// ====== OBSŁUGA TEKSTU Z MIKROFONU ======
+
+function handleTranscript(text) {
+  // tu możesz wpisać do "Rozpoznano:"
+  const recognizedDiv = document.getElementById("recognizedText");
+  if (recognizedDiv) recognizedDiv.textContent = text;
+
+  if (activeMode === "live") {
+    sendToLiveBackend(text);
+  } else {
+    sendToTomorrowBackend(text);
+  }
+}
+
+// ====== LIVE BACKEND ======
+
+async function sendToLiveBackend(text) {
+  try {
+    const res = await fetch(LIVE_BACKEND, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, mode: "live" })
+    });
+
+    const data = await res.json();
+
+    // data: { ticker, interval, time, row, signal, comment }
+    mergeLiveData(data);
+    updateLivePreview();
+    maybeAskAddToLive();
+  } catch (e) {
+    console.error("LIVE backend error:", e);
+  }
+}
+
+function mergeLiveData(data) {
+  // ticker / interval / time
+  if (!activeTicker || activeTicker === "UNKNOWN") {
+    activeTicker = data.ticker;
+  }
+  if (!activeInterval && data.interval) {
+    activeInterval = data.interval;
+  }
+  if (!activeTime && data.time) {
+    activeTime = data.time;
   }
 
-  return t;
+  // scalanie danych
+  const row = data.row || {};
+  for (const key of Object.keys(activeLiveRow)) {
+    if (key in row && row[key] != null) {
+      activeLiveRow[key] = row[key];
+    }
+  }
+
+  // sygnał z backendu
+  if (data.signal) activeLiveRow.signal = data.signal;
+  if (data.comment) activeLiveRow.comment = data.comment;
 }
 
-/* ============================================================
-   MIKROFON LIVE — WERSJA 6.4
-   ============================================================ */
-if (!("webkitSpeechRecognition" in window)) {
-  alert("Brak wsparcia rozpoznawania mowy.");
-} else {
-  recognition = new webkitSpeechRecognition();
-  recognition.lang = "pl-PL";
+function updateLivePreview() {
+  // tu możesz zaktualizować jakiś podgląd, np. div z JSON
+  const liveResultDiv = document.getElementById("liveResult");
+  if (!liveResultDiv) return;
 
-  recognition.interimResults = true;
-  recognition.continuous = false;
-  recognition.maxAlternatives = 3;
+  liveResultDiv.textContent = JSON.stringify({
+    ticker: activeTicker,
+    interval: activeInterval,
+    time: activeTime,
+    ...activeLiveRow
+  }, null, 2);
+}
 
-  recognition.onresult = async (e) => {
-    let text = e.results[e.results.length - 1][0].transcript.trim();
-    text = fixSpeech(text);
+function liveDataIsComplete() {
+  // minimalny zestaw, który uznajemy za "warto pytać o dodanie"
+  return (
+    activeTicker &&
+    activeInterval &&
+    (activeLiveRow.open != null || activeLiveRow.close != null) &&
+    activeLiveRow.low != null &&
+    activeLiveRow.high != null
+  );
+}
 
-    document.getElementById("raw").innerText = text;
+function maybeAskAddToLive() {
+  if (!liveDataIsComplete()) return;
 
-    try {
-      const res = await fetch(LIVE_BACKEND, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text })
-      });
+  const ok = confirm(`Dodać ${activeTicker} ${activeInterval} ${activeTime} do LIVE?`);
+  if (ok) {
+    addLiveRowToTable();
+    resetLiveContext(); // po dodaniu możesz wyczyścić kontekst
+  }
+}
 
-      const data = await res.json();
+function addLiveRowToTable() {
+  const table = document.getElementById("liveTableBody");
+  if (!table) return;
 
-      document.getElementById("parsed").innerText = JSON.stringify(data, null, 2);
-      document.getElementById("comment").innerText = data.comment || "";
+  const tr = document.createElement("tr");
 
-      if (data.ticker) upsertRowFromBackend(data);
+  function td(text) {
+    const cell = document.createElement("td");
+    cell.textContent = text;
+    return cell;
+  }
 
-    } catch (err) {
-      document.getElementById("parsed").innerText = "Błąd backendu: " + err;
-    }
-  };
+  tr.appendChild(td(activeTicker || "???"));
+  tr.appendChild(td(activeInterval || "M15"));
+  tr.appendChild(td(activeTime || "--:--"));
+  tr.appendChild(td(activeLiveRow.open ?? ""));
+  tr.appendChild(td(activeLiveRow.low ?? ""));
+  tr.appendChild(td(activeLiveRow.high ?? ""));
+  tr.appendChild(td(activeLiveRow.close ?? ""));
+  tr.appendChild(td(activeLiveRow.ma20 ?? ""));
+  tr.appendChild(td(activeLiveRow.dema9 ?? ""));
+  tr.appendChild(td(activeLiveRow.rsi ?? ""));
+  tr.appendChild(td(activeLiveRow.volume ?? ""));
+  tr.appendChild(td(activeLiveRow.signal || ""));
+  tr.appendChild(td("")); // widełki/TP jeśli chcesz
 
-  // 🔥 AUTO-RESTART
-  recognition.onend = () => {
-    if (recognition._forceActive) {
-      setTimeout(() => recognition.start(), 150);
-    }
-  };
+  table.appendChild(tr);
+}
 
-  document.getElementById("micStart").onclick = () => {
-    recognition._forceActive = true;
-    recognition.start();
-  };
-
-  document.getElementById("micStop").onclick = () => {
-    recognition._forceActive = false;
-    recognition.stop();
+function resetLiveContext() {
+  activeTicker = null;
+  activeInterval = null;
+  activeTime = null;
+  activeLiveRow = {
+    open: null,
+    low: null,
+    high: null,
+    close: null,
+    ma20: null,
+    dema9: null,
+    rsi: null,
+    vwap: null,
+    volume: null,
+    signal: "CZEKAJ",
+    comment: ""
   };
 }
 
-/* ============================================================
-   TRYB NA JUTRO 2.0 (D1/H1, Styl B)
-   ============================================================ */
-let tomorrowRec = null;
-window._lastTomorrowData = null;
+// ====== NA JUTRO BACKEND ======
 
-document.getElementById("startTomorrow")?.addEventListener("click", () => {
-  tomorrowRec = new webkitSpeechRecognition();
-  tomorrowRec.lang = "pl-PL";
-  tomorrowRec.interimResults = true;
-  tomorrowRec.continuous = false;
+async function sendToTomorrowBackend(text) {
+  try {
+    const res = await fetch(TOMORROW_BACKEND, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, mode: "tomorrow" })
+    });
 
-  tomorrowRec.onresult = async (e) => {
-    let text = e.results[e.results.length - 1][0].transcript.trim();
-    text = fixSpeech(text);
+    const data = await res.json();
+    // data: { ticker, d1, h1, final, signal, widełki, tp, good_for_tomorrow, comment }
+    mergeTomorrowData(data);
+    updateTomorrowPreview();
+    maybeAskAddToTomorrow();
+  } catch (e) {
+    console.error("TOMORROW backend error:", e);
+  }
+}
 
-    document.getElementById("tomorrowRaw").innerText = text;
+function mergeTomorrowData(data) {
+  if (!activeTicker || activeTicker === "UNKNOWN") {
+    activeTicker = data.ticker;
+  }
 
-    try {
-      const res = await fetch(TOMORROW_BACKEND, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text })
-      });
-
-      const data = await res.json();
-      window._lastTomorrowData = data;
-
-      document.getElementById("tomorrowResult").innerText = JSON.stringify(data, null, 2);
-
-      if (data.good_for_tomorrow) {
-        document.getElementById("tomorrowDecision").style.display = "block";
-      } else {
-        document.getElementById("tomorrowDecision").style.display = "none";
+  if (data.d1) {
+    for (const key of Object.keys(activeD1)) {
+      if (data.d1[key] != null) {
+        activeD1[key] = data.d1[key];
       }
-
-    } catch (err) {
-      document.getElementById("tomorrowResult").innerText = "Błąd backendu: " + err;
     }
+  }
+
+  if (data.h1) {
+    for (const key of Object.keys(activeH1)) {
+      if (data.h1[key] != null) {
+        activeH1[key] = data.h1[key];
+      }
+    }
+  }
+}
+
+function updateTomorrowPreview() {
+  const tomorrowResultDiv = document.getElementById("tomorrowResult");
+  if (!tomorrowResultDiv) return;
+
+  tomorrowResultDiv.textContent = JSON.stringify({
+    ticker: activeTicker,
+    d1: activeD1,
+    h1: activeH1
+  }, null, 2);
+}
+
+function tomorrowDataIsComplete() {
+  // minimalny zestaw dla NA JUTRO
+  return (
+    activeTicker &&
+    (activeD1.close != null || activeD1.open != null) &&
+    activeD1.low != null &&
+    activeD1.high != null &&
+    activeD1.rsi != null
+  );
+}
+
+function maybeAskAddToTomorrow() {
+  if (!tomorrowDataIsComplete()) return;
+
+  const ok = confirm(`Dodać ${activeTicker} do NA JUTRO?`);
+  if (ok) {
+    addTomorrowRowToTable();
+    resetTomorrowContext();
+  }
+}
+
+function addTomorrowRowToTable() {
+  const table = document.getElementById("tomorrowTableBody");
+  if (!table) return;
+
+  const tr = document.createElement("tr");
+
+  function td(text) {
+    const cell = document.createElement("td");
+    cell.textContent = text;
+    return cell;
+  }
+
+  tr.appendChild(td(activeTicker || "???"));
+  tr.appendChild(td("D1/H1"));
+  tr.appendChild(td(activeD1.open ?? ""));
+  tr.appendChild(td(activeD1.low ?? ""));
+  tr.appendChild(td(activeD1.high ?? ""));
+  tr.appendChild(td(activeD1.close ?? ""));
+  tr.appendChild(td(activeD1.ma20 ?? ""));
+  tr.appendChild(td(activeD1.dema9 ?? ""));
+  tr.appendChild(td(activeD1.rsi ?? ""));
+  tr.appendChild(td(activeD1.volume ?? ""));
+  // możesz dodać kolumny: TAK/NIE, TP, widełki itd.
+
+  table.appendChild(tr);
+}
+
+function resetTomorrowContext() {
+  activeTicker = null;
+  activeD1 = {
+    open: null,
+    low: null,
+    high: null,
+    close: null,
+    ma20: null,
+    dema9: null,
+    rsi: null,
+    vwap: null,
+    volume: null
   };
+  activeH1 = {
+    open: null,
+    low: null,
+    high: null,
+    close: null,
+    ma20: null,
+    dema9: null,
+    rsi: null,
+    vwap: null,
+    volume: null
+  };
+}
 
-  tomorrowRec.start();
-});
+// ====== PRZYCISKI / TRYBY ======
 
-document.getElementById("stopTomorrow")?.addEventListener("click", () => {
-  tomorrowRec?.stop();
-});
+document.addEventListener("DOMContentLoaded", () => {
+  initRecognition();
 
-document.getElementById("tomorrowYes")?.addEventListener("click", () => {
-  const d = window._lastTomorrowData;
-  if (!d || !d.final) return;
+  const startBtn = document.getElementById("startBtn");
+  const stopBtn = document.getElementById("stopBtn");
+  const liveBtn = document.getElementById("liveBtn");
+  const tomorrowBtn = document.getElementById("tomorrowBtn");
 
-  const f = d.final;
-  const tbody = document.querySelector("#voiceTable tbody");
-  const r = tbody.insertRow(-1);
+  if (startBtn) startBtn.onclick = startMic;
+  if (stopBtn) stopBtn.onclick = stopMic;
 
-  r.dataset.ticker = d.ticker;
-  r.dataset.comment = d.comment || "Dobry na jutro (D1/H1 + VWAP).";
+  if (liveBtn) {
+    liveBtn.onclick = () => {
+      activeMode = "live";
+    };
+  }
 
-  r.insertCell(0).innerText = d.ticker || "";
-  r.insertCell(1).innerText = f.interval || "D1/H1";
-  r.insertCell(2).innerText = "--:--";
-
-  r.insertCell(3).innerText = f.open ?? "";
-  r.insertCell(4).innerText = f.low ?? "";
-  r.insertCell(5).innerText = f.high ?? "";
-  r.insertCell(6).innerText = f.close ?? "";
-
-  r.insertCell(7).innerText = f.ma20 ?? "";
-  r.insertCell(8).innerText = f.dema9 ?? "";
-  r.insertCell(9).innerText = f.rsi ?? "";
-  r.insertCell(10).innerText = f.volume ?? "";
-
-  r.insertCell(11).innerText = d.signal || "CZEKAJ";
-  r.insertCell(12).innerText = d.widełki || "";
-  r.insertCell(13).innerText = d.tp || "";
-
-  r.insertCell(14).innerHTML = `<button onclick="openPopup(this)">📊</button>`;
-  r.insertCell(15).innerHTML = `<button onclick="deleteRow(this)">🗑</button>`;
-
-  saveTable();
-  document.getElementById("tomorrowDecision").style.display = "none";
-});
-
-document.getElementById("tomorrowNo")?.addEventListener("click", () => {
-  document.getElementById("tomorrowDecision").style.display = "none";
-});
-
-/* ============================================================
-   PRZEŁĄCZANIE ZAKŁADEK
-   ============================================================ */
-document.getElementById("tabLive")?.addEventListener("click", () => {
-  document.getElementById("liveView").style.display = "block";
-  document.getElementById("tomorrowView").style.display = "none";
-});
-
-document.getElementById("tabTomorrow")?.addEventListener("click", () => {
-  document.getElementById("liveView").style.display = "none";
-  document.getElementById("tomorrowView").style.display = "block";
+  if (tomorrowBtn) {
+    tomorrowBtn.onclick = () => {
+      activeMode = "tomorrow";
+    };
+  }
 });
