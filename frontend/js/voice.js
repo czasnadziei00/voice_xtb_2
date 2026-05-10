@@ -98,7 +98,7 @@ O: ${d.open}
 L: ${d.low}
 H: ${d.high}
 C: ${d.close}
-ENTRY: ${d.entry}     // 🔥 NOWE
+ENTRY: ${d.entry}
 
 ────────────────────────
 📘 ŚREDNIE
