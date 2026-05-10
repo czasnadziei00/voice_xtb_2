@@ -2,8 +2,8 @@
    TURBO MOBILE 6.0+ — voice.js
    ============================================================ */
 
-const LIVE_BACKEND = "https://twoj-backend.onrender.com/voice-parse";
-const TOMORROW_BACKEND = "https://twoj-backend.onrender.com/parse";
+const LIVE_BACKEND = "https://voice-xtb.onrender.com/voice-parse";
+const TOMORROW_BACKEND = "https://voice-xtb.onrender.com/parse";
 
 let recognition = null;
 
