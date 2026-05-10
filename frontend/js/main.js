@@ -1,140 +1,209 @@
-// ===============================
-// MAIN.JS 6.4 — OBSŁUGA UI + TABS
-// ===============================
+// =========================
+//  BACKEND 6.5 PRO
+// =========================
+const backend = "https://voice-xtb.onrender.com/voice-parse";
 
-// DOM ELEMENTY
-const liveView = document.getElementById("liveView");
-const tomorrowView = document.getElementById("tomorrowView");
-
-const liveBtn = document.getElementById("liveBtn");
-const tomorrowBtn = document.getElementById("tomorrowBtn");
-
-const startBtn = document.getElementById("startBtn");
-const stopBtn = document.getElementById("stopBtn");
-
-const startTomorrow = document.getElementById("startTomorrow");
-const stopTomorrow = document.getElementById("stopTomorrow");
-
-const resetBtn = document.getElementById("resetBtn");
+let lastTicker = null;
 
 
-// ===============================
-// PRZEŁĄCZANIE ZAKŁADEK
-// ===============================
-
-if (liveBtn) {
-  liveBtn.onclick = () => {
-    liveView.style.display = "block";
-    tomorrowView.style.display = "none";
-    activeMode = "live";
-  };
-}
-
-if (tomorrowBtn) {
-  tomorrowBtn.onclick = () => {
-    liveView.style.display = "none";
-    tomorrowView.style.display = "block";
-    activeMode = "tomorrow";
-  };
+// =========================
+//  KOLORY SYGNAŁÓW
+// =========================
+function colorForSignal(signal) {
+  if (signal === "BUY") return "#00c853";
+  if (signal === "SELL") return "#d50000";
+  return "#616161";
 }
 
 
-// ===============================
-// RESET TABELI LIVE
-// ===============================
+// =========================
+//  WIDEŁKI 20–35%
+// =========================
+function calcWidełki(d) {
+  const low = parseFloat(d.low);
+  const high = parseFloat(d.high);
+  const signal = d.signal;
 
-if (resetBtn) {
-  resetBtn.onclick = () => {
-    const tbody = document.getElementById("liveTableBody");
-    if (tbody) tbody.innerHTML = "";
-    activeTicker = null;
-    activeInterval = null;
-    activeTime = null;
+  if (isNaN(low) || isNaN(high)) return "";
 
-    activeLiveRow = {
-      open: null,
-      low: null,
-      high: null,
-      close: null,
-      ma20: null,
-      dema9: null,
-      rsi: null,
-      vwap: null,
-      volume: null,
-      signal: "CZEKAJ",
-      comment: ""
-    };
+  const range = high - low;
 
-    document.getElementById("recognizedText").textContent = "";
-    document.getElementById("liveResult").textContent = "";
-    document.getElementById("comment").textContent = "";
-  };
-}
+  let dol, gor;
 
-
-// ===============================
-// START/STOP mikrofonu (LIVE)
-// ===============================
-
-if (startBtn) {
-  startBtn.onclick = () => {
-    activeMode = "live";
-    startMic();
-  };
-}
-
-if (stopBtn) {
-  stopBtn.onclick = () => {
-    stopMic();
-  };
-}
-
-
-// ===============================
-// START/STOP mikrofonu (NA JUTRO)
-// ===============================
-
-if (startTomorrow) {
-  startTomorrow.onclick = () => {
-    activeMode = "tomorrow";
-    startMic();
-  };
-}
-
-if (stopTomorrow) {
-  stopTomorrow.onclick = () => {
-    stopMic();
-  };
-}
-
-
-// ===============================
-// USUWANIE WIERSZA Z TABELI (LIVE + NA JUTRO)
-// ===============================
-
-document.addEventListener("click", function (e) {
-  if (e.target.classList.contains("delete-row")) {
-    const row = e.target.closest("tr");
-    if (row) row.remove();
+  if (signal === "SELL") {
+    dol = high - range * 0.35;
+    gor = high - range * 0.20;
+  } else {
+    dol = low + range * 0.20;
+    gor = low + range * 0.35;
   }
-});
+
+  return `${dol.toFixed(2)} – ${gor.toFixed(2)}`;
+}
 
 
-// ===============================
-// POPUP 4.5+ (zamknięcie)
-// ===============================
+// =========================
+//  TP1 / TP2 / TP3
+// =========================
+function calcTP(d) {
+  const low = parseFloat(d.low);
+  const high = parseFloat(d.high);
+  const close = parseFloat(d.close);
+  const signal = d.signal;
 
+  if (isNaN(low) || isNaN(high) || isNaN(close))
+    return { tp1: "", tp2: "", tp3: "" };
+
+  const range = Math.abs(high - low);
+
+  let tp1, tp2, tp3;
+
+  if (signal === "SELL") {
+    tp1 = close - range * 0.5;
+    tp2 = close - range * 1.0;
+    tp3 = close - range * 1.5;
+  } else {
+    tp1 = close + range * 0.5;
+    tp2 = close + range * 1.0;
+    tp3 = close + range * 1.5;
+  }
+
+  return {
+    tp1: tp1.toFixed(2),
+    tp2: tp2.toFixed(2),
+    tp3: tp3.toFixed(2)
+  };
+}
+
+
+// =========================
+//  TWORZENIE WIERSZA 6.5
+// =========================
+function createRow(data) {
+  const tbody = document.querySelector("#voiceTable tbody");
+  const tr = document.createElement("tr");
+  tr.dataset.ticker = data.ticker;
+
+  const visibleCols = [
+    "ticker",
+    "interval",
+    "time",
+    "signal",
+    "widełki",
+    "tp"
+  ];
+
+  visibleCols.forEach(key => {
+    const td = document.createElement("td");
+    td.classList.add(key);
+    td.textContent = data[key] ?? "";
+    tr.appendChild(td);
+  });
+
+  const tdIcon = document.createElement("td");
+  tdIcon.classList.add("popupIcon");
+  tdIcon.textContent = "📊";
+  tdIcon.style.cursor = "pointer";
+  tr.appendChild(tdIcon);
+
+  tbody.appendChild(tr);
+  return tr;
+}
+
+
+// =========================
+//  AKTUALIZACJA WIERSZA 6.5
+// =========================
+function updateRow(tr, data) {
+  ["ticker","interval","time","signal"].forEach(key => {
+    const td = tr.querySelector("." + key);
+    if (td && data[key] != null) td.textContent = data[key];
+  });
+
+  const w = calcWidełki(data);
+  const wTd = tr.querySelector(".widełki");
+  if (wTd) wTd.textContent = w;
+
+  const tp = calcTP(data);
+  const tpTd = tr.querySelector(".tp");
+  if (tpTd) tpTd.textContent = `${tp.tp1} / ${tp.tp2} / ${tp.tp3}`;
+
+  if (data.signal) {
+    tr.style.backgroundColor = colorForSignal(data.signal);
+    tr.style.color = "white";
+  }
+
+  tr.dataset.signal = data.signal;
+}
+
+
+// =========================
+//  STATUS BUFORA
+// =========================
+function updateStatus(data) {
+  const required = [
+    "ticker","interval","time",
+    "open","high","low","close",
+    "ma20","dema9","rsi","volume"
+  ];
+
+  const missing = required.filter(k => data[k] === null);
+  document.getElementById("status").textContent =
+    missing.length === 0 ? "Komplet danych — zapisano." : "Brakuje: " + missing.join(", ");
+}
+
+
+// =========================
+//  GŁÓWNA FUNKCJA 6.5
+// =========================
+function handleParsedData(data) {
+  document.getElementById("parsed").textContent =
+    JSON.stringify(data, null, 2);
+
+  updateStatus(data);
+  document.getElementById("comment").textContent = data.comment;
+
+  if (!data.ticker) return;
+
+  const tbody = document.querySelector("#voiceTable tbody");
+
+  if (data.ticker !== lastTicker) {
+    lastTicker = data.ticker;
+    const tr = createRow(data);
+    updateRow(tr, data);
+    return;
+  }
+
+  const rows = tbody.querySelectorAll("tr");
+  if (rows.length > 0) {
+    const tr = rows[rows.length - 1];
+    updateRow(tr, data);
+  }
+}
+
+
+// =========================
+//  POPUP 4.5+
+// =========================
 const popup = document.getElementById("popup45");
 const popupClose = document.getElementById("popupClose");
+const popupData = document.getElementById("popupData");
 
-if (popupClose) {
-  popupClose.onclick = () => {
-    popup.style.display = "none";
-  };
-}
+popupClose.onclick = () => popup.style.display = "none";
+window.onclick = (e) => { if (e.target === popup) popup.style.display = "none"; };
 
-window.onclick = function (event) {
-  if (event.target === popup) {
-    popup.style.display = "none";
-  }
-};
+document.querySelector("#voiceTable tbody").addEventListener("click", (e) => {
+  if (!e.target.classList.contains("popupIcon")) return;
+
+  const tr = e.target.closest("tr");
+  const d = {};
+
+  tr.querySelectorAll("td").forEach(td => {
+    if (td.classList.length > 0 && td.classList[0] !== "popupIcon") {
+      d[td.classList[0]] = td.textContent;
+    }
+  });
+
+  popupData.textContent = analiza45PRO(d);
+  popup.style.display = "block";
+});
