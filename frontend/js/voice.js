@@ -1,6 +1,6 @@
 /* ============================================================
-   TURBO MOBILE 6.3 — voice.js FULL
-   Najlepsza jakość PL + filtry OLHC/DEMA + auto-restart
+   TURBO MOBILE 6.4 — voice.js FULL
+   LIVE + NA JUTRO 2.0 (D1/H1, Styl B)
    ============================================================ */
 
 const LIVE_BACKEND = "https://voice-xtb.onrender.com/voice-parse";
@@ -9,7 +9,7 @@ const TOMORROW_BACKEND = "https://voice-xtb.onrender.com/parse";
 let recognition = null;
 
 /* ============================================================
-   🔥 FILTR MOWY 6.3 — poprawia błędy Chrome PL
+   🔥 FILTR MOWY 6.4 — poprawia błędy Chrome PL
    ============================================================ */
 function fixSpeech(text) {
   let t = text.toLowerCase();
@@ -35,7 +35,7 @@ function fixSpeech(text) {
   t = t.replace(/\bhaj\b/g, "high");
 
   // --- OPEN ---
-  t = t.replace(/\bopen\b/g, "o");
+  t = t.replace(/\bopen\b/g, "open");
 
   // --- CLOSE ---
   t = t.replace(/\bklous\b/g, "close");
@@ -61,7 +61,7 @@ function fixSpeech(text) {
 }
 
 /* ============================================================
-   MIKROFON LIVE — WERSJA 6.3
+   MIKROFON LIVE — WERSJA 6.4
    ============================================================ */
 if (!("webkitSpeechRecognition" in window)) {
   alert("Brak wsparcia rozpoznawania mowy.");
@@ -117,10 +117,10 @@ if (!("webkitSpeechRecognition" in window)) {
 }
 
 /* ============================================================
-   TRYB NA JUTRO
+   TRYB NA JUTRO 2.0 (D1/H1, Styl B)
    ============================================================ */
 let tomorrowRec = null;
-let tomorrowTicker = "";
+window._lastTomorrowData = null;
 
 document.getElementById("startTomorrow")?.addEventListener("click", () => {
   tomorrowRec = new webkitSpeechRecognition();
@@ -142,9 +142,9 @@ document.getElementById("startTomorrow")?.addEventListener("click", () => {
       });
 
       const data = await res.json();
-      document.getElementById("tomorrowResult").innerText = JSON.stringify(data, null, 2);
+      window._lastTomorrowData = data;
 
-      tomorrowTicker = data.ticker || "";
+      document.getElementById("tomorrowResult").innerText = JSON.stringify(data, null, 2);
 
       if (data.good_for_tomorrow) {
         document.getElementById("tomorrowDecision").style.display = "block";
@@ -165,28 +165,34 @@ document.getElementById("stopTomorrow")?.addEventListener("click", () => {
 });
 
 document.getElementById("tomorrowYes")?.addEventListener("click", () => {
-  if (!tomorrowTicker) return;
+  const d = window._lastTomorrowData;
+  if (!d || !d.final) return;
 
+  const f = d.final;
   const tbody = document.querySelector("#voiceTable tbody");
   const r = tbody.insertRow(-1);
 
-  r.dataset.ticker = tomorrowTicker;
-  r.dataset.comment = "Dobry na jutro (D1/H1 + VWAP).";
+  r.dataset.ticker = d.ticker;
+  r.dataset.comment = d.comment || "Dobry na jutro (D1/H1 + VWAP).";
 
-  r.insertCell(0).innerText = tomorrowTicker;
-  r.insertCell(1).innerText = "D1/H1";
+  r.insertCell(0).innerText = d.ticker || "";
+  r.insertCell(1).innerText = f.interval || "D1/H1";
   r.insertCell(2).innerText = "--:--";
-  r.insertCell(3).innerText = "";
-  r.insertCell(4).innerText = "";
-  r.insertCell(5).innerText = "";
-  r.insertCell(6).innerText = "0";
-  r.insertCell(7).innerText = "";
-  r.insertCell(8).innerText = "";
-  r.insertCell(9).innerText = "";
-  r.insertCell(10).innerText = "";
-  r.insertCell(11).innerText = "CZEKAJ";
-  r.insertCell(12).innerText = "";
-  r.insertCell(13).innerText = "";
+
+  r.insertCell(3).innerText = f.open ?? "";
+  r.insertCell(4).innerText = f.low ?? "";
+  r.insertCell(5).innerText = f.high ?? "";
+  r.insertCell(6).innerText = f.close ?? "";
+
+  r.insertCell(7).innerText = f.ma20 ?? "";
+  r.insertCell(8).innerText = f.dema9 ?? "";
+  r.insertCell(9).innerText = f.rsi ?? "";
+  r.insertCell(10).innerText = f.volume ?? "";
+
+  r.insertCell(11).innerText = d.signal || "CZEKAJ";
+  r.insertCell(12).innerText = d.widełki || "";
+  r.insertCell(13).innerText = d.tp || "";
+
   r.insertCell(14).innerHTML = `<button onclick="openPopup(this)">📊</button>`;
   r.insertCell(15).innerHTML = `<button onclick="deleteRow(this)">🗑</button>`;
 
