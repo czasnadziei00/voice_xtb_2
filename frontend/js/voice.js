@@ -14,6 +14,7 @@ function initRecognition() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
         alert("Twoja przeglądarka nie wspiera rozpoznawania mowy.");
+        console.log("SpeechRecognition API niedostępne");
         return null;
     }
 
@@ -22,9 +23,14 @@ function initRecognition() {
     rec.continuous = true;
     rec.interimResults = false;
 
+    rec.onstart = () => {
+        console.log("Mikrofon wystartował (onstart)");
+    };
+
     rec.onresult = (event) => {
         const last = event.results[event.results.length - 1];
         const text = last[0].transcript.trim();
+        console.log("Rozpoznano:", text);
         handleRecognizedText(text);
     };
 
@@ -32,8 +38,20 @@ function initRecognition() {
         console.error("Speech error:", e);
     };
 
+    // 🔥 KLUCZOWE NA ANDROIDZIE: auto‑restart
     rec.onend = () => {
-        recognizing = false;
+        console.log("onend wywołane, recognizing =", recognizing);
+        if (recognizing) {
+            // Android często ubija sesję po chwili – restartujemy
+            try {
+                console.log("Próba restartu mikrofonu…");
+                rec.start();
+            } catch (e) {
+                console.warn("Błąd przy restarcie:", e);
+            }
+        } else {
+            console.log("Mikrofon zatrzymany ręcznie (stopMic)");
+        }
     };
 
     return rec;
@@ -43,20 +61,37 @@ function initRecognition() {
 //  START / STOP MIKROFONU
 // ----------------------------------------
 function startMic() {
+    console.log("startMic() wywołane");
     if (!recognition) {
         recognition = initRecognition();
-        if (!recognition) return;
+        if (!recognition) {
+            console.log("Brak recognition po initRecognition");
+            return;
+        }
     }
     if (!recognizing) {
-        recognition.start();
-        recognizing = true;
+        try {
+            recognition.start();
+            recognizing = true;
+            console.log("Wywołano recognition.start()");
+        } catch (e) {
+            console.error("Błąd przy start():", e);
+        }
+    } else {
+        console.log("Mikrofon już działa");
     }
 }
 
 function stopMic() {
+    console.log("stopMic() wywołane");
     if (recognition && recognizing) {
-        recognition.stop();
-        recognizing = false;
+        recognizing = false; // ważne: ustaw przed stop, żeby onend wiedział, że to ręczne
+        try {
+            recognition.stop();
+            console.log("Wywołano recognition.stop()");
+        } catch (e) {
+            console.error("Błąd przy stop():", e);
+        }
     }
 }
 
@@ -71,6 +106,7 @@ function handleRecognizedText(text) {
     // jeśli kliknięto kolumnę Cena → wymuszamy kontekst "after"
     if (awaitingAfterPrice) {
         sendText = "after " + text;
+        console.log("W trybie after_price, wysyłam:", sendText);
     }
 
     fetch("/voice-parse", {
@@ -80,6 +116,7 @@ function handleRecognizedText(text) {
     })
     .then(r => r.json())
     .then(data => {
+        console.log("Odpowiedź backendu:", data);
         document.getElementById("parsed").textContent = JSON.stringify(data, null, 2);
 
         if (data.comment) {
