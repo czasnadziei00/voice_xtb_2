@@ -260,7 +260,7 @@ function handleRecognizedText(text) {
     // ----------------------------------------
     // BACKEND
     // ----------------------------------------
-    fetch("/voice-parse", {
+    fetch("https://voice-xtb.onrender.com/voice-parse", {
 
         method: "POST",
 
