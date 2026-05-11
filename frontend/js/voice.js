@@ -1,168 +1,163 @@
-// =========================
-//  ROZPOZNAWANIE MOWY 6.5 PRO
-// =========================
+let recognition = null;
+let recognizing = false;
 
-let recognition;
-let isListening = false;
+// tryb oczekiwania na cenę po godzinie
+let awaitingAfterPrice = null;
 
-if ("webkitSpeechRecognition" in window) {
-    recognition = new webkitSpeechRecognition();
-} else if ("SpeechRecognition" in window) {
-    recognition = new SpeechRecognition();
+// pamięć wierszy (frontend)
+let rows = {}; // key: "TICKER|INTERVAL" -> state
+
+// ----------------------------------------
+//  INIT ROZPOZNAWANIA MOWY
+// ----------------------------------------
+function initRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        alert("Twoja przeglądarka nie wspiera rozpoznawania mowy.");
+        return null;
+    }
+
+    const rec = new SpeechRecognition();
+    rec.lang = "pl-PL";
+    rec.continuous = true;
+    rec.interimResults = false;
+
+    rec.onresult = (event) => {
+        const last = event.results[event.results.length - 1];
+        const text = last[0].transcript.trim();
+        handleRecognizedText(text);
+    };
+
+    rec.onerror = (e) => {
+        console.error("Speech error:", e);
+    };
+
+    rec.onend = () => {
+        recognizing = false;
+    };
+
+    return rec;
 }
 
-if (recognition) {
-    recognition.lang = "pl-PL";
-    recognition.continuous = true;
-    recognition.interimResults = false;
+// ----------------------------------------
+//  START / STOP MIKROFONU
+// ----------------------------------------
+function startMic() {
+    if (!recognition) {
+        recognition = initRecognition();
+        if (!recognition) return;
+    }
+    if (!recognizing) {
+        recognition.start();
+        recognizing = true;
+    }
 }
 
+function stopMic() {
+    if (recognition && recognizing) {
+        recognition.stop();
+        recognizing = false;
+    }
+}
 
-// =========================
-//  GŁÓWNA OBSŁUGA MOWY
-// =========================
-recognition.onresult = async (event) => {
-    const text = event.results[event.results.length - 1][0].transcript;
-    document.getElementById("raw").textContent = text;
+// ----------------------------------------
+//  OBSŁUGA ROZPOZNANEGO TEKSTU
+// ----------------------------------------
+function handleRecognizedText(text) {
+    document.getElementById("recognized").textContent = text;
 
-    try {
-        const res = await fetch(backend, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text })
-        });
+    let sendText = text;
 
-        if (!res.ok) {
-            console.warn("Backend HTTP error:", res.status, res.statusText);
-            return;
+    // jeśli kliknięto kolumnę Cena → wymuszamy kontekst "after"
+    if (awaitingAfterPrice) {
+        sendText = "after " + text;
+    }
+
+    fetch("/voice-parse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: sendText })
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById("parsed").textContent = JSON.stringify(data, null, 2);
+
+        if (data.comment) {
+            document.getElementById("comment").textContent = data.comment;
         }
 
-        let data;
-        try {
-            data = await res.json();
-        } catch (e) {
-            console.error("Błąd JSON (pusta odpowiedź backendu):", e);
-            return;
+        if (data.ticker && data.interval) {
+            const key = data.ticker + "|" + data.interval;
+            rows[key] = data;
+            renderTable();
         }
 
-        handleParsedData(data);
-
-    } catch (e) {
-        console.error("LIVE backend error:", e);
-    }
-};
-
-
-// =========================
-//  BŁĘDY MIKROFONU
-// =========================
-recognition.onerror = (event) => {
-    console.warn("Błąd mikrofonu:", event.error);
-};
-
-
-// =========================
-//  AUTO-RESTART
-// =========================
-recognition.onend = () => {
-    if (isListening) recognition.start();
-};
-
-
-// =========================
-//  START / STOP
-// =========================
-document.getElementById("micStart").onclick = () => {
-    isListening = true;
-    recognition.start();
-};
-
-document.getElementById("micStop").onclick = () => {
-    isListening = false;
-    recognition.stop();
-};
-
-
-// =========================
-//  ANALIZA 4.5+ (POPUP)
-// =========================
-function analiza45PRO(d) {
-    return `
-📌 TICKER: ${d.ticker}
-⏱ INTERWAŁ: ${d.interval}
-🕒 CZAS: ${d.time}
-
-────────────────────────
-📊 ŚWIECA
-O: ${d.open}
-L: ${d.low}
-H: ${d.high}
-C: ${d.close}
-ENTRY: ${d.entry}
-
-────────────────────────
-📘 ŚREDNIE
-MA20: ${d.ma20}
-DEMA9: ${d.dema9}
-RSI: ${d.rsi}
-Wolumen: ${d.volume}
-
-────────────────────────
-🔥 TREND / MOMENTUM / SIŁA
-${trendMomentumSil(d)}
-
-────────────────────────
-🎯 WIDEŁKI (20–35%)
-${calcWidełki(d)}
-
-🎯 TP1/TP2/TP3
-${calcTP(d).tp1}
-${calcTP(d).tp2}
-${calcTP(d).tp3}
-
-────────────────────────
-🎬 SYGNAŁ
-${d.signal ?? "BRAK"}
-
-💬 KOMENTARZ
-${d.comment}
-`;
+        // reset trybu ceny po godzinie
+        awaitingAfterPrice = null;
+    })
+    .catch(err => console.error(err));
 }
 
+// ----------------------------------------
+//  RENDEROWANIE TABELI
+// ----------------------------------------
+function renderTable() {
+    const tbody = document.getElementById("voiceTableBody");
+    tbody.innerHTML = "";
 
-// =========================
-//  TREND / MOMENTUM / SIŁA
-// =========================
-function trendMomentumSil(d) {
-    const close = parseFloat(d.close);
-    const ma20 = parseFloat(d.ma20);
-    const dema9 = parseFloat(d.dema9);
-    const rsi = parseFloat(d.rsi);
+    Object.keys(rows).forEach(key => {
+        const row = rows[key];
+        const tr = document.createElement("tr");
 
-    let trend = "";
-    let momentum = "";
-    let sila = "";
+        // Ticker
+        const tdTicker = document.createElement("td");
+        tdTicker.textContent = row.ticker || "";
+        tr.appendChild(tdTicker);
 
-    if (!isNaN(close) && !isNaN(ma20) && !isNaN(dema9)) {
-        if (close > ma20 && close > dema9) trend = "Trend: WZROSTOWY 📈";
-        else if (close < ma20 && close < dema9) trend = "Trend: SPADKOWY 📉";
-        else trend = "Trend: NEUTRALNY ➖";
+        // Interwał
+        const tdInterval = document.createElement("td");
+        tdInterval.textContent = row.interval || "";
+        tr.appendChild(tdInterval);
 
-        if (dema9 > ma20) momentum = "Momentum: SILNE 📗";
-        else if (dema9 < ma20) momentum = "Momentum: SŁABE 📕";
-        else momentum = "Momentum: NEUTRALNE ➖";
-    } else {
-        trend = "Trend: brak danych";
-        momentum = "Momentum: brak danych";
-    }
+        // Godzina
+        const tdTime = document.createElement("td");
+        tdTime.textContent = row.time || "";
+        tr.appendChild(tdTime);
 
-    if (!isNaN(rsi)) {
-        if (rsi > 60) sila = "Siła: PRZEWAGA BYKÓW 🟢";
-        else if (rsi < 40) sila = "Siła: PRZEWAGA NIEDŹWIEDZI 🔴";
-        else sila = "Siła: RÓWNOWAGA ⚪";
-    } else {
-        sila = "Siła: brak danych";
-    }
+        // Cena (klikana)
+        const tdAfter = document.createElement("td");
+        tdAfter.className = "afterprice";
+        tdAfter.textContent = row.after_price != null ? row.after_price : "";
+        tdAfter.onclick = () => startAfterPrice(row.ticker, row.interval);
+        tr.appendChild(tdAfter);
 
-    return `${trend}\n${momentum}\n${sila}`;
+        // Entry
+        const tdEntry = document.createElement("td");
+        tdEntry.textContent = row.entry != null ? row.entry : "";
+        tr.appendChild(tdEntry);
+
+        // Sygnał
+        const tdSignal = document.createElement("td");
+        tdSignal.textContent = row.signal || "";
+        tr.appendChild(tdSignal);
+
+        // Widełki (LOW – HIGH)
+        const tdRange = document.createElement("td");
+        if (row.low != null && row.high != null) {
+            tdRange.textContent = row.low + " – " + row.high;
+        } else {
+            tdRange.textContent = "";
+        }
+        tr.appendChild(tdRange);
+
+        tbody.appendChild(tr);
+    });
+}
+
+// ----------------------------------------
+//  TRYB WPROWADZANIA CENY PO GODZINIE
+// ----------------------------------------
+function startAfterPrice(ticker, interval) {
+    awaitingAfterPrice = { ticker, interval };
+    console.log("Oczekuję na cenę po godzinie dla:", ticker, interval);
 }
