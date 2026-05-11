@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>VOICE XTB 7.3 PRO</title>
+    <title>VOICE XTB 7.8 PRO</title>
 
     <style>
         body { font-family: Arial, sans-serif; margin: 10px; }
@@ -15,7 +15,7 @@
         #recognized { font-weight: bold; color: #333; }
         #comment { margin-top: 10px; padding: 8px; background: #f3f3f3; }
 
-        /* Kolory sygnałów (na cały wiersz) */
+        /* Kolory sygnałów */
         .signal-buy { background-color: #00cc44 !important; color: white; }
         .signal-prawie-buy { background-color: #66ff99 !important; }
         .signal-sell { background-color: #ff3333 !important; color: white; }
@@ -24,12 +24,38 @@
         .signal-prawie-reset { background-color: #fff799 !important; }
         .signal-czekaj { background-color: #e0e0e0 !important; }
         .signal-entry { background-color: #ffb84d !important; color: black; }
+
+        /* Popup */
+        .popup {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            left: 0; top: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+        }
+        .popup-content {
+            background: #1e1e1e;
+            color: #fff;
+            width: 480px;
+            margin: 80px auto;
+            padding: 20px;
+            border-radius: 12px;
+            font-size: 15px;
+            line-height: 1.4;
+            border: 1px solid #444;
+        }
+        .close {
+            float: right;
+            font-size: 28px;
+            cursor: pointer;
+        }
     </style>
 </head>
 
 <body>
 
-    <h2>VOICE XTB 7.3 PRO — analiza wielu tickerów</h2>
+    <h2>VOICE XTB 7.8 PRO — analiza wielu tickerów</h2>
 
     <button onclick="startMic()">🎤 START mikrofon</button>
     <button onclick="stopMic()">⛔ STOP mikrofon</button>
@@ -47,19 +73,31 @@
             <tr>
                 <th>Ticker</th>
                 <th>Interwał</th>
-                <th>Godzina</th>
                 <th>Close</th>
                 <th>Entry</th>
                 <th>Sygnał</th>
                 <th>TP3</th>
                 <th>Widełki</th>
+                <th>📊</th>
                 <th>Usuń</th>
             </tr>
         </thead>
         <tbody id="voiceTableBody"></tbody>
     </table>
 
-    <script src="js/voice.js?v=100001"></script>
+    <!-- POPUP -->
+    <div id="popup45" class="popup">
+        <div class="popup-content">
+            <span id="popupClose" class="close">&times;</span>
+            <h2>Analiza 4.5+</h2>
+            <pre id="popupData"></pre>
+
+            <h3>📝 OGÓLNY KOMENTARZ</h3>
+            <pre id="popupGeneral"></pre>
+        </div>
+    </div>
+
+    <script src="js/voice.js?v=100002"></script>
 
 </body>
 </html>
