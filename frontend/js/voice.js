@@ -4,8 +4,11 @@ let recognizing = false;
 // tryb oczekiwania na cenę
 let awaitingPrice = null;
 
-// pamięć wierszy
+// pamięć wierszy (RAM)
 let rows = {}; // key: "TICKER|INTERVAL"
+
+// pamięć trwała (localStorage)
+const STORAGE_KEY = "voice_xtb_71_tabela";
 
 // ----------------------------------------
 // INIT ROZPOZNAWANIA MOWY
@@ -59,7 +62,7 @@ function initRecognition() {
 }
 
 // ----------------------------------------
-// START MIKROFONU
+// START / STOP
 // ----------------------------------------
 function startMic() {
     if (!recognition) recognition = initRecognition();
@@ -71,9 +74,6 @@ function startMic() {
     }
 }
 
-// ----------------------------------------
-// STOP MIKROFONU
-// ----------------------------------------
 function stopMic() {
     recognizing = false;
     if (recognition) {
@@ -89,7 +89,6 @@ function handleRecognizedText(text) {
 
     let sendText = text;
 
-    // tryb ceny → wysyłamy pełny kontekst
     if (awaitingPrice) {
         sendText =
             awaitingPrice.ticker +
@@ -115,6 +114,7 @@ function handleRecognizedText(text) {
             if (data.ticker && data.interval) {
                 const key = data.ticker + "|" + data.interval;
                 rows[key] = data;
+                saveTable();
                 renderTable();
             }
 
@@ -127,7 +127,7 @@ function handleRecognizedText(text) {
 }
 
 // ----------------------------------------
-// PRIORYTET SYGNAŁÓW (SORTOWANIE 7.2 PRO)
+// PRIORYTET SYGNAŁÓW
 // ----------------------------------------
 function signalPriority(sig) {
     if (!sig) return 99;
@@ -135,7 +135,7 @@ function signalPriority(sig) {
 
     if (s === "BUY") return 2;
     if (s === "PRAWIE BUY") return 3;
-    if (s === "CZEKAJ DO") return 4;
+    if (s === "CZEKAJ DO BUY" || s === "CZEKAJ DO SELL") return 4;
     if (s === "CZEKAJ") return 5;
     if (s === "PRAWIE RESET") return 6;
     if (s === "RESET") return 7;
@@ -146,7 +146,7 @@ function signalPriority(sig) {
 }
 
 // ----------------------------------------
-// KOLOROWANIE
+// KOLOROWANIE SYGNAŁÓW
 // ----------------------------------------
 function applySignalColor(row, signal, hasEntry) {
     row.className = "";
@@ -170,7 +170,31 @@ function applySignalColor(row, signal, hasEntry) {
 }
 
 // ----------------------------------------
-// RENDER TABLE (SORTOWANIE 7.2 PRO)
+// PAMIĘĆ TABELI (localStorage)
+// ----------------------------------------
+function saveTable() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
+}
+
+function loadTable() {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    rows = saved;
+    renderTable();
+}
+
+document.addEventListener("DOMContentLoaded", loadTable);
+
+// ----------------------------------------
+// USUWANIE WIERSZA
+// ----------------------------------------
+function deleteRow(key) {
+    delete rows[key];
+    saveTable();
+    renderTable();
+}
+
+// ----------------------------------------
+// RENDEROWANIE TABELI
 // ----------------------------------------
 function renderTable() {
     const tbody = document.getElementById("voiceTableBody");
@@ -179,40 +203,39 @@ function renderTable() {
     const list = Object.values(rows);
 
     list.sort((a, b) => {
-        // 1) ENTRY
         const aEntry = a.entry != null;
         const bEntry = b.entry != null;
 
         if (aEntry && !bEntry) return -1;
         if (!aEntry && bEntry) return 1;
 
-        // 2) sygnał
         const pa = signalPriority(a.signal);
         const pb = signalPriority(b.signal);
 
         if (pa < pb) return -1;
         if (pa > pb) return 1;
 
-        // 3) ticker
         const ta = a.ticker.localeCompare(b.ticker);
         if (ta !== 0) return ta;
 
-        // 4) interwał
         return a.interval.localeCompare(b.interval);
     });
 
     list.forEach(row => {
+        const key = row.ticker + "|" + row.interval;
+
         const tr = document.createElement("tr");
 
         tr.innerHTML = `
-            <td>${row.ticker || ""}</td>
-            <td>${row.interval || ""}</td>
+            <td>${row.ticker}</td>
+            <td>${row.interval}</td>
             <td>${row.time || ""}</td>
             <td class="price" title="Kliknij aby podać cenę">${row.close ?? ""}</td>
             <td>${row.entry ?? ""}</td>
             <td>${row.signal || ""}</td>
             <td>${row.tp3 ?? ""}</td>
             <td>${row.low != null && row.high != null ? row.low + " – " + row.high : ""}</td>
+            <td><button onclick="deleteRow('${key}')">🗑 Usuń</button></td>
         `;
 
         tr.querySelector(".price").onclick = () =>
@@ -233,4 +256,4 @@ function startPrice(ticker, interval) {
         `🎯 Podaj cenę dla ${ticker} ${interval}`;
 }
 
-console.log("VOICE.JS ZAŁADOWANY POPRAWNIE");
+console.log("VOICE.JS ZAŁADOWANY + PAMIĘĆ + USUŃ + KOLORY");
