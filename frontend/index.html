@@ -1,58 +1,56 @@
-<!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="UTF-8">
-  <title>VOICE XTB 6.5 PRO</title>
-  <link rel="stylesheet" href="css/style.css">
+    <meta charset="UTF-8">
+    <title>VOICE XTB 6.8.1 PRO — analiza wielu tickerów</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 10px; }
+        button { margin: 5px; padding: 8px 12px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+        th, td { border: 1px solid #ccc; padding: 4px 6px; text-align: center; }
+        th { background: #eee; }
+        .afterprice { cursor: pointer; background: #fdf7e3; }
+        .status { margin-top: 10px; font-size: 0.9em; color: #555; }
+        #recognized { font-weight: bold; }
+        #comment { margin-top: 10px; padding: 6px; background: #f3f3f3; }
+    </style>
 </head>
 <body>
+    <h2>VOICE XTB 6.8.1 PRO — analiza wielu tickerów</h2>
 
-<h1>VOICE XTB 6.5 PRO — analiza wielu tickerów</h1>
+    <button onclick="startMic()">START mikrofon</button>
+    <button onclick="stopMic()">STOP mikrofon</button>
 
-<button id="micStart">START mikrofon</button>
-<button id="micStop">STOP mikrofon</button>
+    <div class="status">
+        Rozpoznano: <span id="recognized"></span>
+    </div>
 
-<h3>Rozpoznano:</h3>
-<pre id="raw"></pre>
+    <div class="status">
+        Wynik parsowania (LIVE):
+        <pre id="parsed"></pre>
+    </div>
 
-<h3>Wynik parsowania (LIVE 6.5):</h3>
-<pre id="parsed"></pre>
+    <div class="status">
+        Komentarz systemu:
+        <div id="comment"></div>
+    </div>
 
-<h3>Status:</h3>
-<div id="status"></div>
+    <h3>Dane z głosu (LIVE — multi-ticker)</h3>
+    <table id="voiceTable">
+        <thead>
+            <tr>
+                <th>Ticker</th>
+                <th>Interwał</th>
+                <th>Godzina</th>
+                <th>Cena</th>
+                <th>Entry</th>
+                <th>Sygnał</th>
+                <th>Widełki</th>
+            </tr>
+        </thead>
+        <tbody id="voiceTableBody"></tbody>
+    </table>
 
-<h3>Dane z głosu (LIVE — multi‑ticker)</h3>
-<table id="voiceTable">
-  <thead>
-    <tr>
-      <th>Ticker</th>
-      <th>Interwał</th>
-      <th>Godzina</th>
-      <th>Entry</th>
-      <th>Sygnał</th>
-      <th>Widełki</th>
-      <th>TP1/TP2/TP3</th>
-      <th>📊</th>
-      <th>🗑</th>   <!-- NOWE -->
-    </tr>
-  </thead>
-  <tbody></tbody>
-</table>
-
-<h3>Komentarz systemu</h3>
-<div id="comment"></div>
-
-<!-- POPUP 4.5+ -->
-<div id="popup45" class="popup">
-  <div class="popup-content">
-    <span id="popupClose" class="close">&times;</span>
-    <h2>Analiza 4.5+</h2>
-    <pre id="popupData"></pre>
-  </div>
-</div>
-
-<script src="js/main.js"></script>
-<script src="js/voice.js"></script>
-
+    <script src="voice.js"></script>
 </body>
 </html>
