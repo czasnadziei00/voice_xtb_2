@@ -1,5 +1,3 @@
-alert("VOICE.JS DZIAŁA");
-
 let recognition = null;
 let recognizing = false;
 
