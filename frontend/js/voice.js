@@ -8,7 +8,7 @@ let awaitingPrice = null;
 let rows = {}; // key: "TICKER|INTERVAL"
 
 // pamięć trwała (localStorage)
-const STORAGE_KEY = "voice_xtb_71_tabela";
+const STORAGE_KEY = "voice_xtb_74_tabela";
 
 // ----------------------------------------
 // INIT ROZPOZNAWANIA MOWY
@@ -82,13 +82,32 @@ function stopMic() {
 }
 
 // ----------------------------------------
-// OBSŁUGA TEKSTU
+// OBSŁUGA TEKSTU (TRYB PL 7.4)
 // ----------------------------------------
-function handleRecognizedText(text) {
-    document.getElementById("recognized").textContent = text;
+function handleRecognizedText(rawText) {
+    document.getElementById("recognized").textContent = rawText;
 
-    let sendText = text;
+    // MAPOWANIE POLSKICH SŁÓW → ANGIELSKIE KLUCZE / SKRÓTY
+    let text = rawText.toLowerCase();
 
+    // OHLC
+    text = text
+        .replace(/\bwysoka\b/g, " high ")
+        .replace(/\bwysoki\b/g, " high ")
+        .replace(/\bniska\b/g, " low ")
+        .replace(/\bniski\b/g, " low ")
+        .replace(/\bcena\b/g, " close ");
+
+    // ŚREDNIE
+    // "średnia" → ma20
+    text = text.replace(/\bśrednia\b/g, " ma20 ");
+
+    // "wykładnicza" → dema9
+    text = text.replace(/\bwykładnicza\b/g, " dema9 ");
+
+    let sendText = text.trim();
+
+    // tryb ceny → dokładamy kontekst
     if (awaitingPrice) {
         sendText =
             awaitingPrice.ticker +
@@ -256,4 +275,4 @@ function startPrice(ticker, interval) {
         `🎯 Podaj cenę dla ${ticker} ${interval}`;
 }
 
-console.log("VOICE.JS ZAŁADOWANY + PAMIĘĆ + USUŃ + KOLORY");
+console.log("VOICE.JS 7.4 PRO (PL MAP) ZAŁADOWANY");
