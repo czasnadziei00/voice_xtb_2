@@ -38,13 +38,13 @@ function initRecognition() {
         console.error("Speech error:", e);
     };
 
-    // 🔥 KLUCZOWE NA ANDROIDZIE: auto‑restart
+    // 🔥 KLUCZOWE NA ANDROIDZIE — auto‑restart
     rec.onend = () => {
         console.log("onend wywołane, recognizing =", recognizing);
+
         if (recognizing) {
-            // Android często ubija sesję po chwili – restartujemy
+            console.log("Android ubija sesję — restartuję mikrofon…");
             try {
-                console.log("Próba restartu mikrofonu…");
                 rec.start();
             } catch (e) {
                 console.warn("Błąd przy restarcie:", e);
@@ -62,6 +62,7 @@ function initRecognition() {
 // ----------------------------------------
 function startMic() {
     console.log("startMic() wywołane");
+
     if (!recognition) {
         recognition = initRecognition();
         if (!recognition) {
@@ -69,6 +70,7 @@ function startMic() {
             return;
         }
     }
+
     if (!recognizing) {
         try {
             recognition.start();
@@ -84,8 +86,9 @@ function startMic() {
 
 function stopMic() {
     console.log("stopMic() wywołane");
+
     if (recognition && recognizing) {
-        recognizing = false; // ważne: ustaw przed stop, żeby onend wiedział, że to ręczne
+        recognizing = false; // ważne: ustaw przed stop
         try {
             recognition.stop();
             console.log("Wywołano recognition.stop()");
@@ -103,10 +106,9 @@ function handleRecognizedText(text) {
 
     let sendText = text;
 
-    // jeśli kliknięto kolumnę Cena → wymuszamy kontekst "after"
     if (awaitingAfterPrice) {
         sendText = "after " + text;
-        console.log("W trybie after_price, wysyłam:", sendText);
+        console.log("Tryb after_price, wysyłam:", sendText);
     }
 
     fetch("/voice-parse", {
@@ -129,7 +131,6 @@ function handleRecognizedText(text) {
             renderTable();
         }
 
-        // reset trybu ceny po godzinie
         awaitingAfterPrice = null;
     })
     .catch(err => console.error(err));
@@ -146,39 +147,32 @@ function renderTable() {
         const row = rows[key];
         const tr = document.createElement("tr");
 
-        // Ticker
         const tdTicker = document.createElement("td");
         tdTicker.textContent = row.ticker || "";
         tr.appendChild(tdTicker);
 
-        // Interwał
         const tdInterval = document.createElement("td");
         tdInterval.textContent = row.interval || "";
         tr.appendChild(tdInterval);
 
-        // Godzina
         const tdTime = document.createElement("td");
         tdTime.textContent = row.time || "";
         tr.appendChild(tdTime);
 
-        // Cena (klikana)
         const tdAfter = document.createElement("td");
         tdAfter.className = "afterprice";
         tdAfter.textContent = row.after_price != null ? row.after_price : "";
         tdAfter.onclick = () => startAfterPrice(row.ticker, row.interval);
         tr.appendChild(tdAfter);
 
-        // Entry
         const tdEntry = document.createElement("td");
         tdEntry.textContent = row.entry != null ? row.entry : "";
         tr.appendChild(tdEntry);
 
-        // Sygnał
         const tdSignal = document.createElement("td");
         tdSignal.textContent = row.signal || "";
         tr.appendChild(tdSignal);
 
-        // Widełki (LOW – HIGH)
         const tdRange = document.createElement("td");
         if (row.low != null && row.high != null) {
             tdRange.textContent = row.low + " – " + row.high;
