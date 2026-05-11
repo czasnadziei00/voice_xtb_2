@@ -46,8 +46,8 @@ function initRecognition() {
     rec.maxAlternatives = 1;
 
     rec.onstart = () => {
-        document.getElementById("comment").textContent =
-            "🎤 Mikrofon aktywny — tryb AUTO";
+        // 🔥 KLUCZOWA POPRAWKA — zawsze pokazuje aktualny krok
+        sayStep();
     };
 
     rec.onresult = (e) => {
@@ -125,9 +125,11 @@ function handleRecognized(text) {
 
     if (step === "ticker") {
         tempRecord.ticker = text.toUpperCase();
-    } else if (step === "interval") {
+    }
+    else if (step === "interval") {
         tempRecord.interval = text.toUpperCase();
-    } else {
+    }
+    else {
         const num = parseFloat(text.replace(",", "."));
         if (!isNaN(num)) tempRecord[step] = num;
     }
