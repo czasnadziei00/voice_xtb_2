@@ -17,7 +17,6 @@ function initRecognition() {
 
     if (!SpeechRecognition) {
         alert("Twoja przeglądarka nie wspiera rozpoznawania mowy.");
-        console.log("SpeechRecognition API niedostępne");
         return null;
     }
 
@@ -28,7 +27,6 @@ function initRecognition() {
     rec.maxAlternatives = 1;
 
     rec.onstart = () => {
-        console.log("Mikrofon wystartował");
         const comment = document.getElementById("comment");
         if (comment) comment.textContent = "🎤 Mikrofon aktywny";
     };
@@ -36,34 +34,23 @@ function initRecognition() {
     rec.onresult = (event) => {
         const last = event.results[event.results.length - 1];
         const text = last[0].transcript.trim();
-        console.log("Rozpoznano:", text);
         handleRecognizedText(text);
     };
 
     rec.onerror = (e) => {
-        console.error("SpeechRecognition ERROR:", e);
         const comment = document.getElementById("comment");
         if (comment) comment.textContent = "❌ Błąd mikrofonu: " + e.error;
     };
 
     rec.onend = () => {
-        console.log("onend");
         const comment = document.getElementById("comment");
 
         if (recognizing) {
-            console.log("Restart mikrofonu...");
             if (comment) comment.textContent = "🔄 Restart mikrofonu...";
-
             setTimeout(() => {
-                try {
-                    rec.start();
-                    console.log("Mikrofon wznowiony");
-                } catch (e) {
-                    console.warn("Błąd restartu:", e);
-                }
+                try { rec.start(); } catch {}
             }, 300);
         } else {
-            console.log("Mikrofon zatrzymany");
             if (comment) comment.textContent = "⛔ Mikrofon zatrzymany";
         }
     };
@@ -75,30 +62,12 @@ function initRecognition() {
 // START MIKROFONU
 // ----------------------------------------
 function startMic() {
-    console.log("startMic()");
-    const comment = document.getElementById("comment");
-
-    if (!recognition) {
-        recognition = initRecognition();
-        if (!recognition) {
-            console.log("Brak recognition");
-            return;
-        }
-    }
+    if (!recognition) recognition = initRecognition();
+    if (!recognition) return;
 
     if (!recognizing) {
         recognizing = true;
-        try {
-            recognition.start();
-            console.log("recognition.start() OK");
-            if (comment) comment.textContent = "🎤 Uruchamianie mikrofonu...";
-        } catch (e) {
-            console.error("Błąd recognition.start():", e);
-            recognizing = false;
-        }
-    } else {
-        console.log("Mikrofon już działa");
-        if (comment) comment.textContent = "🎤 Mikrofon już aktywny";
+        try { recognition.start(); } catch {}
     }
 }
 
@@ -106,32 +75,21 @@ function startMic() {
 // STOP MIKROFONU
 // ----------------------------------------
 function stopMic() {
-    console.log("stopMic()");
     recognizing = false;
-    const comment = document.getElementById("comment");
-
     if (recognition) {
-        try {
-            recognition.stop();
-            console.log("recognition.stop() OK");
-        } catch (e) {
-            console.error("Błąd recognition.stop():", e);
-        }
+        try { recognition.stop(); } catch {}
     }
-
-    if (comment) comment.textContent = "⛔ Mikrofon zatrzymany";
 }
 
 // ----------------------------------------
 // OBSŁUGA TEKSTU
 // ----------------------------------------
 function handleRecognizedText(text) {
-    const recognized = document.getElementById("recognized");
-    if (recognized) recognized.textContent = text;
+    document.getElementById("recognized").textContent = text;
 
     let sendText = text;
 
-    // tryb podawania ceny -> dokładnie wskazany ticker + interval + close
+    // tryb ceny → wysyłamy pełny kontekst
     if (awaitingPrice) {
         sendText =
             awaitingPrice.ticker +
@@ -139,8 +97,6 @@ function handleRecognizedText(text) {
             awaitingPrice.interval +
             " close " +
             text;
-
-        console.log("Tryb ceny:", sendText);
     }
 
     fetch("https://voice-xtb.onrender.com/voice-parse", {
@@ -150,13 +106,11 @@ function handleRecognizedText(text) {
     })
         .then(r => r.json())
         .then(data => {
-            console.log("Backend response:", data);
+            document.getElementById("parsed").textContent =
+                JSON.stringify(data, null, 2);
 
-            const parsed = document.getElementById("parsed");
-            if (parsed) parsed.textContent = JSON.stringify(data, null, 2);
-
-            const comment = document.getElementById("comment");
-            if (data.comment && comment) comment.textContent = data.comment;
+            if (data.comment)
+                document.getElementById("comment").textContent = data.comment;
 
             if (data.ticker && data.interval) {
                 const key = data.ticker + "|" + data.interval;
@@ -166,15 +120,14 @@ function handleRecognizedText(text) {
 
             awaitingPrice = null;
         })
-        .catch(err => {
-            console.error("FETCH ERROR:", err);
-            const comment = document.getElementById("comment");
-            if (comment) comment.textContent = "❌ Błąd połączenia z backendem";
+        .catch(() => {
+            document.getElementById("comment").textContent =
+                "❌ Błąd połączenia z backendem";
         });
 }
 
 // ----------------------------------------
-// PRIORYTET SYGNAŁÓW DO SORTOWANIA
+// PRIORYTET SYGNAŁÓW (SORTOWANIE 7.2 PRO)
 // ----------------------------------------
 function signalPriority(sig) {
     if (!sig) return 99;
@@ -182,7 +135,7 @@ function signalPriority(sig) {
 
     if (s === "BUY") return 2;
     if (s === "PRAWIE BUY") return 3;
-    if (s === "CZEKAJ DO") return 4; // rezerwa na przyszłość
+    if (s === "CZEKAJ DO") return 4;
     if (s === "CZEKAJ") return 5;
     if (s === "PRAWIE RESET") return 6;
     if (s === "RESET") return 7;
@@ -193,19 +146,10 @@ function signalPriority(sig) {
 }
 
 // ----------------------------------------
-// KOLOROWANIE WIERSZA
+// KOLOROWANIE
 // ----------------------------------------
 function applySignalColor(row, signal, hasEntry) {
-    row.classList.remove(
-        "signal-buy",
-        "signal-prawie-buy",
-        "signal-sell",
-        "signal-prawie-sell",
-        "signal-reset",
-        "signal-prawie-reset",
-        "signal-czekaj",
-        "signal-entry"
-    );
+    row.className = "";
 
     if (hasEntry) {
         row.classList.add("signal-entry");
@@ -213,6 +157,7 @@ function applySignalColor(row, signal, hasEntry) {
     }
 
     if (!signal) return;
+
     const s = signal.toLowerCase();
 
     if (s === "buy") row.classList.add("signal-buy");
@@ -225,92 +170,53 @@ function applySignalColor(row, signal, hasEntry) {
 }
 
 // ----------------------------------------
-// RENDER TABLE (z sortowaniem + TP3)
+// RENDER TABLE (SORTOWANIE 7.2 PRO)
 // ----------------------------------------
 function renderTable() {
     const tbody = document.getElementById("voiceTableBody");
-    if (!tbody) return;
-
     tbody.innerHTML = "";
 
-    const list = Object.keys(rows).map(k => rows[k]);
+    const list = Object.values(rows);
 
-    // sortowanie:
-    // 1) entry != null na górze
-    // 2) potem wg priorytetu sygnału
-    // 3) potem alfabetycznie po tickerze
     list.sort((a, b) => {
+        // 1) ENTRY
         const aEntry = a.entry != null;
         const bEntry = b.entry != null;
 
         if (aEntry && !bEntry) return -1;
         if (!aEntry && bEntry) return 1;
 
+        // 2) sygnał
         const pa = signalPriority(a.signal);
         const pb = signalPriority(b.signal);
+
         if (pa < pb) return -1;
         if (pa > pb) return 1;
 
-        const ta = (a.ticker || "").localeCompare(b.ticker || "");
+        // 3) ticker
+        const ta = a.ticker.localeCompare(b.ticker);
         if (ta !== 0) return ta;
 
-        return (a.interval || "").localeCompare(b.interval || "");
+        // 4) interwał
+        return a.interval.localeCompare(b.interval);
     });
 
     list.forEach(row => {
         const tr = document.createElement("tr");
 
-        // Ticker
-        const tdTicker = document.createElement("td");
-        tdTicker.textContent = row.ticker || "";
-        tr.appendChild(tdTicker);
+        tr.innerHTML = `
+            <td>${row.ticker || ""}</td>
+            <td>${row.interval || ""}</td>
+            <td>${row.time || ""}</td>
+            <td class="price" title="Kliknij aby podać cenę">${row.close ?? ""}</td>
+            <td>${row.entry ?? ""}</td>
+            <td>${row.signal || ""}</td>
+            <td>${row.tp3 ?? ""}</td>
+            <td>${row.low != null && row.high != null ? row.low + " – " + row.high : ""}</td>
+        `;
 
-        // Interval
-        const tdInterval = document.createElement("td");
-        tdInterval.textContent = row.interval || "";
-        tr.appendChild(tdInterval);
-
-        // Time
-        const tdTime = document.createElement("td");
-        tdTime.textContent = row.time || "";
-        tr.appendChild(tdTime);
-
-        // Close (klik do ceny)
-        const tdClose = document.createElement("td");
-        tdClose.className = "price";
-        tdClose.textContent =
-            row.close != null ? row.close : "";
-        tdClose.style.cursor = "pointer";
-        tdClose.title = "Kliknij aby podać cenę";
-        tdClose.onclick = () =>
+        tr.querySelector(".price").onclick = () =>
             startPrice(row.ticker, row.interval);
-        tr.appendChild(tdClose);
-
-        // Entry
-        const tdEntry = document.createElement("td");
-        tdEntry.textContent =
-            row.entry != null ? row.entry : "";
-        tr.appendChild(tdEntry);
-
-        // Signal
-        const tdSignal = document.createElement("td");
-        tdSignal.textContent = row.signal || "";
-        tr.appendChild(tdSignal);
-
-        // TP3
-        const tdTp3 = document.createElement("td");
-        tdTp3.textContent =
-            row.tp3 != null ? row.tp3 : "";
-        tr.appendChild(tdTp3);
-
-        // Range (low–high)
-        const tdRange = document.createElement("td");
-        if (row.low != null && row.high != null) {
-            tdRange.textContent = row.low + " – " + row.high;
-        } else {
-            tdRange.textContent = "";
-        }
-        tr.appendChild(tdRange);
 
         applySignalColor(tr, row.signal, row.entry != null);
 
@@ -323,15 +229,8 @@ function renderTable() {
 // ----------------------------------------
 function startPrice(ticker, interval) {
     awaitingPrice = { ticker, interval };
-    console.log("Oczekuję na cenę:", ticker, interval);
-
-    const comment = document.getElementById("comment");
-    if (comment) {
-        comment.textContent = `🎯 Podaj cenę dla ${ticker} ${interval}`;
-    }
+    document.getElementById("comment").textContent =
+        `🎯 Podaj cenę dla ${ticker} ${interval}`;
 }
 
-// ----------------------------------------
-// DEBUG
-// ----------------------------------------
 console.log("VOICE.JS ZAŁADOWANY POPRAWNIE");
