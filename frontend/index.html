@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- BLOKADA IFRAME — Android + Chrome + mikrofon -->
+    <!-- BLOKADA IFRAME — Chrome Android + mikrofon -->
     <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'self';">
 
     <title>VOICE XTB 6.8.3 PRO</title>
@@ -51,8 +51,13 @@
         <tbody id="voiceTableBody"></tbody>
     </table>
 
-    <!-- ŁADOWANIE voice.js Z WYMUSZONYM ODŚWIEŻENIEM -->
-    <script src="voice.js?v=999"></script>
+    <!-- AUTO‑REFRESH voice.js — wymusza pobranie NOWEJ wersji -->
+    <script>
+        const v = Date.now(); // unikalny numer za każdym wejściem
+        const s = document.createElement("script");
+        s.src = "voice.js?v=" + v;
+        document.head.appendChild(s);
+    </script>
 
 </body>
 </html>
