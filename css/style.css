@@ -12,9 +12,9 @@ h1, h2, h3 {
 }
 
 button {
-    padding: 10px 20px;
-    margin-right: 10px;
-    font-size: 16px;
+    padding: 8px 14px;
+    margin: 4px;
+    font-size: 14px;
     cursor: pointer;
 }
 
@@ -27,12 +27,13 @@ pre {
 
 
 /* ============================
-   TABELA 6.5 PRO
+   TABELA 7.3 PRO
 ============================ */
 table {
     width: 100%;
     border-collapse: collapse;
     background: #fff;
+    margin-top: 15px;
 }
 
 th, td {
@@ -46,28 +47,84 @@ th {
     font-weight: bold;
 }
 
-td.signal {
+td.price {
+    cursor: pointer;
     font-weight: bold;
-    font-size: 18px;
+    color: #0044aa;
+}
+
+td.price:hover {
+    background: #e3f2fd;
 }
 
 
 /* ============================
-   KOLORY SYGNAŁÓW 6.5
+   KOLORY SYGNAŁÓW 7.3 PRO
+   (koloruje CAŁY WIERSZ)
 ============================ */
-tr[data-signal="BUY"] {
-    background: #00c853 !important;
+
+/* BUY */
+tr.signal-buy {
+    background-color: #00c853 !important;
     color: white;
 }
 
-tr[data-signal="SELL"] {
-    background: #d50000 !important;
+/* PRAWIE BUY */
+tr.signal-prawie-buy {
+    background-color: #66ff99 !important;
+    color: black;
+}
+
+/* SELL */
+tr.signal-sell {
+    background-color: #d50000 !important;
     color: white;
 }
 
-tr[data-signal="CZEKAJ"] {
-    background: #616161 !important;
+/* PRAWIE SELL */
+tr.signal-prawie-sell {
+    background-color: #ff9999 !important;
+    color: black;
+}
+
+/* RESET */
+tr.signal-reset {
+    background-color: #ffcc66 !important;
+    color: black;
+}
+
+/* PRAWIE RESET */
+tr.signal-prawie-reset {
+    background-color: #fff799 !important;
+    color: black;
+}
+
+/* CZEKAJ */
+tr.signal-czekaj {
+    background-color: #bdbdbd !important;
+    color: black;
+}
+
+/* CZEKAJ DO BUY / SELL */
+tr.signal-entry {
+    background-color: #ffb84d !important;
+    color: black;
+}
+
+
+/* ============================
+   PRZYCISK USUŃ
+============================ */
+button.delete-btn {
+    background: #d32f2f;
     color: white;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 4px;
+}
+
+button.delete-btn:hover {
+    background: #b71c1c;
 }
 
 
