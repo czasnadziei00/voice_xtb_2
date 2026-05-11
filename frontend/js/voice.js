@@ -1,77 +1,90 @@
+/* ---------------------------------------------------------
+   VOICE XTB 7.8 PRO — AUTO SEKWENCJA
+   --------------------------------------------------------- */
+
 let recognition = null;
 let recognizing = false;
 
-// tryb oczekiwania na cenę
-let awaitingPrice = null;
+let rows = {}; // TICKER|INTERVAL → rekord
+const STORAGEKEY = "voicextb78tabela";
 
-// pamięć wierszy (RAM)
-let rows = {}; // key: "TICKER|INTERVAL"
+/* ---------------------------------------------------------
+   AUTO-SEKWENCJA
+   --------------------------------------------------------- */
 
-// pamięć trwała (localStorage)
-const STORAGE_KEY = "voice_xtb_74_tabela";
+const steps = [
+    "ticker",
+    "interval",
+    "open",
+    "low",
+    "high",
+    "close",
+    "ma20",
+    "dema9",
+    "volume",
+    "rsi"
+];
 
-// ----------------------------------------
-// INIT ROZPOZNAWANIA MOWY
-// ----------------------------------------
+let currentStep = 0;
+let tempRecord = {};
+
+/* ---------------------------------------------------------
+   MIKROFON
+   --------------------------------------------------------- */
+
 function initRecognition() {
-    const SpeechRecognition =
-        window.SpeechRecognition ||
-        window.webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
         alert("Twoja przeglądarka nie wspiera rozpoznawania mowy.");
         return null;
     }
 
-    const rec = new SpeechRecognition();
+    const rec = new SR();
     rec.lang = "pl-PL";
     rec.continuous = false;
     rec.interimResults = false;
     rec.maxAlternatives = 1;
 
     rec.onstart = () => {
-        const comment = document.getElementById("comment");
-        if (comment) comment.textContent = "🎤 Mikrofon aktywny";
+        document.getElementById("comment").textContent =
+            "🎤 Mikrofon aktywny — tryb AUTO";
     };
 
-    rec.onresult = (event) => {
-        const last = event.results[event.results.length - 1];
-        const text = last[0].transcript.trim();
-        handleRecognizedText(text);
+    rec.onresult = (e) => {
+        const text = e.results[0][0].transcript.trim();
+        handleRecognized(text);
     };
 
     rec.onerror = (e) => {
-        const comment = document.getElementById("comment");
-        if (comment) comment.textContent = "❌ Błąd mikrofonu: " + e.error;
+        document.getElementById("comment").textContent =
+            "❌ Błąd mikrofonu: " + e.error;
     };
 
     rec.onend = () => {
-        const comment = document.getElementById("comment");
-
         if (recognizing) {
-            if (comment) comment.textContent = "🔄 Restart mikrofonu...";
             setTimeout(() => {
                 try { rec.start(); } catch {}
-            }, 300);
+            }, 200);
         } else {
-            if (comment) comment.textContent = "⛔ Mikrofon zatrzymany";
+            document.getElementById("comment").textContent =
+                "⛔ Mikrofon zatrzymany";
         }
     };
 
     return rec;
 }
 
-// ----------------------------------------
-// START / STOP
-// ----------------------------------------
 function startMic() {
     if (!recognition) recognition = initRecognition();
     if (!recognition) return;
 
-    if (!recognizing) {
-        recognizing = true;
-        try { recognition.start(); } catch {}
-    }
+    recognizing = true;
+    currentStep = 0;
+    tempRecord = {};
+
+    sayStep();
+
+    try { recognition.start(); } catch {}
 }
 
 function stopMic() {
@@ -81,92 +94,185 @@ function stopMic() {
     }
 }
 
-// ----------------------------------------
-// OBSŁUGA TEKSTU (TRYB PL 7.4)
-// ----------------------------------------
-function handleRecognizedText(rawText) {
-    document.getElementById("recognized").textContent = rawText;
+/* ---------------------------------------------------------
+   OBSŁUGA AUTO-SEKWENCJI
+   --------------------------------------------------------- */
 
-    // MAPOWANIE POLSKICH SŁÓW → ANGIELSKIE KLUCZE / SKRÓTY
-    let text = rawText.toLowerCase();
+function sayStep() {
+    const step = steps[currentStep];
+    const comment = document.getElementById("comment");
 
-    // OHLC
-    text = text
-        .replace(/\bwysoka\b/g, " high ")
-        .replace(/\bwysoki\b/g, " high ")
-        .replace(/\bniska\b/g, " low ")
-        .replace(/\bniski\b/g, " low ")
-        .replace(/\bcena\b/g, " close ");
+    const map = {
+        ticker: "Powiedz ticker",
+        interval: "Powiedz interwał",
+        open: "Powiedz open",
+        low: "Powiedz low",
+        high: "Powiedz high",
+        close: "Powiedz close",
+        ma20: "Powiedz MA20",
+        dema9: "Powiedz DEMA9",
+        volume: "Powiedz wolumen",
+        rsi: "Powiedz RSI"
+    };
 
-    // ŚREDNIE
-    // "średnia" → ma20
-    text = text.replace(/\bśrednia\b/g, " ma20 ");
+    comment.textContent = "➡️ " + map[step];
+}
 
-    // "wykładnicza" → dema9
-    text = text.replace(/\bwykładnicza\b/g, " dema9 ");
+function handleRecognized(text) {
+    document.getElementById("recognized").textContent = text;
 
-    let sendText = text.trim();
+    const step = steps[currentStep];
 
-    // tryb ceny → dokładamy kontekst
-    if (awaitingPrice) {
-        sendText =
-            awaitingPrice.ticker +
-            " " +
-            awaitingPrice.interval +
-            " close " +
-            text;
+    if (step === "ticker") {
+        tempRecord.ticker = text.toUpperCase();
     }
+    else if (step === "interval") {
+        tempRecord.interval = text.toUpperCase();
+    }
+    else {
+        const num = parseFloat(text.replace(",", "."));
+        if (!isNaN(num)) tempRecord[step] = num;
+    }
+
+    currentStep++;
+
+    if (currentStep >= steps.length) {
+        finalizeRecord();
+        return;
+    }
+
+    sayStep();
+}
+
+/* ---------------------------------------------------------
+   ZAPIS REKORDU
+   --------------------------------------------------------- */
+
+function finalizeRecord() {
+    const key = tempRecord.ticker + "|" + tempRecord.interval;
 
     fetch("https://voice-xtb.onrender.com/voice-parse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: sendText })
+        body: JSON.stringify({
+            text:
+                ${tempRecord.ticker} ${tempRecord.interval}  +
+                open ${tempRecord.open} low ${tempRecord.low} high ${tempRecord.high}  +
+                close ${tempRecord.close} ma20 ${tempRecord.ma20}  +
+                dema9 ${tempRecord.dema9} volume ${tempRecord.volume} rsi ${tempRecord.rsi}
+        })
     })
         .then(r => r.json())
         .then(data => {
-            document.getElementById("parsed").textContent =
-                JSON.stringify(data, null, 2);
+            rows[key] = data;
+            saveTable();
+            renderTable();
 
-            if (data.comment)
-                document.getElementById("comment").textContent = data.comment;
-
-            if (data.ticker && data.interval) {
-                const key = data.ticker + "|" + data.interval;
-                rows[key] = data;
-                saveTable();
-                renderTable();
-            }
-
-            awaitingPrice = null;
+            document.getElementById("comment").textContent =
+                ✅ Zapisano rekord ${data.ticker} ${data.interval};
         })
         .catch(() => {
             document.getElementById("comment").textContent =
                 "❌ Błąd połączenia z backendem";
         });
+
+    recognizing = false;
+    try { recognition.stop(); } catch {}
 }
 
-// ----------------------------------------
-// PRIORYTET SYGNAŁÓW
-// ----------------------------------------
+/* ---------------------------------------------------------
+   TABELA
+   --------------------------------------------------------- */
+
+function saveTable() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
+}
+
+function loadTable() {
+    rows = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    renderTable();
+}
+document.addEventListener("DOMContentLoaded", loadTable);
+
+function deleteRow(key) {
+    delete rows[key];
+    saveTable();
+    renderTable();
+}
+
+function renderTable() {
+    const tbody = document.getElementById("voiceTableBody");
+    tbody.innerHTML = "";
+
+    const list = Object.values(rows);
+
+    list.sort((a, b) => {
+        const pa = signalPriority(a.signal);
+        const pb = signalPriority(b.signal);
+        return pa - pb;
+    });
+
+    list.forEach(row => {
+        const key = row.ticker + "|" + row.interval;
+
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+            <td>${row.ticker}</td>
+            <td>${row.interval}</td>
+            <td>${row.close ?? ""}</td>
+            <td>${row.entry ?? ""}</td>
+            <td>${row.signal || ""}</td>
+            <td>${row.tp3 ?? ""}</td>
+            <td>${row.low != null && row.high != null ? row.low + " – " + row.high : ""}</td>
+            <td><button onclick="openPopup('${key}')">📊</button></td>
+            <td><button onclick="deleteRow('${key}')">🗑</button></td>
+        `;
+
+        applySignalColor(tr, row.signal, row.entry != null);
+        tbody.appendChild(tr);
+    });
+}
+
+/* ---------------------------------------------------------
+   POPUP
+   --------------------------------------------------------- */
+
+function openPopup(key) {
+    const row = rows[key];
+
+    document.getElementById("popupData").textContent =
+        Sygnał: ${row.signal}\nTP3: ${row.tp3}\nWidełki: ${row.low} – ${row.high};
+
+    document.getElementById("popupGeneral").textContent =
+        row.comment || "Brak komentarza";
+
+    document.getElementById("popup45").style.display = "block";
+}
+
+document.getElementById("popupClose").onclick = () =>
+    document.getElementById("popup45").style.display = "none";
+
+/* ---------------------------------------------------------
+   SYGNAŁY
+   --------------------------------------------------------- */
+
 function signalPriority(sig) {
     if (!sig) return 99;
     const s = sig.toUpperCase();
 
-    if (s === "BUY") return 2;
-    if (s === "PRAWIE BUY") return 3;
-    if (s === "CZEKAJ DO BUY" || s === "CZEKAJ DO SELL") return 4;
-    if (s === "CZEKAJ") return 5;
-    if (s === "PRAWIE RESET") return 6;
-    if (s === "RESET") return 7;
-    if (s === "PRAWIE SELL") return 8;
-    if (s === "SELL") return 9;
+    if (s === "BUY") return 1;
+    if (s === "PRAWIE BUY") return 2;
+    if (s === "CZEKAJ DO BUY" || s === "CZEKAJ DO SELL") return 3;
+    if (s === "CZEKAJ") return 4;
+    if (s === "PRAWIE RESET") return 5;
+    if (s === "RESET") return 6;
+    if (s === "PRAWIE SELL") return 7;
+    if (s === "SELL") return 8;
 
     return 99;
 }
 
-// ----------------------------------------
-// KOLOROWANIE SYGNAŁÓW
-// ----------------------------------------
 function applySignalColor(row, signal, hasEntry) {
     row.className = "";
 
@@ -188,91 +294,5 @@ function applySignalColor(row, signal, hasEntry) {
     else if (s === "czekaj") row.classList.add("signal-czekaj");
 }
 
-// ----------------------------------------
-// PAMIĘĆ TABELI (localStorage)
-// ----------------------------------------
-function saveTable() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
-}
-
-function loadTable() {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    rows = saved;
-    renderTable();
-}
-
-document.addEventListener("DOMContentLoaded", loadTable);
-
-// ----------------------------------------
-// USUWANIE WIERSZA
-// ----------------------------------------
-function deleteRow(key) {
-    delete rows[key];
-    saveTable();
-    renderTable();
-}
-
-// ----------------------------------------
-// RENDEROWANIE TABELI
-// ----------------------------------------
-function renderTable() {
-    const tbody = document.getElementById("voiceTableBody");
-    tbody.innerHTML = "";
-
-    const list = Object.values(rows);
-
-    list.sort((a, b) => {
-        const aEntry = a.entry != null;
-        const bEntry = b.entry != null;
-
-        if (aEntry && !bEntry) return -1;
-        if (!aEntry && bEntry) return 1;
-
-        const pa = signalPriority(a.signal);
-        const pb = signalPriority(b.signal);
-
-        if (pa < pb) return -1;
-        if (pa > pb) return 1;
-
-        const ta = a.ticker.localeCompare(b.ticker);
-        if (ta !== 0) return ta;
-
-        return a.interval.localeCompare(b.interval);
-    });
-
-    list.forEach(row => {
-        const key = row.ticker + "|" + row.interval;
-
-        const tr = document.createElement("tr");
-
-        tr.innerHTML = `
-            <td>${row.ticker}</td>
-            <td>${row.interval}</td>
-            <td>${row.time || ""}</td>
-            <td class="price" title="Kliknij aby podać cenę">${row.close ?? ""}</td>
-            <td>${row.entry ?? ""}</td>
-            <td>${row.signal || ""}</td>
-            <td>${row.tp3 ?? ""}</td>
-            <td>${row.low != null && row.high != null ? row.low + " – " + row.high : ""}</td>
-            <td><button onclick="deleteRow('${key}')">🗑 Usuń</button></td>
-        `;
-
-        tr.querySelector(".price").onclick = () =>
-            startPrice(row.ticker, row.interval);
-
-        applySignalColor(tr, row.signal, row.entry != null);
-
-        tbody.appendChild(tr);
-    });
-}
-
-// ----------------------------------------
-// TRYB PODAWANIA CENY
-// ----------------------------------------
-function startPrice(ticker, interval) {
-    awaitingPrice = { ticker, interval };
-    document.getElementById("comment").textContent =
-        `🎯 Podaj cenę dla ${ticker} ${interval}`;
-}
-
-console.log("VOICE.JS 7.4 PRO (PL MAP) ZAŁADOWANY");
+console.log("VOICE XTB 7.8 PRO — AUTO SEKWENCJA ZAŁADOWANA");
+`
