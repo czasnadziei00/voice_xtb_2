@@ -6,7 +6,7 @@ let recognition = null;
 let recognizing = false;
 
 let rows = {}; // TICKER|INTERVAL → rekord
-const STORAGEKEY = "voicextb78tabela";
+const STORAGE_KEY = "voicextb78tabela";
 
 /* ---------------------------------------------------------
    AUTO-SEKWENCJA
@@ -125,11 +125,9 @@ function handleRecognized(text) {
 
     if (step === "ticker") {
         tempRecord.ticker = text.toUpperCase();
-    }
-    else if (step === "interval") {
+    } else if (step === "interval") {
         tempRecord.interval = text.toUpperCase();
-    }
-    else {
+    } else {
         const num = parseFloat(text.replace(",", "."));
         if (!isNaN(num)) tempRecord[step] = num;
     }
@@ -151,16 +149,16 @@ function handleRecognized(text) {
 function finalizeRecord() {
     const key = tempRecord.ticker + "|" + tempRecord.interval;
 
+    const payloadText =
+        `${tempRecord.ticker} ${tempRecord.interval} ` +
+        `open ${tempRecord.open} low ${tempRecord.low} high ${tempRecord.high} ` +
+        `close ${tempRecord.close} ma20 ${tempRecord.ma20} ` +
+        `dema9 ${tempRecord.dema9} volume ${tempRecord.volume} rsi ${tempRecord.rsi}`;
+
     fetch("https://voice-xtb.onrender.com/voice-parse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            text:
-                ${tempRecord.ticker} ${tempRecord.interval}  +
-                open ${tempRecord.open} low ${tempRecord.low} high ${tempRecord.high}  +
-                close ${tempRecord.close} ma20 ${tempRecord.ma20}  +
-                dema9 ${tempRecord.dema9} volume ${tempRecord.volume} rsi ${tempRecord.rsi}
-        })
+        body: JSON.stringify({ text: payloadText })
     })
         .then(r => r.json())
         .then(data => {
@@ -169,7 +167,7 @@ function finalizeRecord() {
             renderTable();
 
             document.getElementById("comment").textContent =
-                ✅ Zapisano rekord ${data.ticker} ${data.interval};
+                `✅ Zapisano rekord ${data.ticker} ${data.interval}`;
         })
         .catch(() => {
             document.getElementById("comment").textContent =
@@ -242,7 +240,7 @@ function openPopup(key) {
     const row = rows[key];
 
     document.getElementById("popupData").textContent =
-        Sygnał: ${row.signal}\nTP3: ${row.tp3}\nWidełki: ${row.low} – ${row.high};
+        `Sygnał: ${row.signal}\nTP3: ${row.tp3}\nWidełki: ${row.low} – ${row.high}`;
 
     document.getElementById("popupGeneral").textContent =
         row.comment || "Brak komentarza";
@@ -295,4 +293,3 @@ function applySignalColor(row, signal, hasEntry) {
 }
 
 console.log("VOICE XTB 7.8 PRO — AUTO SEKWENCJA ZAŁADOWANA");
-`
