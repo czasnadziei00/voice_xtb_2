@@ -1,12 +1,12 @@
 /* ---------------------------------------------------------
-   VOICE XTB 8.3 PRO — AUTO SEKWENCJA + SŁOWA → LICZBY + BLOKADA KROKU
+   VOICE XTB 8.5 PRO — AUTO SEKWENCJA + SUPER PARSER LICZB
    --------------------------------------------------------- */
 
 let recognition = null;
 let recognizing = false;
 
-let rows = {}; // TICKER|INTERVAL → rekord
-const STORAGE_KEY = "voicextb83tabela";
+let rows = {}; 
+const STORAGE_KEY = "voicextb85tabela";
 
 /* ---------------------------------------------------------
    KONWERTER SŁÓW → LICZBY (pełna obsługa przecinka)
@@ -30,7 +30,6 @@ function wordsToNumber(text) {
         "dziewięćset": 900, "tysiąc": 1000, "tysiące": 1000, "tysięcy": 1000
     };
 
-    // rozdzielamy część całkowitą i ułamkową
     const parts = text.split("przecinek");
     const intPart = parts[0].trim();
     const fracPart = parts[1] ? parts[1].trim() : "";
@@ -61,7 +60,6 @@ function wordsToNumber(text) {
 
     if (!fracPart) return intVal;
 
-    // część ułamkowa jako cyfry
     const fracTokens = fracPart.split(/\s+/);
     let digits = "";
 
@@ -178,7 +176,7 @@ function sayStep() {
     };
 
     comment.textContent = "➡️ " + map[step];
-   function handleRecognized(text) {
+function handleRecognized(text) {
     document.getElementById("recognized").textContent = text;
 
     const step = steps[currentStep];
@@ -190,17 +188,28 @@ function sayStep() {
         tempRecord.interval = text.toUpperCase();
     }
     else {
-        // PRÓBA PARSOWANIA LICZBY
-        let num = parseFloat(text.replace(",", "."));
+        // 🔥 SUPER PARSER LICZB
+        let raw = text.toLowerCase().trim();
 
+        // usuń spacje, NBSP, taby
+        let cleaned = raw.replace(/[\s\u00A0]+/g, "");
+
+        // usuń kropkę na końcu typu "341."
+        cleaned = cleaned.replace(/\.$/, "");
+
+        // spróbuj parseFloat
+        let num = parseFloat(cleaned.replace(",", "."));
+
+        // jeśli nadal NaN → spróbuj wordsToNumber
         if (isNaN(num)) {
-            num = wordsToNumber(text);
+            num = wordsToNumber(raw);
         }
 
+        // jeśli nadal NaN → NIE przechodzimy dalej
         if (isNaN(num)) {
             document.getElementById("comment").textContent =
                 "❗ Nie zrozumiałem liczby dla: " + step + " — powtórz wartość.";
-            return; // 🔥 NIE PRZECHODZIMY DALEJ
+            return;
         }
 
         tempRecord[step] = num;
@@ -366,5 +375,6 @@ function applySignalColor(row, signal, hasEntry) {
     else if (s === "czekaj") row.classList.add("signal-czekaj");
 }
 
-console.log("VOICE XTB 8.3 PRO — AUTO SEKWENCJA + BLOKADA KROKU ZAŁADOWANA");
+console.log("VOICE XTB 8.5 PRO — ZAŁADOWANY");
+   
 }
