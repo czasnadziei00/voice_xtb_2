@@ -1,12 +1,12 @@
 /* ---------------------------------------------------------
-   VOICE XTB 8.5 PRO — AUTO SEKWENCJA + SUPER PARSER LICZB
+   VOICE XTB 8.6 PRO — AUTO SEKWENCJA + SUPER PARSER LICZB
    --------------------------------------------------------- */
 
 let recognition = null;
 let recognizing = false;
 
 let rows = {}; 
-const STORAGE_KEY = "voicextb85tabela";
+const STORAGE_KEY = "voicextb86tabela";
 
 /* ---------------------------------------------------------
    KONWERTER SŁÓW → LICZBY (pełna obsługa przecinka)
@@ -176,44 +176,55 @@ function sayStep() {
     };
 
     comment.textContent = "➡️ " + map[step];
-function handleRecognized(text) {
+
+   function handleRecognized(text) {
     document.getElementById("recognized").textContent = text;
 
     const step = steps[currentStep];
+    const raw = text.trim();
 
+    /* -------------------------
+       1) TICKER — NIE ruszamy!
+       ------------------------- */
     if (step === "ticker") {
-        tempRecord.ticker = text.toUpperCase();
+        tempRecord.ticker = raw.toUpperCase();
+        currentStep++;
+        sayStep();
+        return;
     }
-    else if (step === "interval") {
-        tempRecord.interval = text.toUpperCase();
+
+    /* -------------------------
+       2) INTERWAŁ — też bez zmian
+       ------------------------- */
+    if (step === "interval") {
+        tempRecord.interval = raw.toUpperCase();
+        currentStep++;
+        sayStep();
+        return;
     }
-    else {
-        // 🔥 SUPER PARSER LICZB
-        let raw = text.toLowerCase().trim();
 
-        // usuń spacje, NBSP, taby
-        let cleaned = raw.replace(/[\s\u00A0]+/g, "");
+    /* -------------------------
+       3) POZOSTAŁE — SUPER PARSER LICZB
+       ------------------------- */
 
-        // usuń kropkę na końcu typu "341."
-        cleaned = cleaned.replace(/\.$/, "");
+    let cleaned = raw
+        .toLowerCase()
+        .replace(/[\s\u00A0]+/g, "")   // usuń spacje i NBSP
+        .replace(/\.$/, "");          // usuń kropkę na końcu
 
-        // spróbuj parseFloat
-        let num = parseFloat(cleaned.replace(",", "."));
+    let num = parseFloat(cleaned.replace(",", "."));
 
-        // jeśli nadal NaN → spróbuj wordsToNumber
-        if (isNaN(num)) {
-            num = wordsToNumber(raw);
-        }
-
-        // jeśli nadal NaN → NIE przechodzimy dalej
-        if (isNaN(num)) {
-            document.getElementById("comment").textContent =
-                "❗ Nie zrozumiałem liczby dla: " + step + " — powtórz wartość.";
-            return;
-        }
-
-        tempRecord[step] = num;
+    if (isNaN(num)) {
+        num = wordsToNumber(raw);
     }
+
+    if (isNaN(num)) {
+        document.getElementById("comment").textContent =
+            "❗ Nie zrozumiałem liczby dla: " + step + " — powtórz wartość.";
+        return;
+    }
+
+    tempRecord[step] = num;
 
     currentStep++;
 
@@ -375,6 +386,5 @@ function applySignalColor(row, signal, hasEntry) {
     else if (s === "czekaj") row.classList.add("signal-czekaj");
 }
 
-console.log("VOICE XTB 8.5 PRO — ZAŁADOWANY");
-   
+console.log("VOICE XTB 8.6 PRO — ZAŁADOWANY");
 }
