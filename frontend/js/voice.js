@@ -66,10 +66,19 @@ function initRecognition() {
     };
 
     rec.onend = () => {
-        if (!recognizing) {
-            document.getElementById("comment").textContent = "⛔ Mikrofon zatrzymany";
-        }
-    };
+    if (!recognizing) {
+        document.getElementById("comment").textContent = "⛔ Mikrofon zatrzymany";
+        return;
+    }
+
+    // SYSTEM 8 — start kolejnego kroku TYLKO tutaj
+    if (mode === "FULL" && currentStep < fullSteps.length) {
+        sayStep();
+        setTimeout(() => {
+            try { recognition.start(); } catch {}
+        }, 300);
+    }
+};
 
     return rec;
 }
@@ -211,12 +220,6 @@ function handleRecognized(text) {
         recognizing = false;
         return;
     }
-
-    // SYSTEM 8 — kolejny krok = kolejna sesja mikrofonu
-    sayStep();
-    setTimeout(() => {
-        try { recognition.start(); } catch {}
-    }, 300);
 }
 
 /* ---------------------------------------------------------
