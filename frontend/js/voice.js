@@ -225,36 +225,104 @@ function handleRecognized(text) {
    --------------------------------------------------------- */
 
 function finalizeRecord() {
-    const key = tempRecord.ticker + "|" + tempRecord.interval;
+
+    console.log("FINAL RECORD:", tempRecord);
+
+    const key =
+        tempRecord.ticker +
+        "|" +
+        tempRecord.interval;
 
     const payloadText =
-        `${tempRecord.ticker} ${tempRecord.interval} ` +
-        `open ${tempRecord.open} low ${tempRecord.low} high ${tempRecord.high} ` +
-        `close ${tempRecord.close} ma20 ${tempRecord.ma20} ` +
-        `dema9 ${tempRecord.dema9} volume ${tempRecord.volume} rsi ${tempRecord.rsi}`;
+
+        ${tempRecord.ticker} ${tempRecord.interval}  +
+
+        open ${tempRecord.open}  +
+        low ${tempRecord.low}  +
+        high ${tempRecord.high}  +
+
+        close ${tempRecord.close}  +
+
+        ma20 ${tempRecord.ma20}  +
+
+        // 🔥 KLUCZ: DEMA9 bez spacji w nazwie parametru
+        dema9 ${tempRecord.dema9 ?? ""}  +
+
+        volume ${tempRecord.volume}  +
+        rsi ${tempRecord.rsi};
+
+    console.log("PAYLOAD:");
+    console.log(payloadText);
+
+    document.getElementById("comment").textContent =
+        "⏳ Wysyłanie do backendu...";
+
+    const controller = new AbortController();
+
+    const timeout = setTimeout(() => {
+        controller.abort();
+    }, 10000);
 
     fetch("https://voice-xtb.onrender.com/voice-parse", {
+
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: payloadText })
+
+        headers: {
+            "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify({
+            text: payloadText
+        }),
+
+        signal: controller.signal
     })
-        .then(r => r.json())
-        .then(data => {
-            rows[key] = data;
-            saveTable();
-            renderTable();
+
+    .then(r => r.json())
+
+    .then(data => {
+
+        clearTimeout(timeout);
+
+        console.log("BACKEND RESPONSE:", data);
+
+        rows[key] = data;
+
+        saveTable();
+
+        renderTable();
+
+        document.getElementById("comment").textContent =
+            ✅ Zapisano rekord ${data.ticker} ${data.interval};
+    })
+
+    .catch(err => {
+
+        clearTimeout(timeout);
+
+        console.log(err);
+
+        if (err.name === "AbortError") {
 
             document.getElementById("comment").textContent =
-                `✅ Zapisano rekord ${data.ticker} ${data.interval}`;
-        })
-        .catch(() => {
-            document.getElementById("comment").textContent =
-                "❌ Błąd połączenia z backendem";
-        });
+                "❌ Timeout backendu";
+
+            return;
+        }
+
+        document.getElementById("comment").textContent =
+            "❌ Błąd połączenia z backendem";
+    });
 
     recognizing = false;
-    try { recognition.stop(); } catch {}
-}
+
+    try {
+        recognition.stop();
+    }
+    catch (err) {
+        console.log(err);
+    }
+       }
 
 /* ---------------------------------------------------------
    TABELA
