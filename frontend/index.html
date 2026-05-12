@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>VOICE XTB 7.8 PRO</title>
+    <title>VOICE XTB 7.9 PRO</title>
 
     <style>
         body { font-family: Arial, sans-serif; margin: 10px; }
@@ -16,14 +16,14 @@
         #comment { margin-top: 10px; padding: 8px; background: #f3f3f3; }
 
         /* Kolory sygnałów */
-        .signal-buy { background-color: #00cc44 !important; color: white; }
+        .signal-buy { background-color: #00cc44 !important; color: #fff; }
         .signal-prawie-buy { background-color: #66ff99 !important; }
-        .signal-sell { background-color: #ff3333 !important; color: white; }
+        .signal-sell { background-color: #ff3333 !important; color: #fff; }
         .signal-prawie-sell { background-color: #ff9999 !important; }
         .signal-reset { background-color: #ffcc66 !important; }
         .signal-prawie-reset { background-color: #fff799 !important; }
         .signal-czekaj { background-color: #e0e0e0 !important; }
-        .signal-entry { background-color: #ffb84d !important; color: black; }
+        .signal-entry { background-color: #ffb84d !important; color: #000; }
 
         /* Popup */
         .popup {
@@ -55,23 +55,24 @@
 
 <body>
 
-    <h2>VOICE XTB 7.8 PRO — analiza wielu tickerów</h2>
+    <h2>VOICE XTB 7.9 PRO — analiza wielu tickerów</h2>
 
     <button onclick="startMic()">🎤 START mikrofon</button>
     <button onclick="stopMic()">⛔ STOP mikrofon</button>
-    
-<pre id="parsed" style="
-    white-space: pre-wrap;
-    background:#111;
-    color:#0f0;
-    padding:10px;
-    margin-top:10px;
-    border:1px solid #333;
-    font-size:14px;
-"></pre>
+
+    <!-- Terminal parsowania -->
+    <pre id="parsed" style="
+        white-space: pre-wrap;
+        background:#111;
+        color:#0f0;
+        padding:10px;
+        margin-top:10px;
+        border:1px solid #333;
+        font-size:14px;
+    "></pre>
+
     <div>
         <p>Rozpoznano: <span id="recognized"></span></p>
-        <pre id="parsed"></pre>
         <div id="comment"></div>
     </div>
 
@@ -106,6 +107,6 @@
         </div>
     </div>
 
-    <script src="js/voice.js?v=100013"></script>
+    <script src="js/voice.js?v=100014"></script>
 </body>
 </html>
