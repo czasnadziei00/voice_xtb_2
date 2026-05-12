@@ -2,14 +2,14 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>VOICE XTB 6.5 PRO</title>
+    <title>VOICE XTB 6.5 PRO MULTI-TF</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<h1>VOICE XTB 6.5 PRO</h1>
+<h1>VOICE XTB 6.5 PRO — M5 / M15 / H1</h1>
 
 <div id="controls">
     <button onclick="startFullMic()">🎤 Start sekwencji pełnej</button>
@@ -17,38 +17,31 @@
 </div>
 
 <div id="comment">Status systemu...</div>
-<div id="status">Bufor danych...</div>
 <div id="recognized">Rozpoznano: —</div>
 <div id="parsed">Bufor JSON: —</div>
 
-<table id="voiceTable">
+<table id="tfTable">
     <thead>
         <tr>
             <th>Ticker</th>
-            <th>Interwał</th>
-            <th>Czas</th>
-            <th>Entry</th>
-            <th>Sygnał</th>
-            <th>Widełki</th>
-            <th>TP1 / TP2 / TP3</th>
-            <th>📊</th>
-            <th>🗑</th>
+            <th>M5</th>
+            <th>M15</th>
+            <th>H1</th>
         </tr>
     </thead>
     <tbody></tbody>
 </table>
 
-<!-- POPUP 6.5 PRO -->
-<div id="popup45" class="popup">
+<!-- POPUP SZCZEGÓŁÓW -->
+<div id="popup" class="popup">
     <div class="popup-content">
         <span id="popupClose" class="popup-close">✖</span>
-        <h3>Analiza FINAL</h3>
+        <h3 id="popupTitle">Analiza TF</h3>
         <pre id="popupData"></pre>
     </div>
 </div>
 
 <script src="js/voice.js"></script>
-<script src="js/main.js"></script>
 
 </body>
 </html>
