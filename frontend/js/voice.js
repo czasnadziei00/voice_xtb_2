@@ -1,77 +1,80 @@
 /* ---------------------------------------------------------
-   VOICE XTB 8.6 PRO — AUTO SEKWENCJA + SUPER PARSER LICZB
+   VOICE XTB 7.9 PRO — AUTO SEKWENCJA + SŁOWA → LICZBY
    --------------------------------------------------------- */
 
 let recognition = null;
 let recognizing = false;
 
 let rows = {}; 
-const STORAGE_KEY = "voicextb86tabela";
+const STORAGE_KEY = "voicextb79tabela";
 
 /* ---------------------------------------------------------
-   KONWERTER SŁÓW → LICZBY (pełna obsługa przecinka)
+   KONWERTER SŁÓW → LICZBY
    --------------------------------------------------------- */
 
 function wordsToNumber(text) {
     text = text.toLowerCase().trim();
 
     const map = {
-        "zero": 0, "jeden": 1, "jedna": 1, "dwa": 2, "dwie": 2,
-        "trzy": 3, "cztery": 4, "pięć": 5, "sześć": 6, "siedem": 7,
-        "osiem": 8, "dziewięć": 9, "dziesięć": 10, "jedenaście": 11,
-        "dwanaście": 12, "trzynaście": 13, "czternaście": 14,
-        "piętnaście": 15, "szesnaście": 16, "siedemnaście": 17,
-        "osiemnaście": 18, "dziewiętnaście": 19, "dwadzieścia": 20,
-        "trzydzieści": 30, "czterdzieści": 40, "pięćdziesiąt": 50,
-        "sześćdziesiąt": 60, "siedemdziesiąt": 70, "osiemdziesiąt": 80,
-        "dziewięćdziesiąt": 90, "sto": 100, "dwieście": 200,
-        "trzysta": 300, "czterysta": 400, "pięćset": 500,
-        "sześćset": 600, "siedemset": 700, "osiemset": 800,
-        "dziewięćset": 900, "tysiąc": 1000, "tysiące": 1000, "tysięcy": 1000
+        "zero": 0,
+        "jeden": 1, "jedna": 1,
+        "dwa": 2, "dwie": 2,
+        "trzy": 3,
+        "cztery": 4,
+        "pięć": 5,
+        "sześć": 6,
+        "siedem": 7,
+        "osiem": 8,
+        "dziewięć": 9,
+        "dziesięć": 10,
+        "jedenaście": 11,
+        "dwanaście": 12,
+        "trzynaście": 13,
+        "czternaście": 14,
+        "piętnaście": 15,
+        "szesnaście": 16,
+        "siedemnaście": 17,
+        "osiemnaście": 18,
+        "dziewiętnaście": 19,
+        "dwadzieścia": 20,
+        "trzydzieści": 30,
+        "czterdzieści": 40,
+        "pięćdziesiąt": 50,
+        "sześćdziesiąt": 60,
+        "siedemdziesiąt": 70,
+        "osiemdziesiąt": 80,
+        "dziewięćdziesiąt": 90,
+        "sto": 100,
+        "dwieście": 200,
+        "trzysta": 300,
+        "czterysta": 400,
+        "pięćset": 500,
+        "sześćset": 600,
+        "siedemset": 700,
+        "osiemset": 800,
+        "dziewięćset": 900,
+        "tysiąc": 1000,
+        "tysiące": 1000,
+        "tysięcy": 1000
     };
 
-    const parts = text.split("przecinek");
-    const intPart = parts[0].trim();
-    const fracPart = parts[1] ? parts[1].trim() : "";
+    let parts = text.split(" ");
+    let total = 0;
+    let current = 0;
 
-    function parseIntWords(t) {
-        if (!t) return 0;
-        let tokens = t.split(/\s+/);
-        let total = 0, current = 0;
-
-        for (let w of tokens) {
-            if (!(w in map)) continue;
-            const v = map[w];
-
-            if (v >= 1000) {
-                current = (current || 1) * v;
-                total += current;
-                current = 0;
-            } else if (v >= 100) {
-                current += v;
-            } else {
-                current += v;
-            }
-        }
-        return total + current;
-    }
-
-    const intVal = parseIntWords(intPart);
-
-    if (!fracPart) return intVal;
-
-    const fracTokens = fracPart.split(/\s+/);
-    let digits = "";
-
-    for (let w of fracTokens) {
-        if (w in map && map[w] >= 0 && map[w] <= 9) {
-            digits += String(map[w]);
+    for (let w of parts) {
+        if (map[w] >= 1000) {
+            current = (current || 1) * map[w];
+            total += current;
+            current = 0;
+        } else if (map[w] >= 100) {
+            current += map[w];
+        } else if (map[w] >= 0) {
+            current += map[w];
         }
     }
 
-    if (!digits) return intVal;
-
-    return intVal + parseFloat("0." + digits);
+    return total + current;
 }
 
 /* ---------------------------------------------------------
@@ -176,55 +179,30 @@ function sayStep() {
     };
 
     comment.textContent = "➡️ " + map[step];
+}
 
-   function handleRecognized(text) {
+function handleRecognized(text) {
     document.getElementById("recognized").textContent = text;
 
     const step = steps[currentStep];
-    const raw = text.trim();
 
-    /* -------------------------
-       1) TICKER — NIE ruszamy!
-       ------------------------- */
     if (step === "ticker") {
-        tempRecord.ticker = raw.toUpperCase();
-        currentStep++;
-        sayStep();
-        return;
+        tempRecord.ticker = text.toUpperCase();
     }
-
-    /* -------------------------
-       2) INTERWAŁ — też bez zmian
-       ------------------------- */
-    if (step === "interval") {
-        tempRecord.interval = raw.toUpperCase();
-        currentStep++;
-        sayStep();
-        return;
+    else if (step === "interval") {
+        tempRecord.interval = text.toUpperCase();
     }
+    else {
+        let num = parseFloat(text.replace(",", "."));
 
-    /* -------------------------
-       3) POZOSTAŁE — SUPER PARSER LICZB
-       ------------------------- */
+        if (isNaN(num)) {
+            num = wordsToNumber(text);
+        }
 
-    let cleaned = raw
-        .toLowerCase()
-        .replace(/[\s\u00A0]+/g, "")   // usuń spacje i NBSP
-        .replace(/\.$/, "");          // usuń kropkę na końcu
-
-    let num = parseFloat(cleaned.replace(",", "."));
-
-    if (isNaN(num)) {
-        num = wordsToNumber(raw);
+        if (!isNaN(num)) {
+            tempRecord[step] = num;
+        }
     }
-
-    if (isNaN(num)) {
-        document.getElementById("comment").textContent =
-            "❗ Nie zrozumiałem liczby dla: " + step + " — powtórz wartość.";
-        return;
-    }
-
-    tempRecord[step] = num;
 
     currentStep++;
 
@@ -237,7 +215,7 @@ function sayStep() {
 }
 
 /* ---------------------------------------------------------
-   ZAPIS REKORDU
+   ZAPIS REKORDU — POPRAWKA DEMA9
    --------------------------------------------------------- */
 
 function finalizeRecord() {
@@ -247,7 +225,7 @@ function finalizeRecord() {
         `${tempRecord.ticker} ${tempRecord.interval} ` +
         `open ${tempRecord.open} low ${tempRecord.low} high ${tempRecord.high} ` +
         `close ${tempRecord.close} ma20 ${tempRecord.ma20} ` +
-        `dema9 ${tempRecord.dema9} volume ${tempRecord.volume} rsi ${tempRecord.rsi}`;
+        `dema9 ${tempRecord.dema9 ?? ""} volume ${tempRecord.volume} rsi ${tempRecord.rsi}`;
 
     fetch("https://voice-xtb.onrender.com/voice-parse", {
         method: "POST",
@@ -272,119 +250,4 @@ function finalizeRecord() {
     try { recognition.stop(); } catch {}
 }
 
-/* ---------------------------------------------------------
-   TABELA
-   --------------------------------------------------------- */
-
-function saveTable() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
-}
-
-function loadTable() {
-    rows = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    renderTable();
-}
-document.addEventListener("DOMContentLoaded", loadTable);
-
-function deleteRow(key) {
-    delete rows[key];
-    saveTable();
-    renderTable();
-}
-
-function renderTable() {
-    const tbody = document.getElementById("voiceTableBody");
-    tbody.innerHTML = "";
-
-    const list = Object.values(rows);
-
-    list.sort((a, b) => {
-        const pa = signalPriority(a.signal);
-        const pb = signalPriority(b.signal);
-        return pa - pb;
-    });
-
-    list.forEach(row => {
-        const key = row.ticker + "|" + row.interval;
-
-        const tr = document.createElement("tr");
-
-        tr.innerHTML = `
-            <td>${row.ticker}</td>
-            <td>${row.interval}</td>
-            <td>${row.close ?? ""}</td>
-            <td>${row.entry ?? ""}</td>
-            <td>${row.signal || ""}</td>
-            <td>${row.tp3 ?? ""}</td>
-            <td>${row.low != null && row.high != null ? row.low + " – " + row.high : ""}</td>
-            <td><button onclick="openPopup('${key}')">📊</button></td>
-            <td><button onclick="deleteRow('${key}')">🗑</button></td>
-        `;
-
-        applySignalColor(tr, row.signal, row.entry != null);
-        tbody.appendChild(tr);
-    });
-}
-
-/* ---------------------------------------------------------
-   POPUP
-   --------------------------------------------------------- */
-
-function openPopup(key) {
-    const row = rows[key];
-
-    document.getElementById("popupData").textContent =
-        `Sygnał: ${row.signal}\nTP3: ${row.tp3}\nWidełki: ${row.low} – ${row.high}`;
-
-    document.getElementById("popupGeneral").textContent =
-        row.comment || "Brak komentarza";
-
-    document.getElementById("popup45").style.display = "block";
-}
-
-document.getElementById("popupClose").onclick = () =>
-    document.getElementById("popup45").style.display = "none";
-
-/* ---------------------------------------------------------
-   SYGNAŁY
-   --------------------------------------------------------- */
-
-function signalPriority(sig) {
-    if (!sig) return 99;
-    const s = sig.toUpperCase();
-
-    if (s === "BUY") return 1;
-    if (s === "PRAWIE BUY") return 2;
-    if (s === "CZEKAJ DO BUY" || s === "CZEKAJ DO SELL") return 3;
-    if (s === "CZEKAJ") return 4;
-    if (s === "PRAWIE RESET") return 5;
-    if (s === "RESET") return 6;
-    if (s === "PRAWIE SELL") return 7;
-    if (s === "SELL") return 8;
-
-    return 99;
-}
-
-function applySignalColor(row, signal, hasEntry) {
-    row.className = "";
-
-    if (hasEntry) {
-        row.classList.add("signal-entry");
-        return;
-    }
-
-    if (!signal) return;
-
-    const s = signal.toLowerCase();
-
-    if (s === "buy") row.classList.add("signal-buy");
-    else if (s === "prawie buy") row.classList.add("signal-prawie-buy");
-    else if (s === "sell") row.classList.add("signal-sell");
-    else if (s === "prawie sell") row.classList.add("signal-prawie-sell");
-    else if (s === "reset") row.classList.add("signal-reset");
-    else if (s === "prawie reset") row.classList.add("signal-prawie-reset");
-    else if (s === "czekaj") row.classList.add("signal-czekaj");
-}
-
-console.log("VOICE XTB 8.6 PRO — ZAŁADOWANY");
-}
+console.log("VOICE XTB 7.9 PRO — DEMA FIX ZAŁADOWANY");
