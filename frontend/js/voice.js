@@ -37,6 +37,8 @@ let activeKeyForClose = null; // ticker|interval dla trybu CLOSE_ONLY
 
 function initRecognition() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    console.log("SR =", SR);   // ← LOG: czy API istnieje
+
     if (!SR) {
         alert("Twoja przeglądarka nie wspiera rozpoznawania mowy.");
         return null;
@@ -48,19 +50,24 @@ function initRecognition() {
     rec.interimResults = false;
     rec.maxAlternatives = 1;
 
+    rec.onstart = () => {      // ← KLUCZOWE: Chrome wymaga tego handlera
+        console.log("🎤 Mikrofon wystartował");
+        document.getElementById("comment").textContent = "🎤 Mikrofon działa";
+    };
+
     rec.onresult = (e) => {
         const text = e.results[0][0].transcript.trim();
         handleRecognized(text);
     };
 
     rec.onerror = (e) => {
+        console.log("MIC ERROR:", e.error);
         document.getElementById("comment").textContent =
             "❌ Błąd mikrofonu: " + e.error;
     };
 
     rec.onend = () => {
         if (recognizing) {
-            // w trybie sekwencji pełnej możemy restartować
             if (mode === "FULL") {
                 setTimeout(() => {
                     try { rec.start(); } catch {}
@@ -340,9 +347,6 @@ function finalizeFullRecord() {
     try { recognition.stop(); } catch {}
 }
 
-/* ---------------------------------------------------------
-   TABELA — jeden wiersz FINAL na ticker
-   --------------------------------------------------------- */
 /* ---------------------------------------------------------
    TABELA — jeden wiersz FINAL na ticker
    --------------------------------------------------------- */
