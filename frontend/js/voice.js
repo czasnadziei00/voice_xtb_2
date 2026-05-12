@@ -1,12 +1,12 @@
 /* ---------------------------------------------------------
-   VOICE XTB 8.8 PRO — AUTO SEKWENCJA + KOREKTA CEN
+   VOICE XTB 7.9 PRO — AUTO SEKWENCJA + KOREKTA CEN
    --------------------------------------------------------- */
 
 let recognition = null;
 let recognizing = false;
 
-let rows = {}; 
-const STORAGE_KEY = "voicextb88tabela";
+let rows = {};
+const STORAGE_KEY = "voicextb79_tabela";
 
 /* ---------------------------------------------------------
    AUTO-SEKWENCJA
@@ -59,7 +59,9 @@ function initRecognition() {
 
     rec.onend = () => {
         if (recognizing) {
-            setTimeout(() => { try { rec.start(); } catch {} }, 200);
+            setTimeout(() => {
+                try { rec.start(); } catch {}
+            }, 200);
         } else {
             document.getElementById("comment").textContent = "⛔ Mikrofon zatrzymany";
         }
@@ -103,11 +105,11 @@ function sayStep() {
         volume: "Powiedz wolumen",
         rsi: "Powiedz rsi"
     };
-    document.getElementById("comment").textContent = "➡️ " + map[step];
+    document.getElementById("comment").textContent = "➡️ " + (map[step] || "");
 }
 
 /* ---------------------------------------------------------
-   WYCIĄGANIE LICZBY — 8.8 PRO
+   WYCIĄGANIE LICZBY — 7.9 PRO
    --------------------------------------------------------- */
 
 function extractNumber(text, step = "") {
@@ -134,7 +136,7 @@ function extractNumber(text, step = "") {
     }
 
     // CENY — zachowują kropkę
-    if (["open","high","low","close","ma20","dema9"].includes(step)) {
+    if (["open", "high", "low", "close", "ma20", "dema9"].includes(step)) {
         const m = text.match(/(\d+[.,]?\d*)/);
         if (!m) return NaN;
         let val = parseFloat(m[1].replace(",", "."));
@@ -161,11 +163,9 @@ function handleRecognized(text) {
 
     if (step === "ticker") {
         tempRecord.ticker = text.toUpperCase().replace(/\s+/g, "");
-    }
-    else if (step === "interval") {
+    } else if (step === "interval") {
         tempRecord.interval = text.toUpperCase().replace(/\s+/g, "");
-    }
-    else {
+    } else {
         const num = extractNumber(text, step);
         if (!isNaN(num)) tempRecord[step] = num;
     }
@@ -244,6 +244,7 @@ function finalizeRecord() {
     recognizing = false;
     try { recognition.stop(); } catch {}
 }
+
 /* ---------------------------------------------------------
    TABELA
    --------------------------------------------------------- */
@@ -256,6 +257,7 @@ function loadTable() {
     rows = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     renderTable();
 }
+
 document.addEventListener("DOMContentLoaded", loadTable);
 
 function deleteRow(key) {
@@ -266,6 +268,8 @@ function deleteRow(key) {
 
 function renderTable() {
     const tbody = document.getElementById("voiceTableBody");
+    if (!tbody) return;
+
     tbody.innerHTML = "";
 
     const list = Object.values(rows);
@@ -283,7 +287,11 @@ function renderTable() {
             <td>${row.entry ?? ""}</td>
             <td>${row.signal || ""}</td>
             <td>${row.tp3 ?? ""}</td>
-            <td>${row.low != null && row.high != null ? row.low + " – " + row.high : ""}</td>
+            <td>${
+                row.low != null && row.high != null
+                    ? row.low + " – " + row.high
+                    : ""
+            }</td>
             <td><button onclick="openPopup('${key}')">📊</button></td>
             <td><button onclick="deleteRow('${key}')">🗑</button></td>
         `;
@@ -317,7 +325,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const closeBtn = document.getElementById("popupClose");
     if (closeBtn) {
         closeBtn.onclick = () =>
-            document.getElementById("popup45").style.display = "none";
+            (document.getElementById("popup45").style.display = "none");
     }
 });
 
@@ -362,4 +370,4 @@ function applySignalColor(row, signal, hasEntry) {
     else if (s === "czekaj") row.classList.add("signal-czekaj");
 }
 
-console.log("VOICE XTB 8.8 PRO — ZAŁADOWANA");
+console.log("VOICE XTB 7.9 PRO — ZAŁADOWANA");
