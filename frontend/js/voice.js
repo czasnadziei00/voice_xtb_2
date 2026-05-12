@@ -1,6 +1,6 @@
 /* ---------------------------------------------------------
-   VOICE XTB 4.6 FINAL — FIX MICROPHONE VERSION
-   --------------------------------------------------------- */
+   VOICE XTB 4.7 MOBILE — FULL + CLOSE
+--------------------------------------------------------- */
 
 let recognition = null;
 let recognizing = false;
@@ -9,8 +9,8 @@ let rows = {};
 const STORAGE_KEY = "voicextb46_tabela";
 
 /* ---------------------------------------------------------
-   AUTO-SEKWENCJA PEŁNA
-   --------------------------------------------------------- */
+   FULL FLOW
+--------------------------------------------------------- */
 
 const fullSteps = [
     "ticker",
@@ -27,102 +27,64 @@ const fullSteps = [
 
 let currentStep = 0;
 let tempRecord = {};
-let mode = "FULL";
+let mode = "FULL";          // "FULL" | "CLOSE_ONLY"
 let activeKeyForClose = null;
 
 /* ---------------------------------------------------------
-   MIKROFON
-   --------------------------------------------------------- */
+   INIT RECOGNITION (ANDROID SAFE)
+--------------------------------------------------------- */
 
 function initRecognition() {
-
-    const SR =
-        window.webkitSpeechRecognition ||
-        window.SpeechRecognition;
-
+    const SR = window.webkitSpeechRecognition || window.SpeechRecognition;
     console.log("SpeechRecognition =", SR);
 
     if (!SR) {
-
         alert("❌ Twoja przeglądarka nie wspiera rozpoznawania mowy.");
         return null;
     }
 
     const rec = new SR();
-
     rec.lang = "pl-PL";
 
-    // KLUCZOWE
+    // ANDROID SAFE: continuous = false
     rec.continuous = false;
-
     rec.interimResults = false;
     rec.maxAlternatives = 1;
 
-    /* ---------------------------------------------------------
-       DEBUG
-       --------------------------------------------------------- */
-
     rec.onstart = () => {
-
-        console.log("🎤 MICROPHONE START");
-
-        document.getElementById("comment").textContent =
-            "🎤 Mikrofon aktywny";
-    };
-
-    rec.onaudiostart = () => {
-        console.log("AUDIO START");
-    };
-
-    rec.onsoundstart = () => {
-        console.log("SOUND START");
-    };
-
-    rec.onspeechstart = () => {
-        console.log("SPEECH START");
+        console.log("🎤 START");
+        document.getElementById("comment").textContent = "🎤 Mikrofon aktywny";
     };
 
     rec.onresult = (e) => {
-
-        console.log("RESULT EVENT", e);
-
-        const text =
-            e.results[0][0].transcript.trim();
-
+        const text = e.results[0][0].transcript.trim();
+        console.log("RESULT:", text);
         handleRecognized(text);
+        // UWAGA: NIE zatrzymujemy tu mikrofonu
     };
 
     rec.onerror = (e) => {
-
-        console.error("MIC ERROR:", e);
-
-        document.getElementById("comment").textContent =
-            "❌ Błąd mikrofonu: " + e.error;
+        console.log("MIC ERROR:", e);
+        document.getElementById("comment").textContent = "❌ " + e.error;
+        recognizing = false;
     };
 
     rec.onend = () => {
+        console.log("🎤 END");
 
-        console.log("🎤 MICROPHONE END");
-
-        if (recognizing && mode === "FULL") {
-
+        if (recognizing) {
+            // AUTO-RESTART — tylko gdy dalej jesteśmy w trybie nasłuchu
             setTimeout(() => {
-
                 try {
-
                     recognition.start();
-
                 } catch (e) {
-
-                    console.error("RESTART ERROR:", e);
+                    console.log("RESTART ERROR:", e);
+                    recognizing = false;
+                    document.getElementById("comment").textContent = "⛔ Mikrofon zatrzymany";
                 }
-
-            }, 300);
-
+            }, 350);
         } else {
-
-            document.getElementById("comment").textContent =
-                "⛔ Mikrofon zatrzymany";
+            document.getElementById("comment").textContent = "⛔ Mikrofon zatrzymany";
         }
     };
 
@@ -130,126 +92,82 @@ function initRecognition() {
 }
 
 /* ---------------------------------------------------------
-   START FULL
-   --------------------------------------------------------- */
+   SAFE START (WYMUSZA UPRAWNIENIA)
+--------------------------------------------------------- */
 
-async function startFullMic() {
-
-    console.log("START FULL MIC");
-
-    if (!recognition)
-        recognition = initRecognition();
-
-    if (!recognition)
-        return;
-
+async function safeStartRecognition() {
     try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
 
-        // WAŻNE:
-        // wymusza permission prompt
-
-        await navigator.mediaDevices.getUserMedia({
-            audio: true
-        });
-
-        recognizing = true;
-
-        mode = "FULL";
-
-        currentStep = 0;
-
-        tempRecord = {};
-
-        activeKeyForClose = null;
-
-        sayStep();
+        if (!recognition) recognition = initRecognition();
+        if (!recognition) return;
 
         recognition.start();
-
     } catch (e) {
-
-        console.error("START ERROR:", e);
-
-        document.getElementById("comment").textContent =
-            "❌ Nie można uruchomić mikrofonu";
+        console.log("GETUSERMEDIA ERROR:", e);
+        document.getElementById("comment").textContent = "❌ Brak dostępu do mikrofonu";
+        recognizing = false;
     }
+}
+
+/* ---------------------------------------------------------
+   START FULL
+--------------------------------------------------------- */
+
+async function startFullMic() {
+    console.log("START FULL MIC");
+
+    recognizing = true;
+    mode = "FULL";
+    currentStep = 0;
+    tempRecord = {};
+    activeKeyForClose = null;
+
+    sayStep();
+    await safeStartRecognition();
 }
 
 /* ---------------------------------------------------------
    START CLOSE ONLY
-   --------------------------------------------------------- */
+--------------------------------------------------------- */
 
 async function startCloseOnlyMic(key) {
+    console.log("START CLOSE MIC", key);
 
-    console.log("START CLOSE MIC");
+    recognizing = true;
+    mode = "CLOSE_ONLY";
+    activeKeyForClose = key;
+    tempRecord = {};
 
-    if (!recognition)
-        recognition = initRecognition();
-
-    if (!recognition)
-        return;
-
-    try {
-
-        await navigator.mediaDevices.getUserMedia({
-            audio: true
-        });
-
-        recognizing = true;
-
-        mode = "CLOSE_ONLY";
-
-        activeKeyForClose = key;
-
-        tempRecord = {};
-
-        document.getElementById("comment").textContent =
-            "➡️ Powiedz cenę close";
-
-        recognition.start();
-
-    } catch (e) {
-
-        console.error("START CLOSE ERROR:", e);
-
-        document.getElementById("comment").textContent =
-            "❌ Mikrofon zablokowany";
-    }
+    document.getElementById("comment").textContent = "➡️ Powiedz cenę close";
+    await safeStartRecognition();
 }
 
 /* ---------------------------------------------------------
    STOP
-   --------------------------------------------------------- */
+--------------------------------------------------------- */
 
 function stopMic() {
-
     console.log("STOP MIC");
-
     recognizing = false;
 
     if (recognition) {
-
         try {
-
             recognition.stop();
-
         } catch (e) {
-
-            console.error("STOP ERROR:", e);
+            console.log("STOP ERROR:", e);
         }
     }
 }
 
 /* ---------------------------------------------------------
-   KROKI
-   --------------------------------------------------------- */
+   STEP LABELS
+--------------------------------------------------------- */
 
 function sayStep() {
-
     const step = fullSteps[currentStep];
 
     const map = {
-
         ticker: "Powiedz ticker",
         interval: "Powiedz interwał",
         open: "Powiedz open",
@@ -258,24 +176,21 @@ function sayStep() {
         close: "Powiedz close",
         ma20: "Powiedz ma20",
         dema9: "Powiedz dema9",
-        volume: "Powiedz wolumen",
+        volume: "Powiedz volume",
         rsi: "Powiedz rsi"
     };
 
-    document.getElementById("comment").textContent =
-        "➡️ " + (map[step] || "");
+    document.getElementById("comment").textContent = "➡️ " + (map[step] || "");
 }
 
 /* ---------------------------------------------------------
    EXTRACT NUMBER
-   --------------------------------------------------------- */
+--------------------------------------------------------- */
 
 function extractNumber(text, step = "") {
-
     text = text.toLowerCase();
 
     const map = {
-
         "zero": "0",
         "jeden": "1",
         "dwa": "2",
@@ -292,31 +207,18 @@ function extractNumber(text, step = "") {
     };
 
     for (const [w, d] of Object.entries(map)) {
-
-        text =
-            text.replace(new RegExp(w, "g"), d);
+        text = text.replace(new RegExp(w, "g"), d);
     }
 
-    text =
-        text.replace("przecinek", ".")
-            .replace("kropka", ".");
+    text = text.replace("przecinek", ".").replace("kropka", ".");
 
-    const m =
-        text.match(/(\d+[.,]?\d*)/);
+    const m = text.match(/(\d+[.,]?\d*)/);
+    if (!m) return NaN;
 
-    if (!m)
-        return NaN;
+    let val = parseFloat(m[1].replace(",", "."));
 
-    let val =
-        parseFloat(m[1].replace(",", "."));
-
-    if (
-        ["open", "high", "low", "close", "ma20", "dema9"]
-            .includes(step)
-    ) {
-
-        if (val > 2000)
-            val = val / 100;
+    if (["open", "high", "low", "close", "ma20", "dema9"].includes(step)) {
+        if (val > 2000) val = val / 100;
     }
 
     return val;
@@ -324,52 +226,33 @@ function extractNumber(text, step = "") {
 
 /* ---------------------------------------------------------
    HANDLE RECOGNIZED
-   --------------------------------------------------------- */
+--------------------------------------------------------- */
 
 function handleRecognized(text) {
-
     console.log("RECOGNIZED:", text);
 
-    const recEl =
-        document.getElementById("recognized");
-
-    if (recEl)
-        recEl.textContent = text;
+    const recEl = document.getElementById("recognized");
+    if (recEl) recEl.textContent = text;
 
     if (mode === "CLOSE_ONLY") {
-
         handleCloseOnly(text);
         return;
     }
 
-    const step =
-        fullSteps[currentStep];
+    const step = fullSteps[currentStep];
 
     if (step === "ticker") {
-
-        tempRecord.ticker =
-            text.toUpperCase()
-                .replace(/\s+/g, "");
-
+        tempRecord.ticker = text.toUpperCase().replace(/\s+/g, "");
     } else if (step === "interval") {
-
-        tempRecord.interval =
-            text.toUpperCase()
-                .replace(/\s+/g, "");
-
+        tempRecord.interval = text.toUpperCase().replace(/\s+/g, "");
     } else {
-
-        const num =
-            extractNumber(text, step);
-
-        if (!isNaN(num))
-            tempRecord[step] = num;
+        const num = extractNumber(text, step);
+        if (!isNaN(num)) tempRecord[step] = num;
     }
 
     currentStep++;
 
     if (currentStep >= fullSteps.length) {
-
         finalizeFullRecord();
         return;
     }
@@ -379,70 +262,156 @@ function handleRecognized(text) {
 
 /* ---------------------------------------------------------
    CLOSE ONLY
-   --------------------------------------------------------- */
+--------------------------------------------------------- */
 
 function handleCloseOnly(text) {
-
     console.log("CLOSE ONLY:", text);
 
-    recognizing = false;
-
-    try {
-
-        recognition.stop();
-
-    } catch (e) {
-
-        console.error(e);
+    const num = extractNumber(text, "close");
+    if (isNaN(num)) {
+        document.getElementById("comment").textContent = "❌ Nie rozpoznano liczby";
+        recognizing = false;
+        return;
     }
+
+    const row = rows[activeKeyForClose];
+    if (!row) {
+        recognizing = false;
+        return;
+    }
+
+    const payloadText = `${row.ticker} ${row.interval || "M5"} close ${num}`;
+    sendToBackend(payloadText);
+    recognizing = false;
 }
 
 /* ---------------------------------------------------------
-   FINALIZE
-   --------------------------------------------------------- */
+   FINALIZE FULL
+--------------------------------------------------------- */
 
 function finalizeFullRecord() {
-
     console.log("FINAL RECORD:", tempRecord);
 
     recognizing = false;
 
+    const payloadText =
+        `${tempRecord.ticker} ${tempRecord.interval} ` +
+        `open ${tempRecord.open} ` +
+        `high ${tempRecord.high} ` +
+        `low ${tempRecord.low} ` +
+        `close ${tempRecord.close} ` +
+        `ma20 ${tempRecord.ma20} ` +
+        `dema9 ${tempRecord.dema9} ` +
+        `volume ${tempRecord.volume} ` +
+        `rsi ${tempRecord.rsi}`;
+
+    sendToBackend(payloadText);
+}
+
+/* ---------------------------------------------------------
+   SEND BACKEND
+--------------------------------------------------------- */
+
+async function sendToBackend(payloadText) {
+    document.getElementById("parsed").textContent = payloadText;
+    document.getElementById("comment").textContent = "⏳ Backend...";
+
     try {
+        const r = await fetch("https://voice-xtb.onrender.com/voice-parse", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: payloadText })
+        });
 
-        recognition.stop();
+        const data = await r.json();
 
+        const key = data.ticker + "|" + (data.interval || "M5");
+        rows[key] = data;
+
+        saveTable();
+        renderTable();
+
+        document.getElementById("comment").textContent = "✅ OK";
     } catch (e) {
-
-        console.error(e);
+        console.log("BACKEND ERROR:", e);
+        document.getElementById("comment").textContent = "❌ Backend error";
     }
-
-    document.getElementById("comment").textContent =
-        "✅ Dane odebrane";
 }
 
 /* ---------------------------------------------------------
    STORAGE
-   --------------------------------------------------------- */
+--------------------------------------------------------- */
 
 function saveTable() {
-
-    localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(rows)
-    );
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
 }
 
 function loadTable() {
-
-    rows =
-        JSON.parse(
-            localStorage.getItem(STORAGE_KEY) || "{}"
-        );
+    rows = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    renderTable();
 }
 
-document.addEventListener(
-    "DOMContentLoaded",
-    loadTable
-);
+document.addEventListener("DOMContentLoaded", loadTable);
 
-console.log("VOICE XTB 4.6 FIX LOADED");
+/* ---------------------------------------------------------
+   DELETE
+--------------------------------------------------------- */
+
+function deleteRow(key) {
+    delete rows[key];
+    saveTable();
+    renderTable();
+}
+
+/* ---------------------------------------------------------
+   SIGNAL COLORS
+--------------------------------------------------------- */
+
+function applySignalColor(row, signal) {
+    row.className = "";
+    if (!signal) return;
+
+    const s = signal.toLowerCase();
+
+    if (s === "buy") row.classList.add("signal-buy");
+    else if (s === "prawie buy") row.classList.add("signal-prawie-buy");
+    else if (s === "sell") row.classList.add("signal-sell");
+    else if (s === "prawie sell") row.classList.add("signal-prawie-sell");
+    else if (s === "reset") row.classList.add("signal-reset");
+    else if (s === "czekaj") row.classList.add("signal-czekaj");
+}
+
+/* ---------------------------------------------------------
+   TABLE
+--------------------------------------------------------- */
+
+function renderTable() {
+    const tbody = document.getElementById("voiceTableBody");
+    if (!tbody) return;
+
+    tbody.innerHTML = "";
+
+    Object.values(rows).forEach(row => {
+        const key = row.ticker + "|" + (row.interval || "M5");
+
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+            <td>${row.ticker}</td>
+            <td>${row.final_signal || ""}</td>
+            <td class="clickable-close" onclick="startCloseOnlyMic('${key}')">
+                ${row.close ?? ""}
+            </td>
+            <td>${row.tp3 ?? ""}</td>
+            <td>${row.low ?? ""} - ${row.high ?? ""}</td>
+            <td>
+                <button onclick="deleteRow('${key}')">🗑</button>
+            </td>
+        `;
+
+        applySignalColor(tr, row.final_signal);
+        tbody.appendChild(tr);
+    });
+}
+
+console.log("VOICE XTB 4.7 MOBILE — LOADED");
