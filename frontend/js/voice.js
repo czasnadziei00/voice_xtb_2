@@ -178,10 +178,10 @@ function sayStep() {
         low: "Powiedz low",
         high: "Powiedz high",
         close: "Powiedz close",
-        ma20: "Powiedz MA20",
-        dema9: "Powiedz DEMA9",
+        ma20: "Powiedz ma20",
+        dema9: "Powiedz dema9",
         volume: "Powiedz wolumen",
-        rsi: "Powiedz RSI"
+        rsi: "Powiedz rsi"
     };
 
     comment.textContent = "➡️ " + map[step];
