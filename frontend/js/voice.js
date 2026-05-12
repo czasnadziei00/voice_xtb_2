@@ -1,81 +1,12 @@
 /* ---------------------------------------------------------
-   VOICE XTB 7.9 PRO — AUTO SEKWENCJA + SŁOWA → LICZBY
+   VOICE XTB 8.0 PRO — AUTO SEKWENCJA
    --------------------------------------------------------- */
 
 let recognition = null;
 let recognizing = false;
 
 let rows = {}; // TICKER|INTERVAL → rekord
-const STORAGE_KEY = "voicextb78tabela";
-
-/* ---------------------------------------------------------
-   KONWERTER SŁÓW → LICZBY
-   --------------------------------------------------------- */
-
-function wordsToNumber(text) {
-    text = text.toLowerCase().trim();
-
-    const map = {
-        "zero": 0,
-        "jeden": 1, "jedna": 1,
-        "dwa": 2, "dwie": 2,
-        "trzy": 3,
-        "cztery": 4,
-        "pięć": 5,
-        "sześć": 6,
-        "siedem": 7,
-        "osiem": 8,
-        "dziewięć": 9,
-        "dziesięć": 10,
-        "jedenaście": 11,
-        "dwanaście": 12,
-        "trzynaście": 13,
-        "czternaście": 14,
-        "piętnaście": 15,
-        "szesnaście": 16,
-        "siedemnaście": 17,
-        "osiemnaście": 18,
-        "dziewiętnaście": 19,
-        "dwadzieścia": 20,
-        "trzydzieści": 30,
-        "czterdzieści": 40,
-        "pięćdziesiąt": 50,
-        "sześćdziesiąt": 60,
-        "siedemdziesiąt": 70,
-        "osiemdziesiąt": 80,
-        "dziewięćdziesiąt": 90,
-        "sto": 100,
-        "dwieście": 200,
-        "trzysta": 300,
-        "czterysta": 400,
-        "pięćset": 500,
-        "sześćset": 600,
-        "siedemset": 700,
-        "osiemset": 800,
-        "dziewięćset": 900,
-        "tysiąc": 1000,
-        "tysiące": 1000,
-        "tysięcy": 1000
-    };
-
-    let parts = text.split(" ");
-    let total = 0;
-    let current = 0;
-
-    for (let w of parts) {
-        if (map[w] >= 1000) {
-            current = (current || 1) * map[w];
-            total += current;
-            current = 0;
-        } else if (map[w] >= 100) {
-            current += map[w];
-        } else if (map[w] >= 0) {
-            current += map[w];
-        }
-    }
-
-    return total + current;
-}
+const STORAGE_KEY = "voicextb80tabela";
 
 /* ---------------------------------------------------------
    AUTO-SEKWENCJA
@@ -115,7 +46,6 @@ function initRecognition() {
     rec.maxAlternatives = 1;
 
     rec.onstart = () => {
-        // 🔥 KLUCZOWE — pokazuje aktualny krok po każdym restarcie Chrome
         sayStep();
     };
 
@@ -187,33 +117,39 @@ function sayStep() {
     comment.textContent = "➡️ " + map[step];
 }
 
+/* ---------------------------------------------------------
+   WYCIĄGANIE LICZBY Z MOWY
+   --------------------------------------------------------- */
+
 function extractNumber(text) {
-    return text
+    text = text
         .toLowerCase()
         .replace("przecinek", ".")
-        .replace("kropka", ".")
-        .replace(/[^0-9\.]/g, "")
-        .replace(/\.{2,}/g, ".")
-        .trim();
+        .replace("kropka", ".");
+
+    const m = text.match(/(\d+[.,]?\d*)/);
+    if (!m) return NaN;
+    return parseFloat(m[1].replace(",", "."));
 }
 
+/* ---------------------------------------------------------
+   GŁÓWNA OBSŁUGA ROZPOZNANIA
+   --------------------------------------------------------- */
+
 function handleRecognized(text) {
-   console.log("HANDLE:", steps[currentStep], text);
+    console.log("HANDLE:", steps[currentStep], text);
     document.getElementById("recognized").textContent = text;
 
     const step = steps[currentStep];
 
     if (step === "ticker") {
-        tempRecord.ticker = text.toUpperCase();
+        tempRecord.ticker = text.toUpperCase().replace(/\s+/g, "");
     }
     else if (step === "interval") {
-        tempRecord.interval = text.toUpperCase();
+        tempRecord.interval = text.toUpperCase().replace(/\s+/g, "");
     }
     else {
-        // 🔥 KLUCZ: czyścimy tekst z "dema", "ema", "bema", itp.
-        let cleaned = extractNumber(text);
-        let num = parseFloat(cleaned);
-
+        const num = extractNumber(text);
         if (!isNaN(num)) {
             tempRecord[step] = num;
         }
@@ -227,30 +163,25 @@ function handleRecognized(text) {
     }
 
     sayStep();
-}
-
-   
-
-/* ---------------------------------------------------------
+   /* ---------------------------------------------------------
    ZAPIS REKORDU
    --------------------------------------------------------- */
 
 function finalizeRecord() {
-
     console.log("FINAL RECORD:", tempRecord);
 
     const key = tempRecord.ticker + "|" + tempRecord.interval;
 
     const payloadText =
-    `${tempRecord.ticker} ${tempRecord.interval} ` +
-    `open ${tempRecord.open} ` +
-    `low ${tempRecord.low} ` +
-    `high ${tempRecord.high} ` +
-    `close ${tempRecord.close} ` +
-    `ma20 ${tempRecord.ma20} ` +
-    `dema9 ${tempRecord.dema9 ?? ""} ` +
-    `volume ${tempRecord.volume} ` +
-    `rsi ${tempRecord.rsi}`;
+        `${tempRecord.ticker} ${tempRecord.interval} ` +
+        `open ${tempRecord.open} ` +
+        `low ${tempRecord.low} ` +
+        `high ${tempRecord.high} ` +
+        `close ${tempRecord.close} ` +
+        `ma20 ${tempRecord.ma20} ` +
+        `dema9 ${tempRecord.dema9 ?? ""} ` +
+        `volume ${tempRecord.volume} ` +
+        `rsi ${tempRecord.rsi}`;
 
     console.log("PAYLOAD:", payloadText);
 
@@ -299,8 +230,10 @@ function finalizeRecord() {
     try { recognition.stop(); } catch (err) {
         console.log(err);
     }
-   console.log("FINAL:", tempRecord);
+
+    console.log("FINAL:", tempRecord);
 }
+
 /* ---------------------------------------------------------
    TABELA
    --------------------------------------------------------- */
@@ -415,4 +348,5 @@ function applySignalColor(row, signal, hasEntry) {
     else if (s === "czekaj") row.classList.add("signal-czekaj");
 }
 
-console.log("VOICE XTB 7.9 PRO — AUTO SEKWENCJA + SŁOWA→LICZBY ZAŁADOWANA");
+console.log("VOICE XTB 8.0 PRO — AUTO SEKWENCJA ZAŁADOWANA");
+}
