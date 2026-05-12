@@ -2,111 +2,150 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>VOICE XTB 7.9 PRO</title>
+    <title>VOICE XTB 4.6 FINAL</title>
 
     <style>
-        body { font-family: Arial, sans-serif; margin: 10px; }
-        button { margin: 5px; padding: 10px 14px; font-size: 16px; cursor: pointer; }
-        table { border-collapse: collapse; width: 100%; margin-top: 15px; }
-        th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: center; }
-        th { background: #eee; }
-        #recognized { font-weight: bold; color: #333; }
-        #comment { margin-top: 10px; padding: 8px; background: #f3f3f3; }
+        body {
+            background: #111;
+            color: #eee;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
 
-        /* Kolory sygnałów */
-        .signal-buy { background-color: #00cc44 !important; color: #fff; }
-        .signal-prawie-buy { background-color: #66ff99 !important; }
-        .signal-sell { background-color: #ff3333 !important; color: #fff; }
-        .signal-prawie-sell { background-color: #ff9999 !important; }
-        .signal-reset { background-color: #ffcc66 !important; }
-        .signal-prawie-reset { background-color: #fff799 !important; }
-        .signal-czekaj { background-color: #e0e0e0 !important; }
-        .signal-entry { background-color: #ffb84d !important; color: #000; }
+        h1 {
+            text-align: center;
+            padding: 20px;
+            margin: 0;
+            background: #222;
+            color: #0f0;
+            font-size: 26px;
+        }
 
-        /* Popup */
-        .popup {
+        #controls {
+            text-align: center;
+            padding: 15px;
+            background: #1a1a1a;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #333;
+            color: #eee;
+            border: 1px solid #555;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background: #444;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid #333;
+            text-align: center;
+        }
+
+        th {
+            background: #222;
+        }
+
+        tr:hover {
+            background: #1b1b1b;
+        }
+
+        .clickable-close {
+            cursor: pointer;
+            color: #0af;
+            font-weight: bold;
+        }
+
+        /* SYGNAŁY FINAL */
+        .signal-buy { background: #003300; color: #00ff00; }
+        .signal-prawie-buy { background: #1a3300; color: #ccff33; }
+        .signal-sell { background: #330000; color: #ff3333; }
+        .signal-prawie-sell { background: #331a00; color: #ff9933; }
+        .signal-reset { background: #222; color: #bbb; }
+        .signal-czekaj { background: #001a33; color: #66ccff; }
+
+        /* POPUP */
+        #popup45 {
             display: none;
             position: fixed;
-            z-index: 9999;
-            left: 0; top: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6);
-        }
-        .popup-content {
-            background: #1e1e1e;
-            color: #fff;
-            width: 480px;
-            margin: 80px auto;
+            top: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 500px;
+            background: #222;
+            border: 2px solid #555;
             padding: 20px;
-            border-radius: 12px;
-            font-size: 15px;
-            line-height: 1.4;
-            border: 1px solid #444;
+            z-index: 9999;
+            color: #eee;
         }
-        .close {
+
+        #popupClose {
             float: right;
-            font-size: 28px;
             cursor: pointer;
+            color: #f33;
+            font-size: 20px;
+        }
+
+        #parsed, #recognized, #comment {
+            white-space: pre-wrap;
+            padding: 10px;
+            margin: 10px;
+            background: #1a1a1a;
+            border: 1px solid #333;
         }
     </style>
 </head>
 
 <body>
 
-    <h2>VOICE XTB 7.9 PRO — analiza wielu tickerów</h2>
+<h1>VOICE XTB 4.6 FINAL — Jeden Wiersz</h1>
 
-    <button onclick="startMic()">🎤 START mikrofon</button>
-    <button onclick="stopMic()">⛔ STOP mikrofon</button>
+<div id="controls">
+    <button onclick="startFullMic()">🎤 Start sekwencji pełnej</button>
+    <button onclick="stopMic()">⛔ Stop</button>
+</div>
 
-    <!-- Terminal parsowania -->
-    <pre id="parsed" style="
-        white-space: pre-wrap;
-        background:#111;
-        color:#0f0;
-        padding:10px;
-        margin-top:10px;
-        border:1px solid #333;
-        font-size:14px;
-    "></pre>
+<div id="comment">Status systemu...</div>
+<div id="recognized">Rozpoznano: —</div>
+<div id="parsed">Wysłane: —</div>
 
-    <div>
-        <p>Rozpoznano: <span id="recognized"></span></p>
-        <div id="comment"></div>
-    </div>
+<table>
+    <thead>
+        <tr>
+            <th>Ticker</th>
+            <th>Sygnał FINAL</th>
+            <th>Close</th>
+            <th>TP3</th>
+            <th>Widełki</th>
+            <th>📊</th>
+            <th>🗑</th>
+        </tr>
+    </thead>
+    <tbody id="voiceTableBody"></tbody>
+</table>
 
-    <h3>Dane z głosu (LIVE)</h3>
+<!-- POPUP -->
+<div id="popup45">
+    <span id="popupClose">✖</span>
+    <h3>Analiza FINAL</h3>
+    <pre id="popupData"></pre>
+    <pre id="popupGeneral"></pre>
+</div>
 
-    <table id="voiceTable">
-        <thead>
-            <tr>
-                <th>Ticker</th>
-                <th>Interwał</th>
-                <th>Close</th>
-                <th>Entry</th>
-                <th>Sygnał</th>
-                <th>TP3</th>
-                <th>Widełki</th>
-                <th>📊</th>
-                <th>Usuń</th>
-            </tr>
-        </thead>
-        <tbody id="voiceTableBody"></tbody>
-    </table>
+<script src="voice.js"></script>
 
-    <!-- POPUP -->
-    <div id="popup45" class="popup">
-        <div class="popup-content">
-            <span id="popupClose" class="close">&times;</span>
-            <h2>Analiza 4.5+</h2>
-            <pre id="popupData"></pre>
-
-            <h3>📝 OGÓLNY KOMENTARZ</h3>
-            <pre id="popupGeneral"></pre>
-        </div>
-    </div>
-
-    <script src="js/voice.js?v=100014"></script>
 </body>
 </html>
