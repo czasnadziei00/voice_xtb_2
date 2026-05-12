@@ -1,6 +1,7 @@
 // =========================
-//   VOICE XTB 4.7 — FULL FINAL
+//   VOICE XTB 6.5 PRO
 //   MA20 + VOLUME + SYSTEM 8
+//   backend: voice-parse (6.5 PRO)
 // =========================
 
 let recognition = null;
@@ -10,6 +11,7 @@ let mode = null;
 let currentStep = 0;
 let tempRecord = {};
 
+// Kolejność kroków głosowych (bez ENTRY – ENTRY liczy backend)
 const fullSteps = [
     "ticker",
     "interval",
@@ -30,7 +32,15 @@ function startFullMic() {
     mode = "FULL";
     recognizing = true;
     currentStep = 0;
-    tempRecord = {};
+
+    // time ustawiamy automatycznie (HH:MM)
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+
+    tempRecord = {
+        time: `${hh}:${mm}`
+    };
 
     sayStep();
 
@@ -97,13 +107,27 @@ function handleRecognized(text) {
 //   FINALIZE
 // =========================
 function finalizeFullRecord() {
+    // podgląd bufora
     document.getElementById("parsed").textContent = JSON.stringify(tempRecord, null, 2);
-    document.getElementById("comment").textContent = "✔️ Zakończono sekwencję";
+    document.getElementById("comment").textContent = "✔️ Zakończono sekwencję — wysyłam do backendu 6.5 PRO";
 
-    // BACKEND CALL (main.js nadpisze tę funkcję)
-    if (typeof sendToBackend === "function") {
-        sendToBackend(tempRecord);
-    }
+    // wysyłka do backendu 6.5 PRO (voice-parse)
+    // zmienna `backend` masz w swoim 6.5 PRO:
+    // const backend = "https://voice-xtb.onrender.com/voice-parse";
+    fetch(backend, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(tempRecord)
+    })
+    .then(res => res.json())
+    .then(data => {
+        // główna funkcja 6.5 PRO
+        handleParsedData(data);
+    })
+    .catch(err => {
+        console.error(err);
+        document.getElementById("comment").textContent = "❌ Błąd backendu 6.5 PRO";
+    });
 }
 
 // =========================
@@ -123,6 +147,7 @@ function initRecognition() {
     rec.interimResults = false;
     rec.maxAlternatives = 1;
 
+    // SYSTEM 8 — nie nadpisujemy komunikatu
     rec.onstart = () => {};
 
     rec.onresult = (e) => {
