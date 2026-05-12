@@ -364,4 +364,3 @@ document.getElementById("popupClose").onclick = () =>
     document.getElementById("popup45").style.display = "none";
    
 console.log("VOICE XTB 8.0 PRO — AUTO SEKWENCJA ZAŁADOWANA");
-}
