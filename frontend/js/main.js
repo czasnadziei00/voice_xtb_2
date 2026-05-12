@@ -7,7 +7,7 @@ let lastTicker = null;
 
 
 // =========================
-–  KOLORY SYGNAŁÓW
+//  KOLORY SYGNAŁÓW
 // =========================
 function colorForSignal(signal) {
   if (signal === "BUY") return "#00c853";
@@ -225,7 +225,6 @@ document.querySelector("#voiceTable tbody").addEventListener("click", (e) => {
       }
     });
 
-    // tu możesz podpiąć swoją analiza45PRO(d)
     popupData.textContent = JSON.stringify(d, null, 2);
     popup.style.display = "block";
   }
