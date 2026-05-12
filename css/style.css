@@ -11,10 +11,6 @@ h1 {
     margin-bottom: 10px;
 }
 
-#controls {
-    margin-bottom: 10px;
-}
-
 button {
     padding: 8px 12px;
     margin-right: 6px;
@@ -22,30 +18,24 @@ button {
     border-radius: 4px;
     background: #2b7cff;
     color: #fff;
-    font-size: 14px;
 }
 
 button:nth-child(2) {
     background: #c0392b;
 }
 
-#comment,
-#recognized,
-#parsed {
+#comment, #recognized, #parsed {
     margin: 6px 0;
     font-size: 14px;
-    word-wrap: break-word;
 }
 
 #resultsTable {
     width: 100%;
     border-collapse: collapse;
     margin-top: 10px;
-    font-size: 13px;
 }
 
-#resultsTable th,
-#resultsTable td {
+#resultsTable th, #resultsTable td {
     border: 1px solid #444;
     padding: 4px 6px;
     text-align: center;
@@ -56,7 +46,6 @@ button:nth-child(2) {
 }
 
 /* POPUP */
-
 .popup {
     display: none;
     position: fixed;
@@ -75,7 +64,6 @@ button:nth-child(2) {
     border-radius: 6px;
     width: 90%;
     max-width: 400px;
-    color: #eee;
 }
 
 .popup-close {
@@ -84,9 +72,7 @@ button:nth-child(2) {
     font-size: 18px;
 }
 
-#popupData,
-#popupGeneral {
-    font-size: 12px;
+pre {
     white-space: pre-wrap;
-    word-wrap: break-word;
+    font-size: 12px;
 }
