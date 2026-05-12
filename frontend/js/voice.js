@@ -1,12 +1,12 @@
 /* ---------------------------------------------------------
-   VOICE XTB 8.4 PRO — AUTO SEKWENCJA
+   VOICE XTB 8.5 PRO — AUTO SEKWENCJA
    --------------------------------------------------------- */
 
 let recognition = null;
 let recognizing = false;
 
 let rows = {}; 
-const STORAGE_KEY = "voicextb84tabela";
+const STORAGE_KEY = "voicextb85tabela";
 
 /* ---------------------------------------------------------
    AUTO-SEKWENCJA (zgodna z backendem)
@@ -118,7 +118,7 @@ function sayStep() {
 }
 
 /* ---------------------------------------------------------
-   WYCIĄGANIE LICZBY — WERSJA 8.4 PRO
+   WYCIĄGANIE LICZBY — WERSJA 8.5 PRO
    --------------------------------------------------------- */
 
 function extractNumber(text, step = "") {
@@ -162,7 +162,7 @@ function extractNumber(text, step = "") {
 }
 
 /* ---------------------------------------------------------
-   HANDLE RECOGNIZED
+   HANDLE RECOGNIZED — POPRAWIONE (z step)
    --------------------------------------------------------- */
 
 function handleRecognized(text) {
@@ -194,7 +194,7 @@ function handleRecognized(text) {
 }
 
 /* ---------------------------------------------------------
-   FINALIZE RECORD — z pełnym debugiem
+   FINALIZE RECORD — pełny debug
    --------------------------------------------------------- */
 
 function finalizeRecord() {
@@ -377,4 +377,4 @@ function applySignalColor(row, signal, hasEntry) {
     else if (s === "czekaj") row.classList.add("signal-czekaj");
 }
 
-console.log("VOICE XTB 8.4 PRO — ZAŁADOWANA");
+console.log("VOICE XTB 8.5 PRO — ZAŁADOWANA");
