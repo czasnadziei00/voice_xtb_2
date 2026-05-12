@@ -198,6 +198,7 @@ function extractNumber(text) {
 }
 
 function handleRecognized(text) {
+   console.log("HANDLE:", steps[currentStep], text);
     document.getElementById("recognized").textContent = text;
 
     const step = steps[currentStep];
@@ -298,6 +299,7 @@ function finalizeRecord() {
     try { recognition.stop(); } catch (err) {
         console.log(err);
     }
+   console.log("FINAL:", tempRecord);
 }
 /* ---------------------------------------------------------
    TABELA
