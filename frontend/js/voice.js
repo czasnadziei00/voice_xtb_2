@@ -335,6 +335,14 @@ function finalizeFullRecord() {
                     ? "❌ Timeout backendu"
                     : "❌ Błąd połączenia z backendem";
         });
+
+    recognizing = false;
+    try { recognition.stop(); } catch {}
+}
+
+/* ---------------------------------------------------------
+   TABELA — jeden wiersz FINAL na ticker
+   --------------------------------------------------------- */
 /* ---------------------------------------------------------
    TABELA — jeden wiersz FINAL na ticker
    --------------------------------------------------------- */
