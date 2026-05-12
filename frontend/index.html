@@ -2,14 +2,14 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>VOICE XTB 4.7 FINAL — Jeden Wiersz</title>
+    <title>VOICE XTB 6.5 PRO</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<h1>VOICE XTB 4.7 FINAL — Jeden Wiersz</h1>
+<h1>VOICE XTB 6.5 PRO</h1>
 
 <div id="controls">
     <button onclick="startFullMic()">🎤 Start sekwencji pełnej</button>
@@ -17,29 +17,33 @@
 </div>
 
 <div id="comment">Status systemu...</div>
+<div id="status">Bufor danych...</div>
 <div id="recognized">Rozpoznano: —</div>
-<div id="parsed">Wysłane: —</div>
+<div id="parsed">Bufor JSON: —</div>
 
-<table id="resultsTable">
+<table id="voiceTable">
     <thead>
         <tr>
             <th>Ticker</th>
-            <th>Sygnał FINAL</th>
-            <th>Close</th>
-            <th>TP3</th>
+            <th>Interwał</th>
+            <th>Czas</th>
+            <th>Entry</th>
+            <th>Sygnał</th>
             <th>Widełki</th>
+            <th>TP1 / TP2 / TP3</th>
+            <th>📊</th>
+            <th>🗑</th>
         </tr>
     </thead>
-    <tbody id="resultsBody"></tbody>
+    <tbody></tbody>
 </table>
 
-<!-- POPUP -->
+<!-- POPUP 6.5 PRO -->
 <div id="popup45" class="popup">
     <div class="popup-content">
         <span id="popupClose" class="popup-close">✖</span>
         <h3>Analiza FINAL</h3>
         <pre id="popupData"></pre>
-        <pre id="popupGeneral"></pre>
     </div>
 </div>
 
