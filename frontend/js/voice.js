@@ -1,15 +1,15 @@
 /* ---------------------------------------------------------
-   VOICE XTB 8.5 PRO — AUTO SEKWENCJA
+   VOICE XTB 8.8 PRO — AUTO SEKWENCJA + KOREKTA CEN
    --------------------------------------------------------- */
 
 let recognition = null;
 let recognizing = false;
 
 let rows = {}; 
-const STORAGE_KEY = "voicextb85tabela";
+const STORAGE_KEY = "voicextb88tabela";
 
 /* ---------------------------------------------------------
-   AUTO-SEKWENCJA (zgodna z backendem)
+   AUTO-SEKWENCJA
    --------------------------------------------------------- */
 
 const steps = [
@@ -45,9 +45,7 @@ function initRecognition() {
     rec.interimResults = false;
     rec.maxAlternatives = 1;
 
-    rec.onstart = () => {
-        sayStep();
-    };
+    rec.onstart = () => sayStep();
 
     rec.onresult = (e) => {
         const text = e.results[0][0].transcript.trim();
@@ -61,12 +59,9 @@ function initRecognition() {
 
     rec.onend = () => {
         if (recognizing) {
-            setTimeout(() => {
-                try { rec.start(); } catch {}
-            }, 200);
+            setTimeout(() => { try { rec.start(); } catch {} }, 200);
         } else {
-            document.getElementById("comment").textContent =
-                "⛔ Mikrofon zatrzymany";
+            document.getElementById("comment").textContent = "⛔ Mikrofon zatrzymany";
         }
     };
 
@@ -82,15 +77,12 @@ function startMic() {
     tempRecord = {};
 
     sayStep();
-
     try { recognition.start(); } catch {}
 }
 
 function stopMic() {
     recognizing = false;
-    if (recognition) {
-        try { recognition.stop(); } catch {}
-    }
+    if (recognition) try { recognition.stop(); } catch {}
 }
 
 /* ---------------------------------------------------------
@@ -99,8 +91,6 @@ function stopMic() {
 
 function sayStep() {
     const step = steps[currentStep];
-    const comment = document.getElementById("comment");
-
     const map = {
         ticker: "Powiedz ticker",
         interval: "Powiedz interwał",
@@ -113,56 +103,55 @@ function sayStep() {
         volume: "Powiedz wolumen",
         rsi: "Powiedz rsi"
     };
-
-    comment.textContent = "➡️ " + map[step];
+    document.getElementById("comment").textContent = "➡️ " + map[step];
 }
 
 /* ---------------------------------------------------------
-   WYCIĄGANIE LICZBY — WERSJA 8.5 PRO
+   WYCIĄGANIE LICZBY — 8.8 PRO
    --------------------------------------------------------- */
 
 function extractNumber(text, step = "") {
     text = text.toLowerCase();
 
-    // 🔥 Zamiana słów na cyfry
+    // słowa → cyfry
     const map = {
-        "zero": "0",
-        "jeden": "1",
-        "dwa": "2",
-        "trzy": "3",
-        "cztery": "4",
-        "piec": "5",
-        "pięć": "5",
-        "szesc": "6",
-        "sześć": "6",
-        "siedem": "7",
-        "osiem": "8",
-        "dziewiec": "9",
-        "dziewięć": "9"
+        "zero": "0", "jeden": "1", "dwa": "2", "trzy": "3",
+        "cztery": "4", "piec": "5", "pięć": "5",
+        "szesc": "6", "sześć": "6", "siedem": "7",
+        "osiem": "8", "dziewiec": "9", "dziewięć": "9"
     };
-
-    for (const [word, digit] of Object.entries(map)) {
-        text = text.replace(new RegExp(word, "g"), digit);
+    for (const [w, d] of Object.entries(map)) {
+        text = text.replace(new RegExp(w, "g"), d);
     }
 
     text = text.replace("przecinek", ".").replace("kropka", ".");
 
-    // 🔥 RSI zachowuje przecinek
+    // RSI — zachowuje kropkę
     if (step === "rsi") {
         const m = text.match(/(\d+[.,]?\d*)/);
         if (!m) return NaN;
         return parseFloat(m[1].replace(",", "."));
     }
 
-    // 🔥 Reszta → tylko cyfry
+    // CENY — zachowują kropkę
+    if (["open","high","low","close","ma20","dema9"].includes(step)) {
+        const m = text.match(/(\d+[.,]?\d*)/);
+        if (!m) return NaN;
+        let val = parseFloat(m[1].replace(",", "."));
+
+        // AUTOMATYCZNA KOREKTA — jak kiedyś
+        if (val > 2000) val = val / 100;
+        return val;
+    }
+
+    // WOLUMEN — digits only
     const digits = text.replace(/[^0-9]/g, "");
     if (!digits) return NaN;
-
     return parseFloat(digits);
 }
 
 /* ---------------------------------------------------------
-   HANDLE RECOGNIZED — POPRAWIONE (z step)
+   HANDLE RECOGNIZED
    --------------------------------------------------------- */
 
 function handleRecognized(text) {
@@ -178,9 +167,7 @@ function handleRecognized(text) {
     }
     else {
         const num = extractNumber(text, step);
-        if (!isNaN(num)) {
-            tempRecord[step] = num;
-        }
+        if (!isNaN(num)) tempRecord[step] = num;
     }
 
     currentStep++;
@@ -200,6 +187,9 @@ function handleRecognized(text) {
 function finalizeRecord() {
     const key = tempRecord.ticker + "|" + tempRecord.interval;
 
+    // wolumen fallback
+    if (tempRecord.volume === undefined) tempRecord.volume = tempRecord.low;
+
     const payloadText =
         `${tempRecord.ticker} ${tempRecord.interval} ` +
         `open ${tempRecord.open} ` +
@@ -212,12 +202,9 @@ function finalizeRecord() {
         `rsi ${tempRecord.rsi}`;
 
     const parsedEl = document.getElementById("parsed");
-    if (parsedEl) {
-        parsedEl.textContent = "WYSŁANO:\n" + payloadText;
-    }
+    if (parsedEl) parsedEl.textContent = "WYSŁANO:\n" + payloadText;
 
-    document.getElementById("comment").textContent =
-        "⏳ Wysyłanie do backendu...";
+    document.getElementById("comment").textContent = "⏳ Wysyłanie do backendu...";
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
@@ -248,7 +235,6 @@ function finalizeRecord() {
         })
         .catch(err => {
             clearTimeout(timeout);
-
             document.getElementById("comment").textContent =
                 err.name === "AbortError"
                     ? "❌ Timeout backendu"
@@ -283,7 +269,6 @@ function renderTable() {
     tbody.innerHTML = "";
 
     const list = Object.values(rows);
-
     list.sort((a, b) => signalPriority(a.signal) - signalPriority(b.signal));
 
     list.forEach(row => {
@@ -377,4 +362,4 @@ function applySignalColor(row, signal, hasEntry) {
     else if (s === "czekaj") row.classList.add("signal-czekaj");
 }
 
-console.log("VOICE XTB 8.5 PRO — ZAŁADOWANA");
+console.log("VOICE XTB 8.8 PRO — ZAŁADOWANA");
