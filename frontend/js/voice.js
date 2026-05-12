@@ -370,3 +370,4 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 console.log("VOICE XTB 8.0 PRO — AUTO SEKWENCJA ZAŁADOWANA");
+}
