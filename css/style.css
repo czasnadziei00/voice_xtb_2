@@ -31,29 +31,59 @@ button:nth-child(2) {
 
 #comment,
 #recognized,
-#parsed,
-#status {
+#parsed {
     margin: 4px 0;
     font-size: 13px;
     word-wrap: break-word;
 }
 
-#voiceTable {
+#tfTable {
     width: 100%;
     border-collapse: collapse;
     margin-top: 10px;
     font-size: 13px;
 }
 
-#voiceTable th,
-#voiceTable td {
+#tfTable th,
+#tfTable td {
     border: 1px solid #444;
     padding: 4px 6px;
     text-align: center;
+    vertical-align: top;
 }
 
-#voiceTable thead {
+#tfTable thead {
     background: #222;
+}
+
+.tf-cell {
+    cursor: pointer;
+    padding: 4px;
+}
+
+.tf-signal {
+    font-weight: bold;
+    font-size: 14px;
+    display: block;
+}
+
+.tf-hint {
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+/* kolory sygnałów */
+.signal-BUY {
+    color: #00e676;
+}
+.signal-SELL {
+    color: #ff5252;
+}
+.signal-NEUTRAL,
+.signal-CZEKAJ,
+.signal-CZEKAJDO,
+.signal-PRAWIEBUY {
+    color: #ffeb3b;
 }
 
 /* POPUP */
@@ -75,7 +105,7 @@ button:nth-child(2) {
     padding: 10px;
     border-radius: 6px;
     width: 90%;
-    max-width: 400px;
+    max-width: 420px;
     color: #eee;
 }
 
