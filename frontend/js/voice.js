@@ -1,6 +1,6 @@
 // =========================
-//   VOICE XTB 4.7 — FINAL + MA20
-//   SYSTEM 8 STYLE
+//   VOICE XTB 4.7 — FULL FINAL
+//   MA20 + VOLUME + SYSTEM 8
 // =========================
 
 let recognition = null;
@@ -17,6 +17,7 @@ const fullSteps = [
     "low",
     "high",
     "close",
+    "volume",
     "ma20",
     "dema9",
     "rsi"
@@ -57,6 +58,7 @@ function sayStep() {
         low: "Powiedz low",
         high: "Powiedz high",
         close: "Powiedz close",
+        volume: "Powiedz wolumen",
         ma20: "Powiedz MA20",
         dema9: "Powiedz DEMA9",
         rsi: "Powiedz RSI"
@@ -89,8 +91,6 @@ function handleRecognized(text) {
         recognizing = false;
         return;
     }
-
-    // UWAGA: restart mikrofonu TYLKO w onend
 }
 
 // =========================
@@ -99,6 +99,11 @@ function handleRecognized(text) {
 function finalizeFullRecord() {
     document.getElementById("parsed").textContent = JSON.stringify(tempRecord, null, 2);
     document.getElementById("comment").textContent = "✔️ Zakończono sekwencję";
+
+    // BACKEND CALL (main.js nadpisze tę funkcję)
+    if (typeof sendToBackend === "function") {
+        sendToBackend(tempRecord);
+    }
 }
 
 // =========================
@@ -118,7 +123,6 @@ function initRecognition() {
     rec.interimResults = false;
     rec.maxAlternatives = 1;
 
-    // SYSTEM 8 — NIE nadpisujemy komunikatu!
     rec.onstart = () => {};
 
     rec.onresult = (e) => {
@@ -139,7 +143,6 @@ function initRecognition() {
             return;
         }
 
-        // SYSTEM 8 — kolejny krok TYLKO tutaj
         if (mode === "FULL" && currentStep < fullSteps.length) {
             sayStep();
             setTimeout(() => {
