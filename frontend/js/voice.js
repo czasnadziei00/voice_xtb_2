@@ -198,6 +198,7 @@ function extractNumber(text) {
 }
 
 function handleRecognized(text) {
+   console.log("STEP:", step, "TEXT:", text);
     document.getElementById("recognized").textContent = text;
 
     const step = steps[currentStep];
