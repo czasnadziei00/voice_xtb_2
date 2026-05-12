@@ -11,7 +11,7 @@ let mode = null;
 let currentStep = 0;
 let tempRecord = {};
 
-// Kolejność kroków głosowych (bez ENTRY – ENTRY liczy backend)
+// KROKI GŁOSOWE – Z WOLUMENEM
 const fullSteps = [
     "ticker",
     "interval",
@@ -33,7 +33,7 @@ function startFullMic() {
     recognizing = true;
     currentStep = 0;
 
-    // time ustawiamy automatycznie (HH:MM)
+    // time automatycznie (HH:MM)
     const now = new Date();
     const hh = String(now.getHours()).padStart(2, "0");
     const mm = String(now.getMinutes()).padStart(2, "0");
@@ -107,13 +107,11 @@ function handleRecognized(text) {
 //   FINALIZE
 // =========================
 function finalizeFullRecord() {
-    // podgląd bufora
     document.getElementById("parsed").textContent = JSON.stringify(tempRecord, null, 2);
-    document.getElementById("comment").textContent = "✔️ Zakończono sekwencję — wysyłam do backendu 6.5 PRO";
+    document.getElementById("comment").textContent =
+        "✔️ Zakończono sekwencję — wysyłam do backendu 6.5 PRO";
 
-    // wysyłka do backendu 6.5 PRO (voice-parse)
-    // zmienna `backend` masz w swoim 6.5 PRO:
-    // const backend = "https://voice-xtb.onrender.com/voice-parse";
+    // `backend` jest zdefiniowany w main.js 6.5 PRO
     fetch(backend, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -121,8 +119,7 @@ function finalizeFullRecord() {
     })
     .then(res => res.json())
     .then(data => {
-        // główna funkcja 6.5 PRO
-        handleParsedData(data);
+        handleParsedData(data);   // główna funkcja 6.5 PRO
     })
     .catch(err => {
         console.error(err);
@@ -147,7 +144,6 @@ function initRecognition() {
     rec.interimResults = false;
     rec.maxAlternatives = 1;
 
-    // SYSTEM 8 — nie nadpisujemy komunikatu
     rec.onstart = () => {};
 
     rec.onresult = (e) => {
