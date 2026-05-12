@@ -347,6 +347,21 @@ function applySignalColor(row, signal, hasEntry) {
     else if (s === "prawie reset") row.classList.add("signal-prawie-reset");
     else if (s === "czekaj") row.classList.add("signal-czekaj");
 }
+function openPopup(key) {
+    const row = rows[key];
+    if (!row) return;
 
+    document.getElementById("popupData").textContent =
+        `Sygnał: ${row.signal}\nTP3: ${row.tp3}\nWidełki: ${row.low} – ${row.high}`;
+
+    document.getElementById("popupGeneral").textContent =
+        row.comment || "Brak komentarza";
+
+    document.getElementById("popup45").style.display = "block";
+}
+
+document.getElementById("popupClose").onclick = () =>
+    document.getElementById("popup45").style.display = "none";
+   
 console.log("VOICE XTB 8.0 PRO — AUTO SEKWENCJA ZAŁADOWANA");
 }
