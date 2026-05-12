@@ -1,23 +1,37 @@
 /* ---------------------------------------------------------
-   VOICE XTB 8.0 PRO — AUTO SEKWENCJA
+   VOICE XTB 8.2 PRO — AUTO SEKWENCJA
    --------------------------------------------------------- */
 
 let recognition = null;
 let recognizing = false;
 
-let rows = {}; // TICKER|INTERVAL → rekord
-const STORAGE_KEY = "voicextb80tabela";
+let rows = {}; 
+const STORAGE_KEY = "voicextb82tabela";
 
 /* ---------------------------------------------------------
    AUTO-SEKWENCJA
    --------------------------------------------------------- */
+/*
+   KOLEJNOŚĆ ZGODNA Z BACKENDEM:
+
+   ticker
+   interval
+   open
+   high
+   low
+   close
+   ma20
+   dema9
+   volume
+   rsi
+*/
 
 const steps = [
     "ticker",
     "interval",
     "open",
-    "low",
     "high",
+    "low",
     "close",
     "ma20",
     "dema9",
@@ -105,8 +119,8 @@ function sayStep() {
         ticker: "Powiedz ticker",
         interval: "Powiedz interwał",
         open: "Powiedz open",
-        low: "Powiedz low",
         high: "Powiedz high",
+        low: "Powiedz low",
         close: "Powiedz close",
         ma20: "Powiedz ma20",
         dema9: "Powiedz dema9",
@@ -118,7 +132,7 @@ function sayStep() {
 }
 
 /* ---------------------------------------------------------
-   WYCIĄGANIE LICZBY Z MOWY
+   WYCIĄGANIE LICZBY (ODPORNE NA GŁOS)
    --------------------------------------------------------- */
 
 function extractNumber(text) {
@@ -127,17 +141,18 @@ function extractNumber(text) {
         .replace("przecinek", ".")
         .replace("kropka", ".");
 
-    const m = text.match(/(\d+[.,]?\d*)/);
-    if (!m) return NaN;
-    return parseFloat(m[1].replace(",", "."));
+    // zbierz wszystkie cyfry
+    const digits = text.replace(/[^0-9]/g, "");
+    if (!digits) return NaN;
+
+    return parseFloat(digits);
 }
 
 /* ---------------------------------------------------------
-   GŁÓWNA OBSŁUGA ROZPOZNANIA
+   HANDLE RECOGNIZED
    --------------------------------------------------------- */
 
 function handleRecognized(text) {
-    console.log("HANDLE:", steps[currentStep], text);
     document.getElementById("recognized").textContent = text;
 
     const step = steps[currentStep];
@@ -151,7 +166,12 @@ function handleRecognized(text) {
     else {
         const num = extractNumber(text);
         if (!isNaN(num)) {
-            tempRecord[step] = num;
+            // prosta walidacja dla dema9 (odrzuć ewidentne śmieci typu 3, 9)
+            if (step === "dema9" && num < 50) {
+                // ignorujemy błędne rozpoznanie
+            } else {
+                tempRecord[step] = num;
+            }
         }
     }
 
@@ -163,27 +183,25 @@ function handleRecognized(text) {
     }
 
     sayStep();
-   /* ---------------------------------------------------------
-   ZAPIS REKORDU
+}
+
+/* ---------------------------------------------------------
+   FINALIZE RECORD
    --------------------------------------------------------- */
 
 function finalizeRecord() {
-    console.log("FINAL RECORD:", tempRecord);
-
     const key = tempRecord.ticker + "|" + tempRecord.interval;
 
     const payloadText =
         `${tempRecord.ticker} ${tempRecord.interval} ` +
         `open ${tempRecord.open} ` +
-        `low ${tempRecord.low} ` +
         `high ${tempRecord.high} ` +
+        `low ${tempRecord.low} ` +
         `close ${tempRecord.close} ` +
         `ma20 ${tempRecord.ma20} ` +
         `dema9 ${tempRecord.dema9 ?? ""} ` +
         `volume ${tempRecord.volume} ` +
         `rsi ${tempRecord.rsi}`;
-
-    console.log("PAYLOAD:", payloadText);
 
     document.getElementById("comment").textContent =
         "⏳ Wysyłanie do backendu...";
@@ -201,8 +219,6 @@ function finalizeRecord() {
         .then(data => {
             clearTimeout(timeout);
 
-            console.log("BACKEND RESPONSE:", data);
-
             rows[key] = data;
             saveTable();
             renderTable();
@@ -212,8 +228,6 @@ function finalizeRecord() {
         })
         .catch(err => {
             clearTimeout(timeout);
-
-            console.log(err);
 
             if (err.name === "AbortError") {
                 document.getElementById("comment").textContent =
@@ -226,14 +240,8 @@ function finalizeRecord() {
         });
 
     recognizing = false;
-
-    try { recognition.stop(); } catch (err) {
-        console.log(err);
-    }
-
-    console.log("FINAL:", tempRecord);
+    try { recognition.stop(); } catch {}
 }
-
 /* ---------------------------------------------------------
    TABELA
    --------------------------------------------------------- */
@@ -260,11 +268,7 @@ function renderTable() {
 
     const list = Object.values(rows);
 
-    list.sort((a, b) => {
-        const pa = signalPriority(a.signal);
-        const pb = signalPriority(b.signal);
-        return pa - pb;
-    });
+    list.sort((a, b) => signalPriority(a.signal) - signalPriority(b.signal));
 
     list.forEach(row => {
         const key = row.ticker + "|" + row.interval;
@@ -294,6 +298,7 @@ function renderTable() {
 
 function openPopup(key) {
     const row = rows[key];
+    if (!row) return;
 
     document.getElementById("popupData").textContent =
         `Sygnał: ${row.signal}\nTP3: ${row.tp3}\nWidełki: ${row.low} – ${row.high}`;
@@ -304,8 +309,13 @@ function openPopup(key) {
     document.getElementById("popup45").style.display = "block";
 }
 
-document.getElementById("popupClose").onclick = () =>
-    document.getElementById("popup45").style.display = "none";
+document.addEventListener("DOMContentLoaded", () => {
+    const closeBtn = document.getElementById("popupClose");
+    if (closeBtn) {
+        closeBtn.onclick = () =>
+            document.getElementById("popup45").style.display = "none";
+    }
+});
 
 /* ---------------------------------------------------------
    SYGNAŁY
@@ -348,26 +358,4 @@ function applySignalColor(row, signal, hasEntry) {
     else if (s === "czekaj") row.classList.add("signal-czekaj");
 }
 
-function openPopup(key) {
-    const row = rows[key];
-    if (!row) return;
-
-    document.getElementById("popupData").textContent =
-        `Sygnał: ${row.signal}\nTP3: ${row.tp3}\nWidełki: ${row.low} – ${row.high}`;
-
-    document.getElementById("popupGeneral").textContent =
-        row.comment || "Brak komentarza";
-
-    document.getElementById("popup45").style.display = "block";
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-    const closeBtn = document.getElementById("popupClose");
-    if (closeBtn) {
-        closeBtn.onclick = () =>
-            document.getElementById("popup45").style.display = "none";
-    }
-});
-
-console.log("VOICE XTB 8.0 PRO — AUTO SEKWENCJA ZAŁADOWANA");
-}
+console.log("VOICE XTB 8.2 PRO — ZAŁADOWANA");
