@@ -1,18 +1,19 @@
 /* ---------------------------------------------------------
-   VOICE XTB 7.9 PRO — AUTO SEKWENCJA + KOREKTA CEN
+   VOICE XTB 4.6 FINAL — jeden wiersz na ticker
+   backend: https://voice-xtb.onrender.com/voice-parse
    --------------------------------------------------------- */
 
 let recognition = null;
 let recognizing = false;
 
 let rows = {};
-const STORAGE_KEY = "voicextb79_tabela";
+const STORAGE_KEY = "voicextb46_tabela";
 
 /* ---------------------------------------------------------
-   AUTO-SEKWENCJA
+   AUTO-SEKWENCJA PEŁNA (do pierwszego wprowadzenia tickera)
    --------------------------------------------------------- */
 
-const steps = [
+const fullSteps = [
     "ticker",
     "interval",
     "open",
@@ -27,6 +28,8 @@ const steps = [
 
 let currentStep = 0;
 let tempRecord = {};
+let mode = "FULL"; // FULL albo CLOSE_ONLY
+let activeKeyForClose = null; // ticker|interval dla trybu CLOSE_ONLY
 
 /* ---------------------------------------------------------
    MIKROFON
@@ -45,8 +48,6 @@ function initRecognition() {
     rec.interimResults = false;
     rec.maxAlternatives = 1;
 
-    rec.onstart = () => sayStep();
-
     rec.onresult = (e) => {
         const text = e.results[0][0].transcript.trim();
         handleRecognized(text);
@@ -59,9 +60,14 @@ function initRecognition() {
 
     rec.onend = () => {
         if (recognizing) {
-            setTimeout(() => {
-                try { rec.start(); } catch {}
-            }, 200);
+            // w trybie sekwencji pełnej możemy restartować
+            if (mode === "FULL") {
+                setTimeout(() => {
+                    try { rec.start(); } catch {}
+                }, 200);
+            } else {
+                document.getElementById("comment").textContent = "⛔ Mikrofon zatrzymany";
+            }
         } else {
             document.getElementById("comment").textContent = "⛔ Mikrofon zatrzymany";
         }
@@ -70,15 +76,30 @@ function initRecognition() {
     return rec;
 }
 
-function startMic() {
+function startFullMic() {
     if (!recognition) recognition = initRecognition();
     if (!recognition) return;
 
     recognizing = true;
+    mode = "FULL";
     currentStep = 0;
     tempRecord = {};
+    activeKeyForClose = null;
 
     sayStep();
+    try { recognition.start(); } catch {}
+}
+
+function startCloseOnlyMic(key) {
+    if (!recognition) recognition = initRecognition();
+    if (!recognition) return;
+
+    recognizing = true;
+    mode = "CLOSE_ONLY";
+    activeKeyForClose = key;
+    tempRecord = {};
+
+    document.getElementById("comment").textContent = "➡️ Powiedz cenę bieżącą (close)";
     try { recognition.start(); } catch {}
 }
 
@@ -88,11 +109,11 @@ function stopMic() {
 }
 
 /* ---------------------------------------------------------
-   KOMUNIKATY KROKÓW
+   KOMUNIKATY KROKÓW (FULL)
    --------------------------------------------------------- */
 
 function sayStep() {
-    const step = steps[currentStep];
+    const step = fullSteps[currentStep];
     const map = {
         ticker: "Powiedz ticker",
         interval: "Powiedz interwał",
@@ -109,13 +130,12 @@ function sayStep() {
 }
 
 /* ---------------------------------------------------------
-   WYCIĄGANIE LICZBY — 7.9 PRO
+   WYCIĄGANIE LICZBY — 4.6 FINAL
    --------------------------------------------------------- */
 
 function extractNumber(text, step = "") {
     text = text.toLowerCase();
 
-    // słowa → cyfry
     const map = {
         "zero": "0", "jeden": "1", "dwa": "2", "trzy": "3",
         "cztery": "4", "piec": "5", "pięć": "5",
@@ -128,25 +148,20 @@ function extractNumber(text, step = "") {
 
     text = text.replace("przecinek", ".").replace("kropka", ".");
 
-    // RSI — zachowuje kropkę
     if (step === "rsi") {
         const m = text.match(/(\d+[.,]?\d*)/);
         if (!m) return NaN;
         return parseFloat(m[1].replace(",", "."));
     }
 
-    // CENY — zachowują kropkę
     if (["open", "high", "low", "close", "ma20", "dema9"].includes(step)) {
         const m = text.match(/(\d+[.,]?\d*)/);
         if (!m) return NaN;
         let val = parseFloat(m[1].replace(",", "."));
-
-        // AUTOMATYCZNA KOREKTA — jak kiedyś
         if (val > 2000) val = val / 100;
         return val;
     }
 
-    // WOLUMEN — digits only
     const digits = text.replace(/[^0-9]/g, "");
     if (!digits) return NaN;
     return parseFloat(digits);
@@ -157,9 +172,15 @@ function extractNumber(text, step = "") {
    --------------------------------------------------------- */
 
 function handleRecognized(text) {
-    document.getElementById("recognized").textContent = text;
+    const recEl = document.getElementById("recognized");
+    if (recEl) recEl.textContent = text;
 
-    const step = steps[currentStep];
+    if (mode === "CLOSE_ONLY") {
+        handleCloseOnly(text);
+        return;
+    }
+
+    const step = fullSteps[currentStep];
 
     if (step === "ticker") {
         tempRecord.ticker = text.toUpperCase().replace(/\s+/g, "");
@@ -172,8 +193,8 @@ function handleRecognized(text) {
 
     currentStep++;
 
-    if (currentStep >= steps.length) {
-        finalizeRecord();
+    if (currentStep >= fullSteps.length) {
+        finalizeFullRecord();
         return;
     }
 
@@ -181,14 +202,87 @@ function handleRecognized(text) {
 }
 
 /* ---------------------------------------------------------
-   FINALIZE RECORD — pełny debug
+   TRYB CLOSE_ONLY — tylko aktualna cena
    --------------------------------------------------------- */
 
-function finalizeRecord() {
+function handleCloseOnly(text) {
+    if (!activeKeyForClose || !rows[activeKeyForClose]) {
+        document.getElementById("comment").textContent =
+            "❌ Brak aktywnego rekordu do aktualizacji ceny.";
+        recognizing = false;
+        try { recognition.stop(); } catch {}
+        return;
+    }
+
+    const num = extractNumber(text, "close");
+    if (isNaN(num)) {
+        document.getElementById("comment").textContent =
+            "❌ Nie rozpoznano liczby dla ceny bieżącej.";
+        recognizing = false;
+        try { recognition.stop(); } catch {}
+        return;
+    }
+
+    const row = rows[activeKeyForClose];
+    const ticker = row.ticker;
+    const interval = row.interval || "M5";
+
+    const payloadText =
+        `${ticker} ${interval} close ${num}`;
+
+    const parsedEl = document.getElementById("parsed");
+    if (parsedEl) parsedEl.textContent = "WYSŁANO (CLOSE ONLY):\n" + payloadText;
+
+    document.getElementById("comment").textContent = "⏳ Aktualizacja ceny w backendzie...";
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
+    fetch("https://voice-xtb.onrender.com/voice-parse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: payloadText }),
+        signal: controller.signal
+    })
+        .then(r => r.json())
+        .then(data => {
+            clearTimeout(timeout);
+
+            if (parsedEl) {
+                parsedEl.textContent =
+                    "WYSŁANO (CLOSE ONLY):\n" + payloadText +
+                    "\n\nODPOWIEDŹ BACKENDU:\n" +
+                    JSON.stringify(data, null, 2);
+            }
+
+            const key = data.ticker + "|" + (data.interval || "M5");
+            rows[key] = data;
+            saveTable();
+            renderTable();
+
+            document.getElementById("comment").textContent =
+                `✅ Zaktualizowano cenę ${data.ticker} ${data.interval}`;
+        })
+        .catch(err => {
+            clearTimeout(timeout);
+            document.getElementById("comment").textContent =
+                err.name === "AbortError"
+                    ? "❌ Timeout backendu"
+                    : "❌ Błąd połączenia z backendem";
+        });
+
+    recognizing = false;
+    try { recognition.stop(); } catch {}
+}
+
+/* ---------------------------------------------------------
+   FINALIZE RECORD — pełne wprowadzenie tickera
+   --------------------------------------------------------- */
+
+function finalizeFullRecord() {
     const key = tempRecord.ticker + "|" + tempRecord.interval;
 
-    // wolumen fallback
-    if (tempRecord.volume === undefined) tempRecord.volume = tempRecord.low;
+    if (tempRecord.volume === undefined) tempRecord.volume = 0;
 
     const payloadText =
         `${tempRecord.ticker} ${tempRecord.interval} ` +
@@ -226,6 +320,7 @@ function finalizeRecord() {
                     JSON.stringify(data, null, 2);
             }
 
+            const key = data.ticker + "|" + (data.interval || "M5");
             rows[key] = data;
             saveTable();
             renderTable();
@@ -240,13 +335,8 @@ function finalizeRecord() {
                     ? "❌ Timeout backendu"
                     : "❌ Błąd połączenia z backendem";
         });
-
-    recognizing = false;
-    try { recognition.stop(); } catch {}
-}
-
 /* ---------------------------------------------------------
-   TABELA
+   TABELA — jeden wiersz FINAL na ticker
    --------------------------------------------------------- */
 
 function saveTable() {
@@ -266,6 +356,10 @@ function deleteRow(key) {
     renderTable();
 }
 
+/* ---------------------------------------------------------
+   RENDER TABELI — JEDEN WIERSZ FINAL
+   --------------------------------------------------------- */
+
 function renderTable() {
     const tbody = document.getElementById("voiceTableBody");
     if (!tbody) return;
@@ -273,19 +367,21 @@ function renderTable() {
     tbody.innerHTML = "";
 
     const list = Object.values(rows);
-    list.sort((a, b) => signalPriority(a.signal) - signalPriority(b.signal));
+
+    // sortowanie po sygnale FINAL
+    list.sort((a, b) => signalPriority(a.final_signal) - signalPriority(b.final_signal));
 
     list.forEach(row => {
-        const key = row.ticker + "|" + row.interval;
+        const key = row.ticker + "|" + (row.interval || "M5");
 
         const tr = document.createElement("tr");
 
         tr.innerHTML = `
             <td>${row.ticker}</td>
-            <td>${row.interval}</td>
-            <td>${row.close ?? ""}</td>
-            <td>${row.entry ?? ""}</td>
-            <td>${row.signal || ""}</td>
+            <td>${row.final_signal || ""}</td>
+            <td class="clickable-close" onclick="startCloseOnlyMic('${key}')">
+                ${row.close ?? ""}
+            </td>
             <td>${row.tp3 ?? ""}</td>
             <td>${
                 row.low != null && row.high != null
@@ -296,13 +392,13 @@ function renderTable() {
             <td><button onclick="deleteRow('${key}')">🗑</button></td>
         `;
 
-        applySignalColor(tr, row.signal, row.entry != null);
+        applySignalColor(tr, row.final_signal);
         tbody.appendChild(tr);
     });
 }
 
 /* ---------------------------------------------------------
-   POPUP
+   POPUP — pełna analiza FINAL
    --------------------------------------------------------- */
 
 function openPopup(key) {
@@ -310,13 +406,13 @@ function openPopup(key) {
     if (!row) return;
 
     document.getElementById("popupData").textContent =
-        `Sygnał: ${row.signal}\n` +
-        `DEMA9: ${row.dema9}\n` +
+        `Sygnał FINAL: ${row.final_signal}\n` +
+        `Close: ${row.close}\n` +
         `TP3: ${row.tp3}\n` +
         `Widełki: ${row.low} – ${row.high}`;
 
     document.getElementById("popupGeneral").textContent =
-        row.comment || "Brak komentarza";
+        row.comment || "Brak komentarza (momentum/RSI/korelacja)";
 
     document.getElementById("popup45").style.display = "block";
 }
@@ -330,7 +426,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /* ---------------------------------------------------------
-   SYGNAŁY
+   PRIORYTETY SYGNAŁU FINAL
    --------------------------------------------------------- */
 
 function signalPriority(sig) {
@@ -339,23 +435,20 @@ function signalPriority(sig) {
 
     if (s === "BUY") return 1;
     if (s === "PRAWIE BUY") return 2;
-    if (s === "CZEKAJ DO BUY" || s === "CZEKAJ DO SELL") return 3;
-    if (s === "CZEKAJ") return 4;
-    if (s === "PRAWIE RESET") return 5;
+    if (s === "CZEKAJ") return 3;
+    if (s === "PRAWIE SELL") return 4;
+    if (s === "SELL") return 5;
     if (s === "RESET") return 6;
-    if (s === "PRAWIE SELL") return 7;
-    if (s === "SELL") return 8;
 
     return 99;
 }
 
-function applySignalColor(row, signal, hasEntry) {
-    row.className = "";
+/* ---------------------------------------------------------
+   KOLORY SYGNAŁÓW FINAL
+   --------------------------------------------------------- */
 
-    if (hasEntry) {
-        row.classList.add("signal-entry");
-        return;
-    }
+function applySignalColor(row, signal) {
+    row.className = "";
 
     if (!signal) return;
 
@@ -366,8 +459,10 @@ function applySignalColor(row, signal, hasEntry) {
     else if (s === "sell") row.classList.add("signal-sell");
     else if (s === "prawie sell") row.classList.add("signal-prawie-sell");
     else if (s === "reset") row.classList.add("signal-reset");
-    else if (s === "prawie reset") row.classList.add("signal-prawie-reset");
     else if (s === "czekaj") row.classList.add("signal-czekaj");
 }
 
-console.log("VOICE XTB 7.9 PRO — ZAŁADOWANA");
+console.log("VOICE XTB 4.6 FINAL — ZAŁADOWANA");
+    recognizing = false;
+    try { recognition.stop(); } catch {}
+}
