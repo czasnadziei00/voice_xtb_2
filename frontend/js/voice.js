@@ -347,6 +347,7 @@ function applySignalColor(row, signal, hasEntry) {
     else if (s === "prawie reset") row.classList.add("signal-prawie-reset");
     else if (s === "czekaj") row.classList.add("signal-czekaj");
 }
+
 function openPopup(key) {
     const row = rows[key];
     if (!row) return;
@@ -360,7 +361,12 @@ function openPopup(key) {
     document.getElementById("popup45").style.display = "block";
 }
 
-document.getElementById("popupClose").onclick = () =>
-    document.getElementById("popup45").style.display = "none";
-   
+document.addEventListener("DOMContentLoaded", () => {
+    const closeBtn = document.getElementById("popupClose");
+    if (closeBtn) {
+        closeBtn.onclick = () =>
+            document.getElementById("popup45").style.display = "none";
+    }
+});
+
 console.log("VOICE XTB 8.0 PRO — AUTO SEKWENCJA ZAŁADOWANA");
