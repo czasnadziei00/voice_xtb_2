@@ -463,6 +463,3 @@ function applySignalColor(row, signal) {
 }
 
 console.log("VOICE XTB 4.6 FINAL — ZAŁADOWANA");
-    recognizing = false;
-    try { recognition.stop(); } catch {}
-}
