@@ -241,15 +241,15 @@ function finalizeRecord() {
     const key = tempRecord.ticker + "|" + tempRecord.interval;
 
     const payloadText =
-        `${tempRecord.ticker} ${tempRecord.interval} ` +
-        `open ${tempRecord.open} ` +
-        `low ${tempRecord.low} ` +
-        `high ${tempRecord.high} ` +
-        `close ${tempRecord.close} ` +
-        `ma20 ${tempRecord.ma20} ` +
-        `dema9 ${tempRecord.dema9 ?? ""} ` +
-        `volume ${tempRecord.volume} ` +
-        `rsi ${tempRecord.rsi}`;
+    `${tempRecord.ticker} ${tempRecord.interval} ` +
+    `open ${tempRecord.open} ` +
+    `low ${tempRecord.low} ` +
+    `high ${tempRecord.high} ` +
+    `close ${tempRecord.close} ` +
+    `ma20 ${tempRecord.ma20} ` +
+    `dema9 ${tempRecord.dema9 ?? ""} ` +
+    `volume ${tempRecord.volume} ` +
+    `rsi ${tempRecord.rsi}`;
 
     console.log("PAYLOAD:", payloadText);
 
