@@ -5,8 +5,8 @@
 let recognition = null;
 let recognizing = false;
 
-let rows = {}; 
-const STORAGE_KEY = "voicextb79tabela";
+let rows = {}; // TICKER|INTERVAL → rekord
+const STORAGE_KEY = "voicextb78tabela";
 
 /* ---------------------------------------------------------
    KONWERTER SŁÓW → LICZBY
@@ -115,6 +115,7 @@ function initRecognition() {
     rec.maxAlternatives = 1;
 
     rec.onstart = () => {
+        // 🔥 KLUCZOWE — pokazuje aktualny krok po każdym restarcie Chrome
         sayStep();
     };
 
@@ -130,7 +131,9 @@ function initRecognition() {
 
     rec.onend = () => {
         if (recognizing) {
-            setTimeout(() => { try { rec.start(); } catch {} }, 200);
+            setTimeout(() => {
+                try { rec.start(); } catch {}
+            }, 200);
         } else {
             document.getElementById("comment").textContent =
                 "⛔ Mikrofon zatrzymany";
@@ -149,12 +152,15 @@ function startMic() {
     tempRecord = {};
 
     sayStep();
+
     try { recognition.start(); } catch {}
 }
 
 function stopMic() {
     recognizing = false;
-    if (recognition) try { recognition.stop(); } catch {}
+    if (recognition) {
+        try { recognition.stop(); } catch {}
+    }
 }
 
 /* ---------------------------------------------------------
@@ -196,7 +202,7 @@ function handleRecognized(text) {
         let num = parseFloat(text.replace(",", "."));
 
         if (isNaN(num)) {
-            num = wordsToNumber(text);
+            num = wordsToNumber(text); // 🔥 konwersja słów → liczba
         }
 
         if (!isNaN(num)) {
@@ -215,7 +221,7 @@ function handleRecognized(text) {
 }
 
 /* ---------------------------------------------------------
-   ZAPIS REKORDU — POPRAWKA DEMA9
+   ZAPIS REKORDU
    --------------------------------------------------------- */
 
 function finalizeRecord() {
@@ -225,7 +231,7 @@ function finalizeRecord() {
         `${tempRecord.ticker} ${tempRecord.interval} ` +
         `open ${tempRecord.open} low ${tempRecord.low} high ${tempRecord.high} ` +
         `close ${tempRecord.close} ma20 ${tempRecord.ma20} ` +
-        `dema9 ${tempRecord.dema9 ?? ""} volume ${tempRecord.volume} rsi ${tempRecord.rsi}`;
+        `dema9 ${tempRecord.dema9} volume ${tempRecord.volume} rsi ${tempRecord.rsi}`;
 
     fetch("https://voice-xtb.onrender.com/voice-parse", {
         method: "POST",
@@ -250,4 +256,118 @@ function finalizeRecord() {
     try { recognition.stop(); } catch {}
 }
 
-console.log("VOICE XTB 7.9 PRO — DEMA FIX ZAŁADOWANY");
+/* ---------------------------------------------------------
+   TABELA
+   --------------------------------------------------------- */
+
+function saveTable() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
+}
+
+function loadTable() {
+    rows = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    renderTable();
+}
+document.addEventListener("DOMContentLoaded", loadTable);
+
+function deleteRow(key) {
+    delete rows[key];
+    saveTable();
+    renderTable();
+}
+
+function renderTable() {
+    const tbody = document.getElementById("voiceTableBody");
+    tbody.innerHTML = "";
+
+    const list = Object.values(rows);
+
+    list.sort((a, b) => {
+        const pa = signalPriority(a.signal);
+        const pb = signalPriority(b.signal);
+        return pa - pb;
+    });
+
+    list.forEach(row => {
+        const key = row.ticker + "|" + row.interval;
+
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+            <td>${row.ticker}</td>
+            <td>${row.interval}</td>
+            <td>${row.close ?? ""}</td>
+            <td>${row.entry ?? ""}</td>
+            <td>${row.signal || ""}</td>
+            <td>${row.tp3 ?? ""}</td>
+            <td>${row.low != null && row.high != null ? row.low + " – " + row.high : ""}</td>
+            <td><button onclick="openPopup('${key}')">📊</button></td>
+            <td><button onclick="deleteRow('${key}')">🗑</button></td>
+        `;
+
+        applySignalColor(tr, row.signal, row.entry != null);
+        tbody.appendChild(tr);
+    });
+}
+
+/* ---------------------------------------------------------
+   POPUP
+   --------------------------------------------------------- */
+
+function openPopup(key) {
+    const row = rows[key];
+
+    document.getElementById("popupData").textContent =
+        `Sygnał: ${row.signal}\nTP3: ${row.tp3}\nWidełki: ${row.low} – ${row.high}`;
+
+    document.getElementById("popupGeneral").textContent =
+        row.comment || "Brak komentarza";
+
+    document.getElementById("popup45").style.display = "block";
+}
+
+document.getElementById("popupClose").onclick = () =>
+    document.getElementById("popup45").style.display = "none";
+
+/* ---------------------------------------------------------
+   SYGNAŁY
+   --------------------------------------------------------- */
+
+function signalPriority(sig) {
+    if (!sig) return 99;
+    const s = sig.toUpperCase();
+
+    if (s === "BUY") return 1;
+    if (s === "PRAWIE BUY") return 2;
+    if (s === "CZEKAJ DO BUY" || s === "CZEKAJ DO SELL") return 3;
+    if (s === "CZEKAJ") return 4;
+    if (s === "PRAWIE RESET") return 5;
+    if (s === "RESET") return 6;
+    if (s === "PRAWIE SELL") return 7;
+    if (s === "SELL") return 8;
+
+    return 99;
+}
+
+function applySignalColor(row, signal, hasEntry) {
+    row.className = "";
+
+    if (hasEntry) {
+        row.classList.add("signal-entry");
+        return;
+    }
+
+    if (!signal) return;
+
+    const s = signal.toLowerCase();
+
+    if (s === "buy") row.classList.add("signal-buy");
+    else if (s === "prawie buy") row.classList.add("signal-prawie-buy");
+    else if (s === "sell") row.classList.add("signal-sell");
+    else if (s === "prawie sell") row.classList.add("signal-prawie-sell");
+    else if (s === "reset") row.classList.add("signal-reset");
+    else if (s === "prawie reset") row.classList.add("signal-prawie-reset");
+    else if (s === "czekaj") row.classList.add("signal-czekaj");
+}
+
+console.log("VOICE XTB 7.9 PRO — AUTO SEKWENCJA + SŁOWA→LICZBY ZAŁADOWANA");
