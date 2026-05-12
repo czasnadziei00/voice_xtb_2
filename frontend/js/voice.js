@@ -1,30 +1,16 @@
 /* ---------------------------------------------------------
-   VOICE XTB 8.2 PRO — AUTO SEKWENCJA
+   VOICE XTB 8.4 PRO — AUTO SEKWENCJA
    --------------------------------------------------------- */
 
 let recognition = null;
 let recognizing = false;
 
 let rows = {}; 
-const STORAGE_KEY = "voicextb82tabela";
+const STORAGE_KEY = "voicextb84tabela";
 
 /* ---------------------------------------------------------
-   AUTO-SEKWENCJA
+   AUTO-SEKWENCJA (zgodna z backendem)
    --------------------------------------------------------- */
-/*
-   KOLEJNOŚĆ ZGODNA Z BACKENDEM:
-
-   ticker
-   interval
-   open
-   high
-   low
-   close
-   ma20
-   dema9
-   volume
-   rsi
-*/
 
 const steps = [
     "ticker",
@@ -108,7 +94,7 @@ function stopMic() {
 }
 
 /* ---------------------------------------------------------
-   OBSŁUGA AUTO-SEKWENCJI
+   KOMUNIKATY KROKÓW
    --------------------------------------------------------- */
 
 function sayStep() {
@@ -132,16 +118,43 @@ function sayStep() {
 }
 
 /* ---------------------------------------------------------
-   WYCIĄGANIE LICZBY (ODPORNE NA GŁOS)
+   WYCIĄGANIE LICZBY — WERSJA 8.4 PRO
    --------------------------------------------------------- */
 
-function extractNumber(text) {
-    text = text
-        .toLowerCase()
-        .replace("przecinek", ".")
-        .replace("kropka", ".");
+function extractNumber(text, step = "") {
+    text = text.toLowerCase();
 
-    // zbierz wszystkie cyfry
+    // 🔥 Zamiana słów na cyfry
+    const map = {
+        "zero": "0",
+        "jeden": "1",
+        "dwa": "2",
+        "trzy": "3",
+        "cztery": "4",
+        "piec": "5",
+        "pięć": "5",
+        "szesc": "6",
+        "sześć": "6",
+        "siedem": "7",
+        "osiem": "8",
+        "dziewiec": "9",
+        "dziewięć": "9"
+    };
+
+    for (const [word, digit] of Object.entries(map)) {
+        text = text.replace(new RegExp(word, "g"), digit);
+    }
+
+    text = text.replace("przecinek", ".").replace("kropka", ".");
+
+    // 🔥 RSI zachowuje przecinek
+    if (step === "rsi") {
+        const m = text.match(/(\d+[.,]?\d*)/);
+        if (!m) return NaN;
+        return parseFloat(m[1].replace(",", "."));
+    }
+
+    // 🔥 Reszta → tylko cyfry
     const digits = text.replace(/[^0-9]/g, "");
     if (!digits) return NaN;
 
@@ -164,14 +177,9 @@ function handleRecognized(text) {
         tempRecord.interval = text.toUpperCase().replace(/\s+/g, "");
     }
     else {
-        const num = extractNumber(text);
+        const num = extractNumber(text, step);
         if (!isNaN(num)) {
-            // prosta walidacja dla dema9 (odrzuć ewidentne śmieci typu 3, 9)
-            if (step === "dema9" && num < 50) {
-                // ignorujemy błędne rozpoznanie
-            } else {
-                tempRecord[step] = num;
-            }
+            tempRecord[step] = num;
         }
     }
 
@@ -186,7 +194,7 @@ function handleRecognized(text) {
 }
 
 /* ---------------------------------------------------------
-   FINALIZE RECORD
+   FINALIZE RECORD — z pełnym debugiem
    --------------------------------------------------------- */
 
 function finalizeRecord() {
@@ -203,10 +211,9 @@ function finalizeRecord() {
         `volume ${tempRecord.volume} ` +
         `rsi ${tempRecord.rsi}`;
 
-    // 🔍 POKAŻ NA EKRANIE CO WYSYŁAMY
     const parsedEl = document.getElementById("parsed");
     if (parsedEl) {
-        parsedEl.textContent = "WYSYŁAMY DO BACKENDU:\n" + payloadText;
+        parsedEl.textContent = "WYSŁANO:\n" + payloadText;
     }
 
     document.getElementById("comment").textContent =
@@ -225,7 +232,6 @@ function finalizeRecord() {
         .then(data => {
             clearTimeout(timeout);
 
-            // 🔍 POKAŻ NA EKRANIE CO ZWRÓCIŁ BACKEND
             if (parsedEl) {
                 parsedEl.textContent =
                     "WYSŁANO:\n" + payloadText +
@@ -243,14 +249,10 @@ function finalizeRecord() {
         .catch(err => {
             clearTimeout(timeout);
 
-            if (err.name === "AbortError") {
-                document.getElementById("comment").textContent =
-                    "❌ Timeout backendu";
-                return;
-            }
-
             document.getElementById("comment").textContent =
-                "❌ Błąd połączenia z backendem";
+                err.name === "AbortError"
+                    ? "❌ Timeout backendu"
+                    : "❌ Błąd połączenia z backendem";
         });
 
     recognizing = false;
@@ -325,6 +327,15 @@ function openPopup(key) {
 
     document.getElementById("popup45").style.display = "block";
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+    const closeBtn = document.getElementById("popupClose");
+    if (closeBtn) {
+        closeBtn.onclick = () =>
+            document.getElementById("popup45").style.display = "none";
+    }
+});
+
 /* ---------------------------------------------------------
    SYGNAŁY
    --------------------------------------------------------- */
@@ -366,4 +377,4 @@ function applySignalColor(row, signal, hasEntry) {
     else if (s === "czekaj") row.classList.add("signal-czekaj");
 }
 
-console.log("VOICE XTB 8.2 PRO — ZAŁADOWANA");
+console.log("VOICE XTB 8.4 PRO — ZAŁADOWANA");
