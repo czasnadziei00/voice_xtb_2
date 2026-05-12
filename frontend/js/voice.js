@@ -187,6 +187,16 @@ function sayStep() {
     comment.textContent = "➡️ " + map[step];
 }
 
+function extractNumber(text) {
+    return text
+        .toLowerCase()
+        .replace("przecinek", ".")
+        .replace("kropka", ".")
+        .replace(/[^0-9\.]/g, "")
+        .replace(/\.{2,}/g, ".")
+        .trim();
+}
+
 function handleRecognized(text) {
     document.getElementById("recognized").textContent = text;
 
@@ -199,11 +209,9 @@ function handleRecognized(text) {
         tempRecord.interval = text.toUpperCase();
     }
     else {
-        let num = parseFloat(text.replace(",", "."));
-
-        if (isNaN(num)) {
-            num = wordsToNumber(text); // 🔥 konwersja słów → liczba
-        }
+        // 🔥 KLUCZ: czyścimy tekst z "dema", "ema", "bema", itp.
+        let cleaned = extractNumber(text);
+        let num = parseFloat(cleaned);
 
         if (!isNaN(num)) {
             tempRecord[step] = num;
@@ -219,6 +227,8 @@ function handleRecognized(text) {
 
     sayStep();
 }
+
+   
 
 /* ---------------------------------------------------------
    ZAPIS REKORDU
