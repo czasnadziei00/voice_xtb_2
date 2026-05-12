@@ -1,5 +1,5 @@
 // =========================
-//   VOICE XTB 4.7 — FINAL
+//   VOICE XTB 4.7 — FINAL + MA20
 //   SYSTEM 8 STYLE
 // =========================
 
@@ -17,6 +17,7 @@ const fullSteps = [
     "low",
     "high",
     "close",
+    "ma20",
     "dema9",
     "rsi"
 ];
@@ -56,6 +57,7 @@ function sayStep() {
         low: "Powiedz low",
         high: "Powiedz high",
         close: "Powiedz close",
+        ma20: "Powiedz MA20",
         dema9: "Powiedz DEMA9",
         rsi: "Powiedz RSI"
     };
@@ -76,7 +78,7 @@ function handleRecognized(text) {
     } else if (step === "interval") {
         tempRecord.interval = text.toUpperCase().replace(/\s+/g, "");
     } else {
-        const num = extractNumber(text, step);
+        const num = extractNumber(text);
         if (!isNaN(num)) tempRecord[step] = num;
     }
 
@@ -88,8 +90,7 @@ function handleRecognized(text) {
         return;
     }
 
-    // UWAGA: NIE restartujemy mikrofonu tutaj!
-    // System 8 — restart TYLKO w onend
+    // UWAGA: restart mikrofonu TYLKO w onend
 }
 
 // =========================
