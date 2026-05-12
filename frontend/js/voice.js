@@ -1,80 +1,79 @@
 /* ---------------------------------------------------------
-   VOICE XTB 7.9 PRO — AUTO SEKWENCJA + SŁOWA → LICZBY
+   VOICE XTB 8.3 PRO — AUTO SEKWENCJA + SŁOWA → LICZBY + BLOKADA KROKU
    --------------------------------------------------------- */
 
 let recognition = null;
 let recognizing = false;
 
 let rows = {}; // TICKER|INTERVAL → rekord
-const STORAGE_KEY = "voicextb78tabela";
+const STORAGE_KEY = "voicextb83tabela";
 
 /* ---------------------------------------------------------
-   KONWERTER SŁÓW → LICZBY
+   KONWERTER SŁÓW → LICZBY (pełna obsługa przecinka)
    --------------------------------------------------------- */
 
 function wordsToNumber(text) {
     text = text.toLowerCase().trim();
 
     const map = {
-        "zero": 0,
-        "jeden": 1, "jedna": 1,
-        "dwa": 2, "dwie": 2,
-        "trzy": 3,
-        "cztery": 4,
-        "pięć": 5,
-        "sześć": 6,
-        "siedem": 7,
-        "osiem": 8,
-        "dziewięć": 9,
-        "dziesięć": 10,
-        "jedenaście": 11,
-        "dwanaście": 12,
-        "trzynaście": 13,
-        "czternaście": 14,
-        "piętnaście": 15,
-        "szesnaście": 16,
-        "siedemnaście": 17,
-        "osiemnaście": 18,
-        "dziewiętnaście": 19,
-        "dwadzieścia": 20,
-        "trzydzieści": 30,
-        "czterdzieści": 40,
-        "pięćdziesiąt": 50,
-        "sześćdziesiąt": 60,
-        "siedemdziesiąt": 70,
-        "osiemdziesiąt": 80,
-        "dziewięćdziesiąt": 90,
-        "sto": 100,
-        "dwieście": 200,
-        "trzysta": 300,
-        "czterysta": 400,
-        "pięćset": 500,
-        "sześćset": 600,
-        "siedemset": 700,
-        "osiemset": 800,
-        "dziewięćset": 900,
-        "tysiąc": 1000,
-        "tysiące": 1000,
-        "tysięcy": 1000
+        "zero": 0, "jeden": 1, "jedna": 1, "dwa": 2, "dwie": 2,
+        "trzy": 3, "cztery": 4, "pięć": 5, "sześć": 6, "siedem": 7,
+        "osiem": 8, "dziewięć": 9, "dziesięć": 10, "jedenaście": 11,
+        "dwanaście": 12, "trzynaście": 13, "czternaście": 14,
+        "piętnaście": 15, "szesnaście": 16, "siedemnaście": 17,
+        "osiemnaście": 18, "dziewiętnaście": 19, "dwadzieścia": 20,
+        "trzydzieści": 30, "czterdzieści": 40, "pięćdziesiąt": 50,
+        "sześćdziesiąt": 60, "siedemdziesiąt": 70, "osiemdziesiąt": 80,
+        "dziewięćdziesiąt": 90, "sto": 100, "dwieście": 200,
+        "trzysta": 300, "czterysta": 400, "pięćset": 500,
+        "sześćset": 600, "siedemset": 700, "osiemset": 800,
+        "dziewięćset": 900, "tysiąc": 1000, "tysiące": 1000, "tysięcy": 1000
     };
 
-    let parts = text.split(" ");
-    let total = 0;
-    let current = 0;
+    // rozdzielamy część całkowitą i ułamkową
+    const parts = text.split("przecinek");
+    const intPart = parts[0].trim();
+    const fracPart = parts[1] ? parts[1].trim() : "";
 
-    for (let w of parts) {
-        if (map[w] >= 1000) {
-            current = (current || 1) * map[w];
-            total += current;
-            current = 0;
-        } else if (map[w] >= 100) {
-            current += map[w];
-        } else if (map[w] >= 0) {
-            current += map[w];
+    function parseIntWords(t) {
+        if (!t) return 0;
+        let tokens = t.split(/\s+/);
+        let total = 0, current = 0;
+
+        for (let w of tokens) {
+            if (!(w in map)) continue;
+            const v = map[w];
+
+            if (v >= 1000) {
+                current = (current || 1) * v;
+                total += current;
+                current = 0;
+            } else if (v >= 100) {
+                current += v;
+            } else {
+                current += v;
+            }
+        }
+        return total + current;
+    }
+
+    const intVal = parseIntWords(intPart);
+
+    if (!fracPart) return intVal;
+
+    // część ułamkowa jako cyfry
+    const fracTokens = fracPart.split(/\s+/);
+    let digits = "";
+
+    for (let w of fracTokens) {
+        if (w in map && map[w] >= 0 && map[w] <= 9) {
+            digits += String(map[w]);
         }
     }
 
-    return total + current;
+    if (!digits) return intVal;
+
+    return intVal + parseFloat("0." + digits);
 }
 
 /* ---------------------------------------------------------
@@ -115,7 +114,6 @@ function initRecognition() {
     rec.maxAlternatives = 1;
 
     rec.onstart = () => {
-        // 🔥 KLUCZOWE — pokazuje aktualny krok po każdym restarcie Chrome
         sayStep();
     };
 
@@ -131,9 +129,7 @@ function initRecognition() {
 
     rec.onend = () => {
         if (recognizing) {
-            setTimeout(() => {
-                try { rec.start(); } catch {}
-            }, 200);
+            setTimeout(() => { try { rec.start(); } catch {} }, 200);
         } else {
             document.getElementById("comment").textContent =
                 "⛔ Mikrofon zatrzymany";
@@ -152,15 +148,12 @@ function startMic() {
     tempRecord = {};
 
     sayStep();
-
     try { recognition.start(); } catch {}
 }
 
 function stopMic() {
     recognizing = false;
-    if (recognition) {
-        try { recognition.stop(); } catch {}
-    }
+    if (recognition) try { recognition.stop(); } catch {}
 }
 
 /* ---------------------------------------------------------
@@ -185,9 +178,7 @@ function sayStep() {
     };
 
     comment.textContent = "➡️ " + map[step];
-}
-
-function handleRecognized(text) {
+   function handleRecognized(text) {
     document.getElementById("recognized").textContent = text;
 
     const step = steps[currentStep];
@@ -199,15 +190,20 @@ function handleRecognized(text) {
         tempRecord.interval = text.toUpperCase();
     }
     else {
+        // PRÓBA PARSOWANIA LICZBY
         let num = parseFloat(text.replace(",", "."));
 
         if (isNaN(num)) {
-            num = wordsToNumber(text); // 🔥 konwersja słów → liczba
+            num = wordsToNumber(text);
         }
 
-        if (!isNaN(num)) {
-            tempRecord[step] = num;
+        if (isNaN(num)) {
+            document.getElementById("comment").textContent =
+                "❗ Nie zrozumiałem liczby dla: " + step + " — powtórz wartość.";
+            return; // 🔥 NIE PRZECHODZIMY DALEJ
         }
+
+        tempRecord[step] = num;
     }
 
     currentStep++;
@@ -370,4 +366,5 @@ function applySignalColor(row, signal, hasEntry) {
     else if (s === "czekaj") row.classList.add("signal-czekaj");
 }
 
-console.log("VOICE XTB 7.9 PRO — AUTO SEKWENCJA + SŁOWA→LICZBY ZAŁADOWANA");
+console.log("VOICE XTB 8.3 PRO — AUTO SEKWENCJA + BLOKADA KROKU ZAŁADOWANA");
+}
