@@ -7,7 +7,7 @@ let lastTicker = null;
 
 
 // =========================
-//  KOLORY SYGNAŁÓW
+–  KOLORY SYGNAŁÓW
 // =========================
 function colorForSignal(signal) {
   if (signal === "BUY") return "#00c853";
@@ -175,7 +175,7 @@ function handleParsedData(data) {
     JSON.stringify(data, null, 2);
 
   updateStatus(data);
-  document.getElementById("comment").textContent = data.comment;
+  document.getElementById("comment").textContent = data.comment ?? "";
 
   if (!data.ticker) return;
 
@@ -203,7 +203,7 @@ function handleParsedData(data) {
 
 
 // =========================
-//  POPUP 4.5+
+//  POPUP 4.5+ (PRO)
 // =========================
 const popup = document.getElementById("popup45");
 const popupClose = document.getElementById("popupClose");
@@ -218,12 +218,15 @@ document.querySelector("#voiceTable tbody").addEventListener("click", (e) => {
     const d = {};
 
     tr.querySelectorAll("td").forEach(td => {
-      if (td.classList.length > 0 && td.classList[0] !== "popupIcon" && td.classList[0] !== "deleteRow") {
+      if (td.classList.length > 0 &&
+          td.classList[0] !== "popupIcon" &&
+          td.classList[0] !== "deleteRow") {
         d[td.classList[0]] = td.textContent;
       }
     });
 
-    popupData.textContent = analiza45PRO(d);
+    // tu możesz podpiąć swoją analiza45PRO(d)
+    popupData.textContent = JSON.stringify(d, null, 2);
     popup.style.display = "block";
   }
 
