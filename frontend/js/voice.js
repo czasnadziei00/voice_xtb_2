@@ -203,6 +203,12 @@ function finalizeRecord() {
         `volume ${tempRecord.volume} ` +
         `rsi ${tempRecord.rsi}`;
 
+    // 🔍 POKAŻ NA EKRANIE CO WYSYŁAMY
+    const parsedEl = document.getElementById("parsed");
+    if (parsedEl) {
+        parsedEl.textContent = "WYSYŁAMY DO BACKENDU:\n" + payloadText;
+    }
+
     document.getElementById("comment").textContent =
         "⏳ Wysyłanie do backendu...";
 
@@ -218,6 +224,14 @@ function finalizeRecord() {
         .then(r => r.json())
         .then(data => {
             clearTimeout(timeout);
+
+            // 🔍 POKAŻ NA EKRANIE CO ZWRÓCIŁ BACKEND
+            if (parsedEl) {
+                parsedEl.textContent =
+                    "WYSŁANO:\n" + payloadText +
+                    "\n\nODPOWIEDŹ BACKENDU:\n" +
+                    JSON.stringify(data, null, 2);
+            }
 
             rows[key] = data;
             saveTable();
@@ -301,22 +315,16 @@ function openPopup(key) {
     if (!row) return;
 
     document.getElementById("popupData").textContent =
-        `Sygnał: ${row.signal}\nTP3: ${row.tp3}\nWidełki: ${row.low} – ${row.high}`;
+        `Sygnał: ${row.signal}\n` +
+        `DEMA9: ${row.dema9}\n` +
+        `TP3: ${row.tp3}\n` +
+        `Widełki: ${row.low} – ${row.high}`;
 
     document.getElementById("popupGeneral").textContent =
         row.comment || "Brak komentarza";
 
     document.getElementById("popup45").style.display = "block";
 }
-
-document.addEventListener("DOMContentLoaded", () => {
-    const closeBtn = document.getElementById("popupClose");
-    if (closeBtn) {
-        closeBtn.onclick = () =>
-            document.getElementById("popup45").style.display = "none";
-    }
-});
-
 /* ---------------------------------------------------------
    SYGNAŁY
    --------------------------------------------------------- */
