@@ -96,48 +96,192 @@ button:hover{
 .table-wrapper{
     width:100%;
     overflow-x:auto;
-    margin-top:14px;
+    margin-top:15px;
 }
 
 #proTable{
     width:100%;
     border-collapse:separate;
     border-spacing:0 6px;
-    min-width:1000px;
     font-size:14px;
+    min-width:980px;
 }
 
 #proTable thead th{
+
     background:#1a1a1a;
-    padding:12px 8px;
+
+    padding:10px 6px;
+
+    font-weight:600;
+
     border-bottom:2px solid #333;
+
     color:#dcdcdc;
-    font-weight:700;
+
     text-align:center;
 }
 
 #proTable tbody tr{
+
     background:#141414;
-    transition:
-        background 0.25s ease,
-        transform 0.15s ease;
+
+    transition:0.2s;
 }
 
-@media (hover:hover){
+#proTable tbody tr:hover{
 
-    #proTable tbody tr:hover{
-        background:#1f1f1f;
-        transform:scale(1.002);
-    }
-
+    background:#1f1f1f;
 }
 
 #proTable td{
+
     padding:10px 6px;
-    border-top:1px solid #222;
-    border-bottom:1px solid #222;
+
     text-align:center;
+
+    border-top:1px solid #222;
+
+    border-bottom:1px solid #222;
+
     vertical-align:middle;
+}
+
+/* ======================================================
+   CELLS
+====================================================== */
+
+.ticker-cell{
+
+    cursor:pointer;
+
+    font-weight:700;
+
+    color:#6fb6ff;
+
+    min-width:95px;
+}
+
+.price-cell{
+
+    cursor:pointer;
+
+    font-weight:700;
+
+    font-size:15px;
+
+    color:#ffffff;
+
+    min-width:90px;
+}
+
+.entry-cell{
+
+    cursor:pointer;
+
+    color:#ffd166;
+
+    font-weight:700;
+
+    min-width:85px;
+}
+
+.delete-cell{
+
+    cursor:pointer;
+
+    font-size:18px;
+
+    width:50px;
+}
+
+/* ======================================================
+   SIGNAL
+====================================================== */
+
+.signal-box{
+
+    font-size:16px;
+
+    font-weight:800;
+
+    letter-spacing:0.3px;
+}
+
+/* ======================================================
+   TIME
+====================================================== */
+
+.time-mini{
+
+    font-size:11px;
+
+    opacity:0.7;
+
+    margin-top:2px;
+}
+
+/* ======================================================
+   ROW COLORS
+====================================================== */
+
+.row-buy{
+    background:rgba(0,180,0,0.22)!important;
+}
+
+.row-sell{
+    background:rgba(255,0,0,0.22)!important;
+}
+
+.row-prawie{
+    background:rgba(255,215,0,0.22)!important;
+}
+
+.row-czekajdo{
+    background:rgba(0,120,255,0.22)!important;
+}
+
+.row-czekaj{
+    background:rgba(160,160,160,0.18)!important;
+}
+
+/* ======================================================
+   TP
+====================================================== */
+
+.tp-hit{
+    color:#00ff7f!important;
+    font-weight:700;
+}
+
+.tp-close{
+    color:#ffd700!important;
+    font-weight:700;
+}
+
+.tp-fail{
+    color:#ff4d4d!important;
+    font-weight:700;
+}
+
+/* ======================================================
+   MOBILE
+====================================================== */
+
+@media(max-width:768px){
+
+    #proTable{
+        font-size:12px;
+    }
+
+    #proTable td{
+        padding:8px 5px;
+    }
+
+    .signal-box{
+        font-size:14px;
+    }
+
 }
 
 /* ======================================================
