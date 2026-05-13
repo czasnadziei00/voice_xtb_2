@@ -2,7 +2,7 @@
 //  VOICE XTB 6.5 PRO — FINAL VERSION
 // ======================================================
 
-const backend = "https://voice-xtb-2.onrender.com/voice-parse";
+const backend = "https://voice-xtb.onrender.com/voice-parse";
 
 let recognition = null;
 let recognizing = false;
