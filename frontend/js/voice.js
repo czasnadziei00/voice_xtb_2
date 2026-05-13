@@ -208,14 +208,12 @@ function tpColor(price, tp, signal) {
 
   if (isNaN(p) || isNaN(t)) return "";
 
-  // BUY logic
   if (signal.includes("BUY")) {
     if (p >= t) return "tp-hit";
     if (p <= t * 0.97) return "tp-fail";
     if (p >= t * 0.90) return "tp-close";
   }
 
-  // SELL logic
   if (signal.includes("SELL")) {
     if (p <= t) return "tp-hit";
     if (p >= t * 1.03) return "tp-fail";
@@ -224,7 +222,6 @@ function tpColor(price, tp, signal) {
 
   return "";
 }
-
 // ======================================================
 //  TABELA
 // ======================================================
@@ -355,6 +352,34 @@ function stopSequence() {
 }
 
 // ======================================================
+//  GŁOSOWE USTAWIANIE CENY / ENTRY
+// ======================================================
+
+function startVoiceInput(callback) {
+  const SR = window.webkitSpeechRecognition || window.SpeechRecognition;
+  if (!SR) {
+    alert("Brak wsparcia dla rozpoznawania mowy.");
+    return;
+  }
+
+  const rec = new SR();
+  rec.lang = "pl-PL";
+  rec.continuous = false;
+  rec.interimResults = false;
+
+  rec.onresult = (e) => {
+    const text = e.results[0][0].transcript.trim();
+    callback(text);
+  };
+
+  rec.onerror = () => {
+    document.getElementById("comment").textContent = "❌ Błąd rozpoznawania mowy";
+  };
+
+  rec.start();
+}
+
+// ======================================================
 //  POPUP + ENTRY + CENA
 // ======================================================
 
@@ -365,6 +390,7 @@ document.addEventListener("click", (e) => {
   const ticker = row.children[0]?.textContent.trim();
   if (!ticker) return;
 
+  // POPUP
   if (e.target.classList.contains("ticker-cell")) {
     const rec = tickers[ticker]["M15"] || tickers[ticker]["M5"] || tickers[ticker]["H1"];
     const popup = document.getElementById("popup");
@@ -374,22 +400,43 @@ document.addEventListener("click", (e) => {
     popup.style.display = "block";
   }
 
+  // GŁOSOWA CENA
   if (e.target.classList.contains("price-cell")) {
-    const value = prompt("Podaj cenę aktualną:");
-    if (!value) return;
     const rec = tickers[ticker]["M15"] || tickers[ticker]["M5"] || tickers[ticker]["H1"];
-    rec.close = parseFloat(value.replace(",", "."));
-    updateTable();
+
+    document.getElementById("comment").textContent = "🎤 Mów: podaj cenę...";
+
+    startVoiceInput((spoken) => {
+      const value = parseFloat(spoken.replace(",", "."));
+      if (!isNaN(value)) {
+        rec.close = value;
+        updateTable();
+        document.getElementById("comment").textContent = "✔️ Cena ustawiona głosowo";
+      } else {
+        document.getElementById("comment").textContent = "❌ Nie rozpoznano liczby";
+      }
+    });
   }
 
+  // GŁOSOWE ENTRY
   if (e.target.classList.contains("entry-cell")) {
-    const value = prompt("Podaj entry:");
-    if (!value) return;
     const rec = tickers[ticker]["M15"] || tickers[ticker]["M5"] || tickers[ticker]["H1"];
-    rec.entry = parseFloat(value.replace(",", "."));
-    updateTable();
+
+    document.getElementById("comment").textContent = "🎤 Mów: podaj entry...";
+
+    startVoiceInput((spoken) => {
+      const value = parseFloat(spoken.replace(",", "."));
+      if (!isNaN(value)) {
+        rec.entry = value;
+        updateTable();
+        document.getElementById("comment").textContent = "✔️ Entry ustawione głosowo";
+      } else {
+        document.getElementById("comment").textContent = "❌ Nie rozpoznano liczby";
+      }
+    });
   }
 
+  // DELETE
   if (e.target.classList.contains("delete-cell")) {
     delete tickers[ticker];
     updateTable();
