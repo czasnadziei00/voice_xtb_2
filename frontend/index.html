@@ -4,7 +4,132 @@
     <meta charset="UTF-8">
     <title>VOICE XTB 6.5 PRO MULTI-TF</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style.css">
+
+<style>
+body {
+    background: #111;
+    color: #eee;
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 10px;
+}
+
+h1 {
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+
+#controls {
+    margin-bottom: 8px;
+}
+
+button {
+    padding: 8px 12px;
+    margin-right: 6px;
+    border: none;
+    border-radius: 4px;
+    background: #2b7cff;
+    color: #fff;
+    font-size: 14px;
+}
+
+button:nth-child(2) {
+    background: #c0392b;
+}
+
+#comment,
+#recognized,
+#parsed {
+    margin: 4px 0;
+    font-size: 13px;
+    word-wrap: break-word;
+}
+
+#tfTable {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 13px;
+}
+
+#tfTable th,
+#tfTable td {
+    border: 1px solid #444;
+    padding: 4px 6px;
+    text-align: center;
+    vertical-align: top;
+}
+
+#tfTable thead {
+    background: #222;
+}
+
+.tf-cell {
+    cursor: pointer;
+    padding: 4px;
+}
+
+.tf-signal {
+    font-weight: bold;
+    font-size: 14px;
+    display: block;
+}
+
+.tf-hint {
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+/* kolory sygnałów */
+.signal-BUY {
+    color: #00e676;
+}
+.signal-SELL {
+    color: #ff5252;
+}
+.signal-PRAWIEBUY,
+.signal-CZEKAJ,
+.signal-CZEKAJDO,
+.signal-NEUTRAL {
+    color: #ffeb3b;
+}
+
+/* POPUP */
+
+.popup {
+    display: none;
+    position: fixed;
+    z-index: 999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+}
+
+.popup-content {
+    background: #222;
+    margin: 60px auto;
+    padding: 10px;
+    border-radius: 6px;
+    width: 90%;
+    max-width: 420px;
+    color: #eee;
+}
+
+.popup-close {
+    float: right;
+    cursor: pointer;
+    font-size: 18px;
+}
+
+#popupData {
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+</style>
+
 </head>
 
 <body>
