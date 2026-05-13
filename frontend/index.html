@@ -204,8 +204,8 @@ button:nth-child(2) {
 <h1>VOICE XTB 6.5 PRO — M5 / M15 / H1</h1>
 
 <div id="controls">
-    <button onclick="startFullMic()">🎤 Start sekwencji pełnej</button>
-    <button onclick="stopMic()">⛔ Stop</button>
+    <button onclick="startSequence()">🎤 Start sekwencji pełnej</button>
+    <button onclick="stopSequence()">⛔ Stop</button>
 </div>
 
 <div id="comment">Status systemu...</div>
@@ -227,7 +227,7 @@ button:nth-child(2) {
             <th>🗑️</th>
         </tr>
     </thead>
-    <tbody></tbody>
+    <tbody id="table-body"></tbody>
 </table>
 
 <!-- POPUP PREMIUM -->
@@ -237,6 +237,7 @@ button:nth-child(2) {
         <div id="popupBody"></div>
     </div>
 </div>
+
 <script src="js/voice.js"></script>
 </body>
 </html>
