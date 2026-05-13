@@ -718,14 +718,15 @@ function updateTable() {
 
       <td>
 
-        <span style="
-          font-size:15px;
-          font-weight:700;
-        ">
-          ${signal}
-        </span>
+  <div class="signal-box">
+    ${signal}
+  </div>
 
-      </td>
+  <div class="time-mini">
+    ${rec.time ?? ""}
+  </div>
+
+</td>
 
       <td>
         ${M15?.widelki ?? "—"}
