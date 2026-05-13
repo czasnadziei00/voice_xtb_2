@@ -42,8 +42,10 @@ function finalizeRecord() {
   })
     .then(res => res.json())
     .then(data => {
+      // jeśli backend nie nadał time, zachowaj nasz
+      if (!data.time) data.time = tempRecord.time;
       handleBackendData(data);
-      document.getElementById("comment").textContent = "✔️ Dodano rekord";
+      document.getElementById("comment").textContent = "✔️ Dodano świecę do historii";
     })
     .catch(() => {
       document.getElementById("comment").textContent = "❌ Błąd backendu";
@@ -177,20 +179,99 @@ function computeTP3(rec) {
 }
 
 // ======================================================
-//  SYGNAŁ WSPÓLNY
+//  WIELO-ŚWIECOWY SILNIK SYGNAŁU
 // ======================================================
 
-function consensusSignal(tData) {
+// ile świec trzymamy w historii
+const HISTORY_LIMITS = {
+  "M5": 14,
+  "M15": 7,
+  "H1": 3
+};
+
+function pushToHistory(store, tf, candle) {
+  if (!store[tf]) store[tf] = { history: [] };
+  if (!store[tf].history) store[tf].history = [];
+  store[tf].history.push(candle);
+  const limit = HISTORY_LIMITS[tf] || 5;
+  if (store[tf].history.length > limit) {
+    store[tf].history = store[tf].history.slice(-limit);
+  }
+}
+
+// prosta ocena kierunku z historii
+function trendDirectionFromHistory(history) {
+  if (!history || history.length < 2) return "NEUTRAL";
+
+  const first = history[0];
+  const last = history[history.length - 1];
+
+  const up = last.close > first.close;
+  const down = last.close < first.close;
+
+  if (up && Math.abs(last.close - first.close) / first.close > 0.01) return "UP";
+  if (down && Math.abs(last.close - first.close) / first.close > 0.01) return "DOWN";
+  return "NEUTRAL";
+}
+
+// siła trendu z MA20 vs DEMA9 + nachylenie
+function trendStrengthFromHistory(history) {
+  if (!history || history.length === 0) return 0;
+
+  const last = history[history.length - 1];
+  const prev = history[Math.max(0, history.length - 2)];
+
+  const spread = Math.abs(last.ma20 - last.dema9);
+  const slope = last.ma20 - prev.ma20;
+
+  return spread + Math.abs(slope);
+}
+
+// sygnał dla jednego TF na bazie historii
+function computeSignalForTF(history, tf) {
+  if (!history || history.length === 0) return "CZEKAJ";
+
+  const last = history[history.length - 1];
+  const dir = trendDirectionFromHistory(history);
+  const strength = trendStrengthFromHistory(history);
+  const rsi = last.rsi;
+  const c = last.close;
+  const ma = last.ma20;
+  const de = last.dema9;
+
+  const aboveMA = c > ma && ma > de;
+  const belowMA = c < ma && ma < de;
+
+  // bazowy kierunek
+  let base = "CZEKAJ";
+  if (dir === "UP" && aboveMA) base = "BUY";
+  else if (dir === "DOWN" && belowMA) base = "SELL";
+  else if (dir === "UP") base = "PRAWIE BUY";
+  else if (dir === "DOWN") base = "PRAWIE SELL";
+
+  // korekty RSI
+  if (base.includes("BUY") && rsi > 75) base = "CZEKAJ DO";
+  if (base.includes("SELL") && rsi < 25) base = "CZEKAJ DO";
+
+  // bardzo słaba struktura → CZEKAJ
+  if (strength < 0.05) base = "CZEKAJ";
+
+  return base;
+}
+
+// konsensus z M5/M15/H1
+function consensusSignalFromStore(tData) {
   const sigs = [];
 
   ["M5", "M15", "H1"].forEach(tf => {
-    const a = tData[tf];
-    if (a && a.signal) sigs.push(a.signal);
+    const tfData = tData[tf];
+    if (tfData && tfData.signal) sigs.push(tfData.signal);
   });
 
   if (sigs.includes("BUY")) return "BUY";
   if (sigs.includes("SELL")) return "SELL";
   if (sigs.includes("PRAWIE BUY")) return "PRAWIE BUY";
+  if (sigs.includes("PRAWIE SELL")) return "PRAWIE SELL";
   if (sigs.includes("CZEKAJ DO")) return "CZEKAJ DO";
 
   return "CZEKAJ";
@@ -206,6 +287,7 @@ function getRowClass(signal) {
   if (signal === "BUY") return "row-buy";
   if (signal === "SELL") return "row-sell";
   if (signal === "PRAWIE BUY") return "row-prawie";
+  if (signal === "PRAWIE SELL") return "row-prawie";
   if (signal === "CZEKAJ DO") return "row-czekajdo";
 
   return "row-czekaj";
@@ -238,7 +320,7 @@ function tpColor(price, tp, signal) {
   return "";
 }
 // ======================================================
-//  TABELA
+//  TABELA + STRUKTURA DANYCH
 // ======================================================
 
 const tickers = {};
@@ -247,20 +329,29 @@ function handleBackendData(d) {
   const tf = normalizeInterval(d.interval);
   const t = d.ticker;
 
-  if (tf === "M15") {
-    d.widelki = computeWidelki(d);
-
-    const [dol, gor] = d.widelki.split(" - ").map(Number);
-
-    const tp12 = computeTP12(d, dol, gor);
-    d.tp1 = tp12.tp1;
-    d.tp2 = tp12.tp2;
-
-    d.tp3 = computeTP3(d);
-  }
-
   if (!tickers[t]) tickers[t] = {};
-  tickers[t][tf] = d;
+
+  // dopisz świecę do historii TF
+  pushToHistory(tickers[t], tf, d);
+
+  const tfStore = tickers[t][tf];
+  const history = tfStore.history;
+  const last = history[history.length - 1];
+
+  // wylicz sygnał dla tego TF
+  const tfSignal = computeSignalForTF(history, tf);
+  tfStore.signal = tfSignal;
+  tfStore.last = last; // wygodny skrót
+
+  // jeśli to M15 → licz widełki + TP
+  if (tf === "M15") {
+    last.widelki = computeWidelki(last);
+    const [dol, gor] = last.widelki.split(" - ").map(Number);
+    const tp12 = computeTP12(last, dol, gor);
+    last.tp1 = tp12.tp1;
+    last.tp2 = tp12.tp2;
+    last.tp3 = computeTP3(last);
+  }
 
   updateTable();
 }
@@ -272,29 +363,38 @@ function updateTable() {
   Object.keys(tickers).forEach(t => {
     const tData = tickers[t];
 
-    const M5 = tData["M5"];
-    const M15 = tData["M15"];
-    const H1 = tData["H1"];
+    const M5 = tData["M5"]?.last;
+    const M15 = tData["M15"]?.last;
+    const H1 = tData["H1"]?.last;
 
-    const rec = M15 || M5 || H1;
+    const rec = M15 || H1 || M5;
     if (!rec) return;
 
     const entry = rec.entry ?? "—";
-    const signal = consensusSignal(tData);
+    const signal = consensusSignalFromStore(tData);
 
     const row = document.createElement("tr");
     row.className = getRowClass(signal);
 
     row.innerHTML = `
       <td class="ticker-cell">${t}</td>
-      <td class="price-cell">${rec.close.toFixed(2)}</td>
 
-      <td>${rec.interval}</td>
+      <td class="price-cell">
+        ${rec.close.toFixed(2)}
+      </td>
+
+      <td>
+        ${rec.interval}<br>
+        <span style="font-size:11px; opacity:0.7;">${rec.time ?? ""}</span>
+      </td>
 
       <td class="entry-cell">${entry}</td>
 
       <td>
-        <span style="font-size:16px; font-weight:700;">${signal}</span>
+        <span style="font-size:16px; font-weight:700;">
+          ${signal}<br>
+          <small style="font-size:11px; opacity:0.7;">${rec.time ?? ""}</small>
+        </span>
       </td>
 
       <td>${M15?.widelki ?? "—"}</td>
@@ -309,14 +409,14 @@ function updateTable() {
     tbody.appendChild(row);
   });
 
-  saveTable(); // <—— pamięć tabeli
+  saveTable();
 }
 
 // ======================================================
 //  PAMIĘĆ TABELI — LOCALSTORAGE
 // ======================================================
 
-const STORAGE_KEY = "xtb_table_memory_v1";
+const STORAGE_KEY = "xtb_table_memory_v2_multi_tf";
 
 function saveTable() {
   const data = JSON.stringify(tickers);
@@ -329,9 +429,42 @@ function loadTable() {
 
   try {
     const parsed = JSON.parse(raw);
+
     Object.keys(parsed).forEach(t => {
       tickers[t] = parsed[t];
+
+      ["M5", "M15", "H1"].forEach(tf => {
+        const tfData = tickers[t][tf];
+        if (!tfData) return;
+
+        // dopilnuj, żeby była historia jako tablica
+        if (!Array.isArray(tfData.history)) {
+          // stara wersja mogła mieć pojedynczy obiekt
+          if (tfData.last) {
+            tfData.history = [tfData.last];
+          } else {
+            tfData.history = [];
+          }
+        }
+
+        // uzupełnij brakującą godzinę
+        tfData.history.forEach(c => {
+          if (!c.time) {
+            c.time = new Date().toLocaleTimeString("pl-PL", {
+              hour: "2-digit",
+              minute: "2-digit"
+            });
+          }
+        });
+
+        // odtwórz last + signal
+        if (tfData.history.length > 0) {
+          tfData.last = tfData.history[tfData.history.length - 1];
+          tfData.signal = computeSignalForTF(tfData.history, tf);
+        }
+      });
     });
+
     updateTable();
   } catch (e) {
     console.error("Błąd wczytywania tabeli:", e);
@@ -339,10 +472,10 @@ function loadTable() {
 }
 
 // ======================================================
-//  DYNAMICZNY KOMENTARZ PRO
+//  DYNAMICZNY KOMENTARZ PRO (PO KLIKNIĘCIU W TICKER)
 // ======================================================
 
-function buildDynamicComment(rec) {
+function buildDynamicComment(rec, tData) {
   const c = rec.close;
   const o = rec.open;
   const L = rec.low;
@@ -364,14 +497,17 @@ function buildDynamicComment(rec) {
 
   let TREND = "";
 
+  const dirM15 = tData["M15"] ? trendDirectionFromHistory(tData["M15"].history) : "NEUTRAL";
+  const dirH1 = tData["H1"] ? trendDirectionFromHistory(tData["H1"].history) : "NEUTRAL";
+
   if (isKapitulacja) {
     TREND = "Trend wzrostowy, ale świeca kapitulacyjna wprowadza mocną korektę. Struktura nadal trzyma, dopóki cena jest powyżej " 
       + (mid - R*0.20).toFixed(0) + "–" + (mid - R*0.05).toFixed(0) + ".";
   }
-  else if (c > ma && ma > de) {
+  else if (dirH1 === "UP" || (dirM15 === "UP" && c > ma)) {
     TREND = "Trend wzrostowy, struktura jest zdrowa i trzyma kierunek.";
   }
-  else if (c < ma && ma < de) {
+  else if (dirH1 === "DOWN" || (dirM15 === "DOWN" && c < ma)) {
     TREND = "Trend spadkowy, struktura spadkowa aktywna.";
   }
   else {
@@ -426,6 +562,8 @@ function buildDynamicComment(rec) {
   else RISK = "Ryzyko umiarkowane — struktura nadal trzyma.";
 
   return `
+INTERWAŁ: ${rec.interval}, GODZINA: ${rec.time}
+
 TREND: ${TREND}
 
 MOMENTUM: ${MOM}
@@ -534,16 +672,21 @@ document.addEventListener("click", (e) => {
   const ticker = row.children[0]?.textContent.trim();
   if (!ticker) return;
 
-  // POPUP
+  const tData = tickers[ticker];
+  if (!tData) return;
+
+  const rec = tData["M15"]?.last || tData["H1"]?.last || tData["M5"]?.last;
+  if (!rec) return;
+
+  // POPUP — klik w nazwę tickera
   if (e.target.classList.contains("ticker-cell")) {
-    const rec = tickers[ticker]["M15"] || tickers[ticker]["M5"] || tickers[ticker]["H1"];
     const popup = document.getElementById("popup");
     const body = document.getElementById("popupBody");
 
     body.innerHTML = `
-      <h2>${ticker}</h2>
+      <h2>${ticker} — ${rec.interval} — ${rec.time}</h2>
       <pre style="white-space: pre-wrap; font-family: inherit; font-size: 14px; line-height: 1.4;">
-${buildDynamicComment(rec)}
+${buildDynamicComment(rec, tData)}
       </pre>
     `;
 
@@ -552,8 +695,6 @@ ${buildDynamicComment(rec)}
 
   // GŁOSOWA CENA
   if (e.target.classList.contains("price-cell")) {
-    const rec = tickers[ticker]["M15"] || tickers[ticker]["M5"] || tickers[ticker]["H1"];
-
     document.getElementById("comment").textContent = "🎤 Mów: podaj cenę...";
 
     startVoiceInput((spoken) => {
@@ -570,8 +711,6 @@ ${buildDynamicComment(rec)}
 
   // GŁOSOWE ENTRY
   if (e.target.classList.contains("entry-cell")) {
-    const rec = tickers[ticker]["M15"] || tickers[ticker]["M5"] || tickers[ticker]["H1"];
-
     document.getElementById("comment").textContent = "🎤 Mów: podaj entry...";
 
     startVoiceInput((spoken) => {
