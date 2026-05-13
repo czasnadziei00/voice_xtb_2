@@ -79,10 +79,10 @@ button:nth-child(2) {
 .signal-SELL {
     color: #ff5252;
 }
-.signal-NEUTRAL,
+.signal-PRAWIEBUY,
 .signal-CZEKAJ,
 .signal-CZEKAJDO,
-.signal-PRAWIEBUY {
+.signal-NEUTRAL {
     color: #ffeb3b;
 }
 
