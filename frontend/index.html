@@ -38,11 +38,6 @@ button {
     transition: 0.2s;
 }
 
-button:hover {
-    transform: translateY(-1px);
-    opacity: 0.9;
-}
-
 button:nth-child(2) {
     background: linear-gradient(135deg, #c0392b, #99271f);
 }
@@ -56,7 +51,7 @@ button:nth-child(2) {
     word-wrap: break-word;
 }
 
-/* ======= TABELA PRO ======= */
+/* ======= TABELA ======= */
 
 #proTable {
     width: 100%;
@@ -90,15 +85,6 @@ button:nth-child(2) {
     border-bottom: 1px solid #222;
 }
 
-#proTable tbody tr td:first-child {
-    border-left: 1px solid #222;
-    border-radius: 6px 0 0 6px;
-}
-#proTable tbody tr td:last-child {
-    border-right: 1px solid #222;
-    border-radius: 0 6px 6px 0;
-}
-
 .ticker-cell,
 .price-cell,
 .entry-cell,
@@ -106,30 +92,7 @@ button:nth-child(2) {
     cursor: pointer;
 }
 
-.signal-text {
-    font-weight: 700;
-    font-size: 15px;
-    display: block;
-    margin-bottom: 4px;
-}
-
-.signal-BUY {
-    color: #00ff9d;
-    text-shadow: 0 0 6px #00ff9d55;
-}
-.signal-SELL {
-    color: #ff4d4d;
-    text-shadow: 0 0 6px #ff4d4d55;
-}
-.signal-PRAWIEBUY,
-.signal-CZEKAJ,
-.signal-CZEKAJDO,
-.signal-NEUTRAL {
-    color: #ffd84d;
-    text-shadow: 0 0 6px #ffd84d55;
-}
-
-/* ======= POPUP PREMIUM ======= */
+/* ======= POPUP ======= */
 
 .popup {
     display: none;
@@ -161,40 +124,6 @@ button:nth-child(2) {
     font-size: 22px;
     opacity: 0.7;
 }
-
-.popup-close:hover {
-    opacity: 1;
-}
-
-.popup-section {
-    margin-bottom: 14px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #222;
-}
-
-.popup-section:last-child {
-    border-bottom: none;
-}
-
-.popup-title {
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 12px;
-    color: #4da3ff;
-}
-
-.popup-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: #ccc;
-    margin-bottom: 4px;
-}
-
-.popup-text {
-    font-size: 13px;
-    line-height: 1.45;
-    opacity: 0.9;
-}
 </style>
 
 </head>
@@ -218,6 +147,7 @@ button:nth-child(2) {
             <th>Ticker</th>
             <th>Cena</th>
             <th>Interwał</th>
+            <th>Godzina</th>
             <th>Entry</th>
             <th>Sygnał</th>
             <th>Widełki</th>
@@ -230,7 +160,7 @@ button:nth-child(2) {
     <tbody id="table-body"></tbody>
 </table>
 
-<!-- POPUP PREMIUM -->
+<!-- POPUP -->
 <div id="popup" class="popup">
     <div class="popup-content">
         <span id="popupClose" class="popup-close">✖</span>
