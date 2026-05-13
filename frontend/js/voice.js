@@ -27,7 +27,6 @@ const steps = [
 // ======================================================
 
 function finalizeRecord() {
-  // automatyczna godzina
   tempRecord.time = new Date().toLocaleTimeString("pl-PL", {
     hour: "2-digit",
     minute: "2-digit"
@@ -84,7 +83,7 @@ recognition = initRecognition();
 function extractNumber(text) {
   text = text.replace(",", ".").replace(/\s+/g, "");
   const num = parseFloat(text);
-  return isNaN(num) ? 0 : num;   // <<< KLUCZOWA POPRAWKA
+  return isNaN(num) ? 0 : num;
 }
 
 function normalizeInterval(tf) {
@@ -135,21 +134,27 @@ function updateTable() {
 
   Object.keys(tickers).forEach(t => {
     const tData = tickers[t];
-    const M15 = tData["M15"];
-    if (!M15) return;
 
-    const entry = M15.entry ?? "—";
+    const M5 = tData["M5"];
+    const M15 = tData["M15"];
+    const H1 = tData["H1"];
+
+    // ⭐ wybieramy ostatni dostępny interwał
+    const rec = M15 || M5 || H1;
+    if (!rec) return;
+
+    const entry = rec.entry ?? "—";
     const signal = consensusSignal(tData);
 
     const row = document.createElement("tr");
 
     row.innerHTML = `
       <td class="ticker-cell">${t}</td>
-      <td class="price-cell">${M15.close.toFixed(2)}</td>
+      <td class="price-cell">${rec.close.toFixed(2)}</td>
 
       <td>
-        ${M15.interval}<br>
-        <span style="opacity:0.7; font-size:12px;">${M15.time}</span>
+        ${rec.interval}<br>
+        <span style="opacity:0.7; font-size:12px;">${rec.time}</span>
       </td>
 
       <td class="entry-cell">${entry}</td>
@@ -159,7 +164,7 @@ function updateTable() {
         <span style="font-size:12px; opacity:0.7;">
           ${
             signal === "CZEKAJ DO"
-              ? (M15.close > M15.ma20 ? "BUY" : "SELL")
+              ? (rec.close > rec.ma20 ? "BUY" : "SELL")
               : signal
           }
         </span>
@@ -243,33 +248,31 @@ document.addEventListener("click", (e) => {
   const ticker = row.children[0]?.textContent.trim();
   if (!ticker) return;
 
-  // popup komentarza
   if (e.target.classList.contains("ticker-cell")) {
-    const M15 = tickers[ticker]["M15"];
+    const rec = tickers[ticker]["M15"] || tickers[ticker]["M5"] || tickers[ticker]["H1"];
     const popup = document.getElementById("popup");
     const body = document.getElementById("popupBody");
 
-    body.innerHTML = `<h2>${ticker}</h2><p>${M15.comment}</p>`;
+    body.innerHTML = `<h2>${ticker}</h2><p>${rec.comment}</p>`;
     popup.style.display = "block";
   }
 
-  // cena aktualna
   if (e.target.classList.contains("price-cell")) {
     const value = prompt("Podaj cenę aktualną:");
     if (!value) return;
-    tickers[ticker]["M15"].close = parseFloat(value.replace(",", "."));
+    const rec = tickers[ticker]["M15"] || tickers[ticker]["M5"] || tickers[ticker]["H1"];
+    rec.close = parseFloat(value.replace(",", "."));
     updateTable();
   }
 
-  // entry
   if (e.target.classList.contains("entry-cell")) {
     const value = prompt("Podaj entry:");
     if (!value) return;
-    tickers[ticker]["M15"].entry = parseFloat(value.replace(",", "."));
+    const rec = tickers[ticker]["M15"] || tickers[ticker]["M5"] || tickers[ticker]["H1"];
+    rec.entry = parseFloat(value.replace(",", "."));
     updateTable();
   }
 
-  // delete
   if (e.target.classList.contains("delete-cell")) {
     delete tickers[ticker];
     updateTable();
