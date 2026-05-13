@@ -64,6 +64,27 @@ function initRecognition() {
   rec.continuous = false;
   rec.interimResults = false;
 
+  // 🔥 kluczowa flaga — kontroluje, czy można startować
+  let safeToStart = true;
+
+  rec.onstart = () => {
+    safeToStart = false;
+  };
+
+  rec.onend = () => {
+    safeToStart = true;
+
+    if (recognizing && recognitionMode === "SEQUENCE" && currentStep < steps.length) {
+      setTimeout(() => {
+        try { rec.start(); } catch {}
+      }, 150);
+    }
+  };
+
+  rec.onerror = () => {
+    safeToStart = true;
+  };
+
   rec.onresult = (e) => {
     const text = e.results[0][0].transcript.trim();
 
@@ -79,11 +100,10 @@ function initRecognition() {
     try { rec.stop(); } catch {}
   };
 
-  rec.onend = () => {
-    if (!recognizing) return;
-
-    if (recognitionMode === "SEQUENCE" && currentStep < steps.length) {
-      sayStep();
+  // 🔥 bezpieczny start — jedyny sposób, żeby Chrome nie zabił mic
+  rec.safeStart = () => {
+    if (safeToStart) {
+      try { rec.start(); } catch {}
     }
   };
 
