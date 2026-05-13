@@ -351,75 +351,67 @@ function updateTable() {
     tbody.appendChild(tr);
   });
 }
-
-// ====== POPUP ======
+ // ====== POPUP ======
 
 const popup = document.getElementById("popup");
 const popupClose = document.getElementById("popupClose");
-const popupTitle = document.getElementById("popupTitle");
-const popupData = document.getElementById("popupData");
 
 if (popupClose) {
-  popupClose.onclick = () => popup.style.display = "none";
+    popupClose.onclick = () => popup.style.display = "none";
 }
+
 window.onclick = (e) => {
-  if (e.target === popup) popup.style.display = "none";
+    if (e.target === popup) popup.style.display = "none";
 };
 
 // delegacja zdarzeń na tabeli PRO
 const proTbody = document.querySelector("#proTable tbody");
+
 if (proTbody) {
-  proTbody.addEventListener("click", (e) => {
-    const tickerCell = e.target.closest(".ticker-cell");
-    const delCell = e.target.closest(".delete-cell");
-    const priceCell = e.target.closest(".price-cell");
-    const entryCell = e.target.closest(".entry-cell");
+    proTbody.addEventListener("click", (e) => {
 
-    // usuń wiersz
-    if (delCell) {
-      const t = delCell.dataset.ticker;
-      if (t && tickers[t]) {
-        delete tickers[t];
-        updateTable();
-      }
-      return;
-    }
+        const tickerCell = e.target.closest(".ticker-cell");
+        const delCell = e.target.closest(".delete-cell");
+        const priceCell = e.target.closest(".price-cell");
+        const entryCell = e.target.closest(".entry-cell");
 
-    // klik w ticker → popup z analizą 3×TF
-    if (tickerCell) {
-      const t = tickerCell.dataset.ticker;
-      const d = tickers[t];
-      if (!d) return;
+        // 🗑️ USUŃ WIERSZ
+        if (delCell) {
+            const t = delCell.dataset.ticker;
+            if (t && tickers[t]) {
+                delete tickers[t];
+                updateTable();
+            }
+            return;
+        }
 
-      const sig = consensusSignal(d);
-      const payload = {
-        ticker: t,
-        sygnał_wspólny: sig,
-        meta: d.meta,
-        M5: d.M5,
-        M15: d.M15,
-        H1: d.H1
-      };
+        // 📊 POPUP PREMIUM (klik w TICKER)
+        if (tickerCell) {
+            const t = tickerCell.dataset.ticker;
+            const d = tickers[t];
+            if (!d) return;
 
-      popupTitle.textContent = `${t} — analiza M5/M15/H1`;
-      popupData.textContent = JSON.stringify(payload, null, 2);
-      popup.style.display = "block";
-      return;
-    }
+            document.getElementById("popupBody").innerHTML =
+                buildPopupHTML(t, d);
 
-    // klik w cenę / entry — na razie tylko placeholder (można później podpiąć osobną sekwencję głosową)
-    if (priceCell) {
-      const t = priceCell.dataset.ticker;
-      document.getElementById("comment").textContent =
-        `ℹ️ Cena ${t} pochodzi z ostatniego close (backend).`;
-      return;
-    }
+            popup.style.display = "block";
+            return;
+        }
 
-    if (entryCell) {
-      const t = entryCell.dataset.ticker;
-      document.getElementById("comment").textContent =
-        `ℹ️ Entry dla ${t} na razie z backendu / meta (możemy dodać osobne nagrywanie).`;
-      return;
-    }
-  });
+        // 💬 KLIK W CENĘ
+        if (priceCell) {
+            const t = priceCell.dataset.ticker;
+            document.getElementById("comment").textContent =
+                `ℹ️ Cena ${t} pochodzi z ostatniego close (backend).`;
+            return;
+        }
+
+        // 💬 KLIK W ENTRY
+        if (entryCell) {
+            const t = entryCell.dataset.ticker;
+            document.getElementById("comment").textContent =
+                `ℹ️ Entry dla ${t} na razie z backendu / meta.`;
+            return;
+        }
+    });
 }
