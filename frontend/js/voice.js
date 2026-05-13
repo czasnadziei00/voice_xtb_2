@@ -109,6 +109,59 @@ function computeWidelki(rec) {
 }
 
 // ======================================================
+//  TP1 / TP2 — STAŁE
+// ======================================================
+
+function computeTP12(rec, widDol, widGor) {
+  const L = rec.low;
+  const H = rec.high;
+  const R = H - L;
+  const s = rec.signal;
+
+  if (!s) return { tp1: "—", tp2: "—" };
+
+  if (s.includes("BUY")) {
+    return {
+      tp1: (widGor + 0.50 * R).toFixed(2),
+      tp2: (widGor + 1.00 * R).toFixed(2)
+    };
+  }
+
+  if (s.includes("SELL")) {
+    return {
+      tp1: (widDol - 0.50 * R).toFixed(2),
+      tp2: (widDol - 1.00 * R).toFixed(2)
+    };
+  }
+
+  return { tp1: "—", tp2: "—" };
+}
+
+// ======================================================
+//  TP3 — DYNAMICZNE MOMENTUM
+// ======================================================
+
+function computeTP3(rec) {
+  const c = rec.close;
+  const ma = rec.ma20;
+  const de = rec.dema9;
+  const s = rec.signal;
+
+  if (!s || s === "CZEKAJ" || s === "CZEKAJ DO") return "—";
+
+  const trend_strength = Math.abs(ma - de);
+  const mid = (ma + de) / 2;
+  const distance = Math.abs(c - mid);
+
+  const tp = distance + trend_strength;
+
+  if (s.includes("BUY")) return (c + tp).toFixed(2);
+  if (s.includes("SELL")) return (c - tp).toFixed(2);
+
+  return "—";
+}
+
+// ======================================================
 //  SYGNAŁ WSPÓLNY
 // ======================================================
 
@@ -140,6 +193,14 @@ function handleBackendData(d) {
 
   if (tf === "M15") {
     d.widelki = computeWidelki(d);
+
+    const [dol, gor] = d.widelki.split(" - ").map(Number);
+
+    const tp12 = computeTP12(d, dol, gor);
+    d.tp1 = tp12.tp1;
+    d.tp2 = tp12.tp2;
+
+    d.tp3 = computeTP3(d);
   }
 
   if (!tickers[t]) tickers[t] = {};
@@ -176,19 +237,13 @@ function updateTable() {
       <td class="entry-cell">${entry}</td>
 
       <td>
-        <span style="font-size:16px; font-weight:700;">${signal}</span><br>
-        <span style="font-size:12px; opacity:0.7;">
-          ${
-            signal === "CZEKAJ DO"
-              ? (rec.close > rec.ma20 ? "BUY" : "SELL")
-              : signal
-          }
-        </span>
+        <span style="font-size:16px; font-weight:700;">${signal}</span>
       </td>
 
       <td>${M15?.widelki ?? "—"}</td>
-      <td>—</td>
-      <td>—</td>
+      <td>${M15?.tp1 ?? "—"}</td>
+      <td>${M15?.tp2 ?? "—"}</td>
+      <td>${M15?.tp3 ?? "—"}</td>
 
       <td class="delete-cell">🗑️</td>
     `;
