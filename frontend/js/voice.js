@@ -95,6 +95,20 @@ function normalizeInterval(tf) {
 }
 
 // ======================================================
+//  WIDEŁKI — LICZONE TYLKO Z M15
+// ======================================================
+
+function computeWidelki(rec) {
+  const L = rec.low;
+  const H = rec.high;
+
+  const dol = L + (H - L) * 0.20;
+  const gor = L + (H - L) * 0.35;
+
+  return `${dol.toFixed(2)} - ${gor.toFixed(2)}`;
+}
+
+// ======================================================
 //  SYGNAŁ WSPÓLNY
 // ======================================================
 
@@ -122,6 +136,10 @@ function handleBackendData(d) {
   const tf = normalizeInterval(d.interval);
   const t = d.ticker;
 
+  if (tf === "M15") {
+    d.widelki = computeWidelki(d);
+  }
+
   if (!tickers[t]) tickers[t] = {};
   tickers[t][tf] = d;
 
@@ -139,7 +157,6 @@ function updateTable() {
     const M15 = tData["M15"];
     const H1 = tData["H1"];
 
-    // ⭐ wybieramy ostatni dostępny interwał
     const rec = M15 || M5 || H1;
     if (!rec) return;
 
@@ -149,30 +166,31 @@ function updateTable() {
     const row = document.createElement("tr");
 
     row.innerHTML = `
-  <td class="ticker-cell">${t}</td>
-  <td class="price-cell">${rec.close.toFixed(2)}</td>
+      <td class="ticker-cell">${t}</td>
+      <td class="price-cell">${rec.close.toFixed(2)}</td>
 
-  <td>${rec.interval}</td>
+      <td>${rec.interval}</td>
 
-  <td class="entry-cell">${entry}</td>
+      <td class="entry-cell">${entry}</td>
 
-  <td>
-    <span style="font-size:16px; font-weight:700;">${signal}</span><br>
-    <span style="font-size:12px; opacity:0.7;">
-      ${
-        signal === "CZEKAJ DO"
-          ? (rec.close > rec.ma20 ? "BUY" : "SELL")
-          : signal
-      }
-    </span>
-  </td>
+      <td>
+        <span style="font-size:16px; font-weight:700;">${signal}</span><br>
+        <span style="font-size:12px; opacity:0.7;">
+          ${
+            signal === "CZEKAJ DO"
+              ? (rec.close > rec.ma20 ? "BUY" : "SELL")
+              : signal
+          }
+        </span>
+      </td>
 
-  <td>—</td>
-  <td>—</td>
-  <td>—</td>
+      <td>${M15?.widelki ?? "—"}</td>
+      <td>—</td>
+      <td>—</td>
 
-  <td class="delete-cell">🗑️</td>
-`;
+      <td class="delete-cell">🗑️</td>
+    `;
+
     tbody.appendChild(row);
   });
 }
