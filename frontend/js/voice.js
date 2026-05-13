@@ -69,10 +69,8 @@ function sayStep() {
     rsi: "Powiedz RSI"
   };
   document.getElementById("comment").textContent = "➡️ " + map[step];
-}
 
-
-// ======================================================
+  // ======================================================
 //  RECOGNITION — PRZETWARZANIE
 // ======================================================
 
@@ -95,6 +93,10 @@ function handleRecognized(text) {
     return;
   }
 }
+
+// ======================================================
+//  FINALIZACJA — WYSYŁKA DO BACKENDU
+// ======================================================
 
 function finalizeRecord() {
   document.getElementById("parsed").textContent =
@@ -168,11 +170,11 @@ function normalizeInterval(interval) {
   if (iv === "M15") return "M15";
   if (iv === "H1" || iv === "1H") return "H1";
   return null;
+    }
 }
 
-
 // ======================================================
-//  SYGNAŁ WSPÓLNY
+//  SYGNAŁ WSPÓLNY (M5 + M15 + H1)
 // ======================================================
 
 function consensusSignal(tData) {
@@ -288,7 +290,6 @@ function handleBackendData(d) {
 
   updateTable();
 }
-
 
 // ======================================================
 //  TABELA PRO
@@ -489,6 +490,7 @@ function buildPopupHTML(ticker, data) {
   `;
 }
 
+
 // ======================================================
 //  DELEGACJA KLIKNIĘĆ
 // ======================================================
@@ -539,5 +541,5 @@ if (proTbody) {
         `ℹ️ Entry dla ${t} na razie z backendu / meta.`;
       return;
     }
+  });
   }
-}
