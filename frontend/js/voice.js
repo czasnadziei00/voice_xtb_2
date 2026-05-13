@@ -1,4 +1,4 @@
-// VOICE XTB 6.5 PRO MULTI-TF (M5/M15/H1, tabela PRO)
+// VOICE XTB 6.5 PRO — pełna wersja
 
 const backend = "https://voice-xtb.onrender.com/voice-parse";
 
@@ -20,10 +20,10 @@ const steps = [
   "rsi"
 ];
 
-// pamięć: ticker -> { M5: analysis, M15: analysis, H1: analysis, meta: {...} }
+// struktura danych: ticker → { M5, M15, H1, meta }
 const tickers = {};
 
-// ====== SPEECH ======
+// ====== START / STOP ======
 
 function startFullMic() {
   recognizing = true;
@@ -44,6 +44,8 @@ function stopMic() {
   document.getElementById("comment").textContent = "⛔ Mikrofon zatrzymany";
 }
 
+// ====== PROMPTY ======
+
 function sayStep() {
   const step = steps[currentStep];
   const map = {
@@ -60,6 +62,8 @@ function sayStep() {
   };
   document.getElementById("comment").textContent = "➡️ " + map[step];
 }
+
+// ====== PRZETWARZANIE MOWY ======
 
 function handleRecognized(text) {
   document.getElementById("recognized").textContent = text;
@@ -100,6 +104,8 @@ function finalizeRecord() {
     });
 }
 
+// ====== INICJALIZACJA RECOGNITION ======
+
 function initRecognition() {
   const SR = window.webkitSpeechRecognition || window.SpeechRecognition;
   if (!SR) {
@@ -131,13 +137,13 @@ function initRecognition() {
 
 recognition = initRecognition();
 
+// ====== UTYLITY ======
+
 function extractNumber(text) {
   text = text.replace(",", ".").replace(/\s+/g, "");
   const num = parseFloat(text);
   return isNaN(num) ? null : num;
 }
-
-// ====== LOGIKA MULTI-TF ======
 
 function normalizeInterval(interval) {
   const iv = (interval || "").toUpperCase();
@@ -147,36 +153,35 @@ function normalizeInterval(interval) {
   return null;
 }
 
-// prosta logika sygnału wspólnego M5/M15/H1
+// ====== SYGNAŁ WSPÓLNY ======
+
 function consensusSignal(tData) {
   const sigs = [];
   ["M5", "M15", "H1"].forEach(tf => {
     const a = tData[tf];
     if (a && a.signal) sigs.push(a.signal.toUpperCase());
   });
+
   if (sigs.length === 0) return "RESET";
 
-  const hasBUY = sigs.some(s => s === "BUY");
-  const hasSELL = sigs.some(s => s === "SELL");
-  const hasCZKDO = sigs.some(s => s === "CZEKAJ DO");
-  const hasPRAWIE = sigs.some(s => s === "PRAWIE BUY");
+  const hasBUY = sigs.includes("BUY");
+  const hasSELL = sigs.includes("SELL");
+  const hasPRAWIE = sigs.includes("PRAWIE BUY");
+  const hasCZKDO = sigs.includes("CZEKAJ DO");
 
   if (hasSELL && !hasBUY) return "SELL";
   if (hasBUY && !hasSELL && !hasCZKDO && !hasPRAWIE) return "BUY";
-  if (hasBUY && (hasCZKDO || hasPRAWIE)) return "PRAWIE BUY";
+  if (hasBUY && (hasPRAWIE || hasCZKDO)) return "PRAWIE BUY";
   if (hasCZKDO && !hasBUY) return "CZEKAJ DO";
 
   return "CZEKAJ";
 }
 
+// ====== BACKEND → TICKER ======
+
 function handleBackendData(d) {
-  // backend: ticker, interval, time, open, low, high, close, volume, ma20, dema9, rsi, entry, signal, comment
   const tf = normalizeInterval(d.interval || "");
-  if (!tf) {
-    document.getElementById("comment").textContent =
-      "⚠️ Interwał inny niż M5/M15/H1 — pomijam";
-    return;
-  }
+  if (!tf) return;
 
   const t = (d.ticker || "").toUpperCase();
   if (!t) return;
@@ -222,13 +227,12 @@ function handleBackendData(d) {
 
   tickers[t][tf] = analysis;
 
-  // meta: ostatnia cena, TF, czas
   const meta = tickers[t].meta;
   if (!isNaN(close)) meta.price = close;
   meta.lastInterval = tf;
   meta.lastTime = analysis.time || "";
 
-  // widełki tylko dla BUY / PRAWIE BUY / CZEKAJ DO
+  // widełki
   let widełki = null;
   const sigUpper = (d.signal || "").toUpperCase();
   if (["BUY", "PRAWIE BUY", "CZEKAJ DO"].includes(sigUpper)) {
@@ -274,14 +278,14 @@ function updateTable() {
     const meta = data.meta || {};
     const tr = document.createElement("tr");
 
-    // Ticker (klik → popup)
+    // Ticker
     const tdTicker = document.createElement("td");
     tdTicker.textContent = ticker;
     tdTicker.classList.add("ticker-cell");
     tdTicker.dataset.ticker = ticker;
     tr.appendChild(tdTicker);
 
-    // Cena (ostatnie close)
+    // Cena
     const tdPrice = document.createElement("td");
     tdPrice.classList.add("price-cell");
     tdPrice.dataset.ticker = ticker;
@@ -289,34 +293,27 @@ function updateTable() {
       meta.price != null ? meta.price.toFixed(2) : "—";
     tr.appendChild(tdPrice);
 
-    // Interwał (ostatni TF + czas)
+    // Interwał
     const tdInterval = document.createElement("td");
-    const tf = meta.lastInterval || "—";
-    const tm = meta.lastTime || "";
-    tdInterval.textContent = tf + (tm ? "  " + tm : "");
+    tdInterval.textContent =
+      (meta.lastInterval || "—") + "  " + (meta.lastTime || "");
     tr.appendChild(tdInterval);
 
-    // Entry (na razie z backendu / meta)
+    // Entry
     const tdEntry = document.createElement("td");
     tdEntry.classList.add("entry-cell");
     tdEntry.dataset.ticker = ticker;
-    if (meta.entry != null) {
-      tdEntry.textContent = meta.entry.toFixed
-        ? meta.entry.toFixed(2)
-        : meta.entry;
-    } else {
-      tdEntry.textContent = "—";
-    }
+    tdEntry.textContent =
+      meta.entry != null ? meta.entry.toFixed(2) : "—";
     tr.appendChild(tdEntry);
 
-    // Sygnał wspólny
+    // Sygnał
     const tdSignal = document.createElement("td");
     const sig = consensusSignal(data);
     const spanSig = document.createElement("span");
     spanSig.classList.add("signal-text");
     spanSig.textContent = sig;
-    const sigClass = "signal-" + sig.toUpperCase().replace(/\s+/g, "");
-    spanSig.classList.add(sigClass);
+    spanSig.classList.add("signal-" + sig.toUpperCase().replace(/\s+/g, ""));
     tdSignal.appendChild(spanSig);
     tr.appendChild(tdSignal);
 
@@ -325,7 +322,7 @@ function updateTable() {
     tdWidełki.textContent = meta.widełki || "—";
     tr.appendChild(tdWidełki);
 
-    // TP1 / TP2 / TP3
+    // TP1/TP2/TP3
     const tdTP1 = document.createElement("td");
     tdTP1.textContent =
       meta.tp1 != null ? meta.tp1.toFixed(2) : "—";
@@ -351,67 +348,143 @@ function updateTable() {
     tbody.appendChild(tr);
   });
 }
- // ====== POPUP ======
+
+// ====== POPUP PREMIUM ======
 
 const popup = document.getElementById("popup");
 const popupClose = document.getElementById("popupClose");
 
 if (popupClose) {
-    popupClose.onclick = () => popup.style.display = "none";
+  popupClose.onclick = () => popup.style.display = "none";
 }
 
 window.onclick = (e) => {
-    if (e.target === popup) popup.style.display = "none";
-};
+  if (e.target === popup) popup.style.display = "none";
 
-// delegacja zdarzeń na tabeli PRO
+};
+// ====== GENERATOR POPUP PREMIUM ======
+
+function buildPopupHTML(ticker, data) {
+  const meta = data.meta || {};
+  const M5 = data.M5;
+  const M15 = data.M15;
+  const H1 = data.H1;
+
+  const sig = consensusSignal(data);
+
+  const trend = (() => {
+    if (!M15 || !M5) return "Brak danych do oceny trendu.";
+    if (M15.close > M15.ma20) return "Trend wzrostowy, korekta świecą spadkową.";
+    if (M15.close < M15.ma20) return "Trend spadkowy, ale pojawia się reakcja popytowa.";
+    return "Trend neutralny.";
+  })();
+
+  const momentum = (() => {
+    if (!M5) return "Brak danych.";
+    if (M5.rsi < 30) return `RSI ${M5.rsi} = skrajne wyprzedanie.`;
+    if (M5.rsi > 70) return `RSI ${M5.rsi} = wykupienie.`;
+    return `RSI ${M5.rsi} = neutralne momentum.`;
+  })();
+
+  const strength = (() => {
+    if (!M5) return "Brak danych.";
+    const range = M5.high - M5.low;
+    if (range > (M15?.high - M15?.low) * 0.8)
+      return "Duży zasięg świecy = wysoka zmienność.";
+    return "Średnia zmienność, struktura stabilna.";
+  })();
+
+  const supports = (() => {
+    if (!M15) return "Brak danych.";
+    return `${(M15.low - 2).toFixed(2)}–${(M15.low + 1).toFixed(2)} (lokalne), ${(M15.low - 5).toFixed(2)}–${(M15.low - 3).toFixed(2)} (kluczowe).`;
+  })();
+
+  const resistances = (() => {
+    if (!M15) return "Brak danych.";
+    return `${(M15.high + 3).toFixed(2)}–${(M15.high + 5).toFixed(2)} (VWAP), ${(M15.high + 8).toFixed(2)}–${(M15.high + 10).toFixed(2)} (DEMA9).`;
+  })();
+
+  const interpretation = (() => {
+    if (sig === "SELL") return "Struktura słaba, przewaga podaży.";
+    if (sig === "BUY") return "Struktura wzrostowa, korekty naturalne.";
+    if (sig === "PRAWIE BUY") return "Popyt wraca, ale brakuje potwierdzenia.";
+    if (sig === "CZEKAJ DO") return "Rynek w punkcie decyzyjnym.";
+    return "Neutralnie. Rynek szuka kierunku.";
+  })();
+
+  const risk = (() => {
+    if (!M15) return "Brak danych.";
+    return `Ryzyko rośnie przy zamknięciu M15 poniżej ${(M15.low - 3).toFixed(2)}.`;
+  })();
+
+  return `
+    <div class="popup-title">${ticker} — analiza M5/M15/H1</div>
+
+    <div class="popup-section">
+        <div class="popup-label">TREND</div>
+        <div class="popup-text">${trend}</div>
+    </div>
+
+    <div class="popup-section">
+        <div class="popup-label">MOMENTUM</div>
+        <div class="popup-text">${momentum}</div>
+    </div>
+
+    <div class="popup-section">
+        <div class="popup-label">SIŁA / SŁABOŚĆ</div>
+        <div class="popup-text">${strength}</div>
+    </div>
+
+    <div class="popup-section">
+        <div class="popup-label">WSPARCIA</div>
+        <div class="popup-text">${supports}</div>
+    </div>
+
+    <div class="popup-section">
+        <div class="popup-label">OPORY</div>
+        <div class="popup-text">${resistances}</div>
+    </div>
+
+    <div class="popup-section">
+        <div class="popup-label">INTERPRETACJA</div>
+        <div class="popup-text">${interpretation}</div>
+    </div>
+
+    <div class="popup-section">
+        <div class="popup-label">RYZYKO</div>
+        <div class="popup-text">${risk}</div>
+    </div>
+  `;
+}
+
+// ====== DELEGACJA KLIKNIĘĆ ======
+
 const proTbody = document.querySelector("#proTable tbody");
 
 if (proTbody) {
-    proTbody.addEventListener("click", (e) => {
+  proTbody.addEventListener("click", (e) => {
 
-        const tickerCell = e.target.closest(".ticker-cell");
-        const delCell = e.target.closest(".delete-cell");
-        const priceCell = e.target.closest(".price-cell");
-        const entryCell = e.target.closest(".entry-cell");
+    const tickerCell = e.target.closest(".ticker-cell");
+    const delCell = e.target.closest(".delete-cell");
+    const priceCell = e.target.closest(".price-cell");
+    const entryCell = e.target.closest(".entry-cell");
 
-        // 🗑️ USUŃ WIERSZ
-        if (delCell) {
-            const t = delCell.dataset.ticker;
-            if (t && tickers[t]) {
-                delete tickers[t];
-                updateTable();
-            }
-            return;
-        }
+    // usuń
+    if (delCell) {
+      const t = delCell.dataset.ticker;
+      delete tickers[t];
+      updateTable();
+      return;
+    }
 
-        // 📊 POPUP PREMIUM (klik w TICKER)
-        if (tickerCell) {
-            const t = tickerCell.dataset.ticker;
-            const d = tickers[t];
-            if (!d) return;
+    // popup
+    if (tickerCell) {
+      const t = tickerCell.dataset.ticker;
+      const d = tickers[t];
+      if (!d) return;
 
-            document.getElementById("popupBody").innerHTML =
-                buildPopupHTML(t, d);
+      document.getElementById("popupBody").innerHTML =
+        buildPopupHTML(t, d);
 
-            popup.style.display = "block";
-            return;
-        }
-
-        // 💬 KLIK W CENĘ
-        if (priceCell) {
-            const t = priceCell.dataset.ticker;
-            document.getElementById("comment").textContent =
-                `ℹ️ Cena ${t} pochodzi z ostatniego close (backend).`;
-            return;
-        }
-
-        // 💬 KLIK W ENTRY
-        if (entryCell) {
-            const t = entryCell.dataset.ticker;
-            document.getElementById("comment").textContent =
-                `ℹ️ Entry dla ${t} na razie z backendu / meta.`;
-            return;
-        }
-    });
-}
+      popup.style.display = "block";
+      return;
