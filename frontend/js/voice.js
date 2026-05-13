@@ -42,7 +42,6 @@ function finalizeRecord() {
   })
     .then(res => res.json())
     .then(data => {
-      // jeśli backend nie nadał time, zachowaj nasz
       if (!data.time) data.time = tempRecord.time;
       handleBackendData(data);
       document.getElementById("comment").textContent = "✔️ Dodano świecę do historii";
@@ -153,7 +152,6 @@ function computeTP12(rec, widDol, widGor) {
 
   return { tp1: "—", tp2: "—" };
 }
-
 // ======================================================
 //  TP3 — DYNAMICZNE MOMENTUM
 // ======================================================
@@ -182,7 +180,6 @@ function computeTP3(rec) {
 //  WIELO-ŚWIECOWY SILNIK SYGNAŁU
 // ======================================================
 
-// ile świec trzymamy w historii
 const HISTORY_LIMITS = {
   "M5": 14,
   "M15": 7,
@@ -199,7 +196,6 @@ function pushToHistory(store, tf, candle) {
   }
 }
 
-// prosta ocena kierunku z historii
 function trendDirectionFromHistory(history) {
   if (!history || history.length < 2) return "NEUTRAL";
 
@@ -214,7 +210,6 @@ function trendDirectionFromHistory(history) {
   return "NEUTRAL";
 }
 
-// siła trendu z MA20 vs DEMA9 + nachylenie
 function trendStrengthFromHistory(history) {
   if (!history || history.length === 0) return 0;
 
@@ -227,7 +222,6 @@ function trendStrengthFromHistory(history) {
   return spread + Math.abs(slope);
 }
 
-// sygnał dla jednego TF na bazie historii
 function computeSignalForTF(history, tf) {
   if (!history || history.length === 0) return "CZEKAJ";
 
@@ -242,24 +236,24 @@ function computeSignalForTF(history, tf) {
   const aboveMA = c > ma && ma > de;
   const belowMA = c < ma && ma < de;
 
-  // bazowy kierunek
   let base = "CZEKAJ";
   if (dir === "UP" && aboveMA) base = "BUY";
   else if (dir === "DOWN" && belowMA) base = "SELL";
   else if (dir === "UP") base = "PRAWIE BUY";
   else if (dir === "DOWN") base = "PRAWIE SELL";
 
-  // korekty RSI
   if (base.includes("BUY") && rsi > 75) base = "CZEKAJ DO";
   if (base.includes("SELL") && rsi < 25) base = "CZEKAJ DO";
 
-  // bardzo słaba struktura → CZEKAJ
   if (strength < 0.05) base = "CZEKAJ";
 
   return base;
 }
 
-// konsensus z M5/M15/H1
+// ======================================================
+//  KONSENSUS Z M5 / M15 / H1
+// ======================================================
+
 function consensusSignalFromStore(tData) {
   const sigs = [];
 
@@ -291,127 +285,7 @@ function getRowClass(signal) {
   if (signal === "CZEKAJ DO") return "row-czekajdo";
 
   return "row-czekaj";
-}
-
-// ======================================================
-//  KOLOROWANIE TP
-// ======================================================
-
-function tpColor(price, tp, signal) {
-  if (!tp || tp === "—") return "";
-
-  const p = parseFloat(price);
-  const t = parseFloat(tp);
-
-  if (isNaN(p) || isNaN(t)) return "";
-
-  if (signal.includes("BUY")) {
-    if (p >= t) return "tp-hit";
-    if (p <= t * 0.97) return "tp-fail";
-    if (p >= t * 0.90) return "tp-close";
-  }
-
-  if (signal.includes("SELL")) {
-    if (p <= t) return "tp-hit";
-    if (p >= t * 1.03) return "tp-fail";
-    if (p <= t * 1.10) return "tp-close";
-  }
-
-  return "";
-}
-// ======================================================
-//  TABELA + STRUKTURA DANYCH
-// ======================================================
-
-const tickers = {};
-
-function handleBackendData(d) {
-  const tf = normalizeInterval(d.interval);
-  const t = d.ticker;
-
-  if (!tickers[t]) tickers[t] = {};
-
-  // dopisz świecę do historii TF
-  pushToHistory(tickers[t], tf, d);
-
-  const tfStore = tickers[t][tf];
-  const history = tfStore.history;
-  const last = history[history.length - 1];
-
-  // wylicz sygnał dla tego TF
-  const tfSignal = computeSignalForTF(history, tf);
-  tfStore.signal = tfSignal;
-  tfStore.last = last; // wygodny skrót
-
-  // jeśli to M15 → licz widełki + TP
-  if (tf === "M15") {
-    last.widelki = computeWidelki(last);
-    const [dol, gor] = last.widelki.split(" - ").map(Number);
-    const tp12 = computeTP12(last, dol, gor);
-    last.tp1 = tp12.tp1;
-    last.tp2 = tp12.tp2;
-    last.tp3 = computeTP3(last);
-  }
-
-  updateTable();
-}
-
-function updateTable() {
-  const tbody = document.getElementById("table-body");
-  tbody.innerHTML = "";
-
-  Object.keys(tickers).forEach(t => {
-    const tData = tickers[t];
-
-    const M5 = tData["M5"]?.last;
-    const M15 = tData["M15"]?.last;
-    const H1 = tData["H1"]?.last;
-
-    const rec = M15 || H1 || M5;
-    if (!rec) return;
-
-    const entry = rec.entry ?? "—";
-    const signal = consensusSignalFromStore(tData);
-
-    const row = document.createElement("tr");
-    row.className = getRowClass(signal);
-
-    row.innerHTML = `
-      <td class="ticker-cell">${t}</td>
-
-      <td class="price-cell">
-        ${rec.close.toFixed(2)}
-      </td>
-
-      <td>
-        ${rec.interval}<br>
-        <span style="font-size:11px; opacity:0.7;">${rec.time ?? ""}</span>
-      </td>
-
-      <td class="entry-cell">${entry}</td>
-
-      <td>
-        <span style="font-size:16px; font-weight:700;">
-          ${signal}<br>
-          <small style="font-size:11px; opacity:0.7;">${rec.time ?? ""}</small>
-        </span>
-      </td>
-
-      <td>${M15?.widelki ?? "—"}</td>
-
-      <td class="${tpColor(rec.close, M15?.tp1, signal)}">${M15?.tp1 ?? "—"}</td>
-      <td class="${tpColor(rec.close, M15?.tp2, signal)}">${M15?.tp2 ?? "—"}</td>
-      <td class="${tpColor(rec.close, M15?.tp3, signal)}">${M15?.tp3 ?? "—"}</td>
-
-      <td class="delete-cell">🗑️</td>
-    `;
-
-    tbody.appendChild(row);
-  });
-
-  saveTable();
-}
-
+    }
 // ======================================================
 //  PAMIĘĆ TABELI — LOCALSTORAGE
 // ======================================================
@@ -439,7 +313,6 @@ function loadTable() {
 
         // dopilnuj, żeby była historia jako tablica
         if (!Array.isArray(tfData.history)) {
-          // stara wersja mogła mieć pojedynczy obiekt
           if (tfData.last) {
             tfData.history = [tfData.last];
           } else {
@@ -468,196 +341,6 @@ function loadTable() {
     updateTable();
   } catch (e) {
     console.error("Błąd wczytywania tabeli:", e);
-  }
-}
-
-// ======================================================
-//  DYNAMICZNY KOMENTARZ PRO (PO KLIKNIĘCIU W TICKER)
-// ======================================================
-
-function buildDynamicComment(rec, tData) {
-  const c = rec.close;
-  const o = rec.open;
-  const L = rec.low;
-  const H = rec.high;
-  const R = H - L;
-
-  const ma = rec.ma20;
-  const de = rec.dema9;
-  const rsi = rec.rsi;
-
-  const mid = (ma + de) / 2;
-
-  const isKapitulacja = (c < o && rsi <= 28 && c < de && R > (ma * 0.004));
-  const isWybicie = (c > H - R * 0.15 && c > ma && c > de);
-  const isPullback = (c > o && o < ma && c < ma && c > de);
-  const isOdrzucenie = (c > o && L < de && c > de);
-  const isSilnaSwieca = (c > o && (c - o) > R * 0.6);
-  const isSlabaSwieca = (o > c && (o - c) > R * 0.6);
-
-  let TREND = "";
-
-  const dirM15 = tData["M15"] ? trendDirectionFromHistory(tData["M15"].history) : "NEUTRAL";
-  const dirH1 = tData["H1"] ? trendDirectionFromHistory(tData["H1"].history) : "NEUTRAL";
-
-  if (isKapitulacja) {
-    TREND = "Trend wzrostowy, ale świeca kapitulacyjna wprowadza mocną korektę. Struktura nadal trzyma, dopóki cena jest powyżej " 
-      + (mid - R*0.20).toFixed(0) + "–" + (mid - R*0.05).toFixed(0) + ".";
-  }
-  else if (dirH1 === "UP" || (dirM15 === "UP" && c > ma)) {
-    TREND = "Trend wzrostowy, struktura jest zdrowa i trzyma kierunek.";
-  }
-  else if (dirH1 === "DOWN" || (dirM15 === "DOWN" && c < ma)) {
-    TREND = "Trend spadkowy, struktura spadkowa aktywna.";
-  }
-  else {
-    TREND = "Rynek w konsolidacji — brak jednoznacznego kierunku.";
-  }
-
-  let MOM = "";
-
-  if (rsi <= 20) MOM = `RSI ${rsi} = ekstremalne wyprzedanie. To sygnał paniki i często punkt zwrotny.`;
-  else if (rsi <= 30) MOM = `RSI ${rsi} = skrajne wyprzedanie. Rynek statystycznie odbija z takich poziomów.`;
-  else if (rsi >= 75) MOM = `RSI ${rsi} = ekstremalne wykupienie. Rynek może potrzebować korekty.`;
-  else if (rsi >= 65) MOM = `RSI ${rsi} = wykupienie, momentum silne, ale kruche.`;
-  else MOM = `RSI ${rsi} = neutralne momentum.`;
-
-  let SS = "";
-
-  if (isSilnaSwieca) SS = "Silna świeca wzrostowa — przewaga kupujących.";
-  else if (isSlabaSwieca) SS = "Silna świeca spadkowa — przewaga sprzedających.";
-  else if (c > de) SS = "Cena powyżej DEMA9 = krótkoterminowa siła.";
-  else SS = "Cena poniżej DEMA9 = krótkoterminowa słabość.";
-
-  if (isOdrzucenie) SS += " Odrzucenie poziomu — popyt aktywny.";
-
-  const ws1 = (L + R * 0.10).toFixed(2);
-  const ws2 = (L + R * 0.20).toFixed(2);
-
-  const op1 = (H - R * 0.20).toFixed(2);
-  const op2 = (H - R * 0.35).toFixed(2);
-
-  let INTER = "";
-
-  if (isKapitulacja) {
-    INTER = "To nie jest odwrócenie trendu. To kapitulacja po wybiciu. Rynek często wraca do średnich lub VWAP po takim ruchu.";
-  }
-  else if (isWybicie) {
-    INTER = "Silne wybicie górą — rynek może kontynuować, ale korekta jest prawdopodobna.";
-  }
-  else if (isPullback) {
-    INTER = "To wygląda jak klasyczny pullback do średnich — rynek może kontynuować trend.";
-  }
-  else if (isOdrzucenie) {
-    INTER = "Odrzucenie poziomu sugeruje aktywny popyt i możliwe odbicie.";
-  }
-  else {
-    INTER = "Neutralna sytuacja — rynek czeka na kierunek.";
-  }
-
-  let RISK = "";
-
-  if (isKapitulacja) RISK = "Ryzyko rośnie tylko przy zamknięciu poniżej " + ws1 + ".";
-  else if (c < ws1) RISK = "Ryzyko podwyższone — cena blisko kluczowego wsparcia.";
-  else RISK = "Ryzyko umiarkowane — struktura nadal trzyma.";
-
-  return `
-INTERWAŁ: ${rec.interval}, GODZINA: ${rec.time}
-
-TREND: ${TREND}
-
-MOMENTUM: ${MOM}
-
-SIŁA/SŁABOŚĆ: ${SS}
-
-WSPARCIA: ${ws1}–${ws2}
-OPORY: ${op2}–${op1}
-
-INTERPRETACJA: ${INTER}
-
-RYZYKO: ${RISK}
-  `;
-}
-// ======================================================
-//  OBSŁUGA ROZPOZNAWANIA — MASTER MIC
-// ======================================================
-
-function handleRecognized(text) {
-  switch (currentStep) {
-    case 0: tempRecord.ticker = text.toUpperCase(); break;
-    case 1: tempRecord.interval = normalizeInterval(text); break;
-    case 2: tempRecord.open = extractNumber(text); break;
-    case 3: tempRecord.high = extractNumber(text); break;
-    case 4: tempRecord.low = extractNumber(text); break;
-    case 5: tempRecord.close = extractNumber(text); break;
-    case 6: tempRecord.volume = extractNumber(text); break;
-    case 7: tempRecord.ma20 = extractNumber(text); break;
-    case 8: tempRecord.dema9 = extractNumber(text); break;
-    case 9: tempRecord.rsi = extractNumber(text); break;
-  }
-
-  currentStep++;
-
-  if (currentStep >= steps.length) {
-    recognizing = false;
-    finalizeRecord();
-  }
-}
-
-function sayStep() {
-  const msg = new SpeechSynthesisUtterance(steps[currentStep]);
-  msg.lang = "pl-PL";
-
-  msg.onend = () => {
-    setTimeout(() => {
-      try { recognition.start(); } catch {}
-    }, 200);
-  };
-
-  speechSynthesis.cancel();
-  speechSynthesis.speak(msg);
-}
-
-// ======================================================
-//  START / STOP
-// ======================================================
-
-function startSequence() {
-  tempRecord = {};
-  currentStep = 0;
-  recognitionMode = "SEQUENCE";
-  recognizing = true;
-  sayStep();
-}
-
-function stopSequence() {
-  recognizing = false;
-  recognitionMode = "SEQUENCE";
-  try { recognition && recognition.stop(); } catch {}
-}
-
-// ======================================================
-//  GŁOSOWE USTAWIANIE CENY / ENTRY — MASTER MIC
-// ======================================================
-
-function startVoiceInput(callback) {
-  const SR = window.webkitSpeechRecognition || window.SpeechRecognition;
-  if (!SR) {
-    alert("Brak wsparcia dla rozpoznawania mowy.");
-    return;
-  }
-
-  if (!recognition) recognition = initRecognition();
-
-  recognitionMode = "AD_HOC";
-  adHocCallback = (spoken) => {
-    callback(spoken.trim());
-  };
-
-  recognizing = true;
-
-  try { recognition.start(); } catch (e) {
-    console.log("Błąd startVoiceInput:", e);
   }
 }
 
@@ -735,6 +418,153 @@ ${buildDynamicComment(rec, tData)}
 document.getElementById("popupClose").onclick = () => {
   document.getElementById("popup").style.display = "none";
 };
+// ======================================================
+//  OBSŁUGA ROZPOZNAWANIA — MASTER MIC
+// ======================================================
+
+function handleRecognized(text) {
+  switch (currentStep) {
+    case 0: tempRecord.ticker = text.toUpperCase(); break;
+    case 1: tempRecord.interval = normalizeInterval(text); break;
+    case 2: tempRecord.open = extractNumber(text); break;
+    case 3: tempRecord.high = extractNumber(text); break;
+    case 4: tempRecord.low = extractNumber(text); break;
+    case 5: tempRecord.close = extractNumber(text); break;
+    case 6: tempRecord.volume = extractNumber(text); break;
+    case 7: tempRecord.ma20 = extractNumber(text); break;
+    case 8: tempRecord.dema9 = extractNumber(text); break;
+    case 9: tempRecord.rsi = extractNumber(text); break;
+  }
+
+  currentStep++;
+
+  if (currentStep >= steps.length) {
+    recognizing = false;
+    finalizeRecord();
+  }
+}
+
+function sayStep() {
+  const msg = new SpeechSynthesisUtterance(steps[currentStep]);
+  msg.lang = "pl-PL";
+
+  msg.onend = () => {
+    setTimeout(() => {
+      try { recognition.start(); } catch {}
+    }, 200);
+  };
+
+  speechSynthesis.cancel();
+  speechSynthesis.speak(msg);
+}
+
+// ======================================================
+//  START / STOP
+// ======================================================
+
+function startSequence() {
+  tempRecord = {};
+  currentStep = 0;
+  recognitionMode = "SEQUENCE";
+  recognizing = true;
+  sayStep();
+}
+
+function stopSequence() {
+  recognizing = false;
+  recognitionMode = "SEQUENCE";
+  try { recognition && recognition.stop(); } catch {}
+}
+
+// ======================================================
+//  POPRAWIONY updateTable() — WERSJA PRO (początek)
+// ======================================================
+
+function updateTable() {
+  const tbody = document.getElementById("table-body");
+  tbody.innerHTML = "";
+
+  Object.keys(tickers).forEach(t => {
+    const tData = tickers[t];
+
+    const M5 = tData["M5"]?.last;
+    const M15 = tData["M15"]?.last;
+    const H1 = tData["H1"]?.last;
+
+    const rec = M15 || H1 || M5;
+    if (!rec) return;
+
+    const entry = rec.entry ?? "—";
+
+    // 🔥 CZYSTY SYGNAŁ
+    const signal = consensusSignalFromStore(tData);
+
+    // 🔥 WIDEŁKI (tylko z M15)
+    const widelki = M15?.widelki ?? "—";
+
+    // 🔥 OPIS POD SYGNAŁEM
+    let signalDetail = "";
+
+    if (signal === "CZEKAJ DO") {
+      signalDetail = `prawie buy — widełki ${widelki}`;
+    }
+    else if (signal === "PRAWIE BUY") {
+      signalDetail = `buy — widełki ${widelki}`;
+    }
+    else if (signal === "BUY") {
+      signalDetail = `najlepsza cena wejścia: ${widelki}`;
+    }
+    else if (signal === "PRAWIE SELL") {
+      signalDetail = `sell — widełki ${widelki}`;
+    }
+    else if (signal === "SELL") {
+      signalDetail = `najlepsza cena wyjścia: ${widelki}`;
+    }
+
+    const row = document.createElement("tr");
+    row.className = getRowClass(signal);
+
+    row.innerHTML = `
+      <td class="ticker-cell">${t}</td>
+
+      <td class="price-cell">
+        ${rec.close.toFixed(2)}
+      </td>
+
+      <td>
+        ${rec.interval}<br>
+        <span style="font-size:11px; opacity:0.7;">${rec.time ?? ""}</span>
+      </td>
+
+      <td class="entry-cell">${entry}</td>
+
+      <td>
+        <div style="font-size:16px; font-weight:700;">${signal}</div>
+        <div style="font-size:11px; opacity:0.7;">${signalDetail}</div>
+      </td>
+    `;
+    <td>${widelki}</td>
+
+      <td class="${tpColor(rec.close, M15?.tp1, signal)}">
+        ${M15?.tp1 ?? "—"}
+      </td>
+
+      <td class="${tpColor(rec.close, M15?.tp2, signal)}">
+        ${M15?.tp2 ?? "—"}
+      </td>
+
+      <td class="${tpColor(rec.close, M15?.tp3, signal)}">
+        ${M15?.tp3 ?? "—"}
+      </td>
+
+      <td class="delete-cell">🗑️</td>
+    `;
+
+    tbody.appendChild(row);
+  });
+
+  saveTable();
+}
 
 // ======================================================
 //  AUTO-LOAD TABELI PRZY STARCIU
