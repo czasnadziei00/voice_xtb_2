@@ -90,7 +90,6 @@ button:nth-child(2) {
     border-bottom: 1px solid #222;
 }
 
-/* zaokrąglenia wierszy */
 #proTable tbody tr td:first-child {
     border-left: 1px solid #222;
     border-radius: 6px 0 0 6px;
@@ -100,7 +99,6 @@ button:nth-child(2) {
     border-radius: 0 6px 6px 0;
 }
 
-/* komórki klikalne */
 .ticker-cell,
 .price-cell,
 .entry-cell,
@@ -108,7 +106,6 @@ button:nth-child(2) {
     cursor: pointer;
 }
 
-/* sygnały */
 .signal-text {
     font-weight: 700;
     font-size: 15px;
@@ -116,7 +113,6 @@ button:nth-child(2) {
     margin-bottom: 4px;
 }
 
-/* kolory sygnałów */
 .signal-BUY {
     color: #00ff9d;
     text-shadow: 0 0 6px #00ff9d55;
@@ -133,7 +129,7 @@ button:nth-child(2) {
     text-shadow: 0 0 6px #ffd84d55;
 }
 
-/* ======= POPUP ======= */
+/* ======= POPUP PREMIUM ======= */
 
 .popup {
     display: none;
@@ -144,36 +140,60 @@ button:nth-child(2) {
     width: 100%;
     height: 100%;
     background: rgba(0,0,0,0.75);
-    backdrop-filter: blur(3px);
+    backdrop-filter: blur(4px);
 }
 
 .popup-content {
-    background: #1a1a1a;
-    margin: 80px auto;
-    padding: 15px;
-    border-radius: 8px;
-    width: 90%;
-    max-width: 450px;
+    background: #121212;
+    margin: 60px auto;
+    padding: 20px;
+    border-radius: 12px;
+    width: 92%;
+    max-width: 480px;
     color: #eee;
-    box-shadow: 0 0 20px #000;
+    box-shadow: 0 0 25px #000;
+    border: 1px solid #222;
 }
 
 .popup-close {
     float: right;
     cursor: pointer;
-    font-size: 20px;
-    opacity: 0.8;
+    font-size: 22px;
+    opacity: 0.7;
 }
 
 .popup-close:hover {
     opacity: 1;
 }
 
-#popupData {
+.popup-section {
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #222;
+}
+
+.popup-section:last-child {
+    border-bottom: none;
+}
+
+.popup-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: #4da3ff;
+}
+
+.popup-label {
     font-size: 13px;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    margin-top: 10px;
+    font-weight: 600;
+    color: #ccc;
+    margin-bottom: 4px;
+}
+
+.popup-text {
+    font-size: 13px;
+    line-height: 1.45;
+    opacity: 0.9;
 }
 </style>
 
@@ -210,12 +230,11 @@ button:nth-child(2) {
     <tbody></tbody>
 </table>
 
-<!-- POPUP SZCZEGÓŁÓW -->
+<!-- POPUP PREMIUM -->
 <div id="popup" class="popup">
     <div class="popup-content">
         <span id="popupClose" class="popup-close">✖</span>
-        <h3 id="popupTitle">Analiza TF</h3>
-        <pre id="popupData"></pre>
+        <div id="popupBody"></div>
     </div>
 </div>
 
