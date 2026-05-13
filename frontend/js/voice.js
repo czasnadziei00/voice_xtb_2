@@ -54,8 +54,8 @@ function finalizeRecord() {
       document.getElementById("comment").textContent =
         "❌ Błąd backend/fetch: " + err.message;
     });
-  
-}// ======================================================
+}
+// ======================================================
 //  INICJALIZACJA RECOGNITION
 // ======================================================
 
@@ -81,7 +81,9 @@ function initRecognition() {
     if (!recognizing) return;
     if (currentStep < steps.length) {
       sayStep();
-      setTimeout(() => { try { recognition.start(); } catch {} }, 300);
+      setTimeout(() => {
+        try { recognition.start(); } catch {}
+      }, 700);
     }
   };
 
@@ -134,7 +136,7 @@ function consensusSignal(tData) {
 }
 
 // ======================================================
-//  AKTUALIZACJA TABELI
+//  TABELA
 // ======================================================
 
 const tickers = {};
@@ -177,6 +179,7 @@ function updateTable() {
     tbody.appendChild(row);
   });
 }
+
 // ======================================================
 //  OBSŁUGA ROZPOZNAWANIA
 // ======================================================
@@ -217,7 +220,10 @@ function startSequence() {
   currentStep = 0;
   recognizing = true;
   sayStep();
-  try { recognition.start(); } catch {}
+
+  setTimeout(() => {
+    try { recognition.start(); } catch {}
+  }, 700);
 }
 
 function stopSequence() {
