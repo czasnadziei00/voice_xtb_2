@@ -12,7 +12,6 @@ let tempRecord = {};
 const steps = [
   "Podaj ticker",
   "Podaj interwał",
-  "Podaj godzinę",
   "Podaj open",
   "Podaj low",
   "Podaj high",
@@ -28,6 +27,9 @@ const steps = [
 // ======================================================
 
 function finalizeRecord() {
+  // godzina automatyczna
+  tempRecord.time = new Date().toISOString();
+
   document.getElementById("parsed").textContent =
     JSON.stringify(tempRecord, null, 2);
 
@@ -43,6 +45,8 @@ function finalizeRecord() {
     .then(data => {
       try {
         handleBackendData(data);
+        document.getElementById("comment").textContent =
+          "✔️ Dane zapisane, tabela zaktualizowana";
       } catch (err) {
         console.error("FRONTEND ERROR:", err);
         document.getElementById("comment").textContent =
@@ -55,6 +59,7 @@ function finalizeRecord() {
         "❌ Błąd backend/fetch: " + err.message;
     });
 }
+
 // ======================================================
 //  INICJALIZACJA RECOGNITION
 // ======================================================
@@ -62,7 +67,9 @@ function finalizeRecord() {
 function initRecognition() {
   const SR = window.webkitSpeechRecognition || window.SpeechRecognition;
   if (!SR) {
-    alert("❌ Brak wsparcia SpeechRecognition");
+    alert("❌ Brak wsparcia SpeechRecognition w tej przeglądarce");
+    document.getElementById("comment").textContent =
+      "❌ Brak wsparcia SpeechRecognition w tej przeglądarce";
     return null;
   }
 
@@ -71,19 +78,44 @@ function initRecognition() {
   rec.continuous = false;
   rec.interimResults = false;
 
+  rec.onstart = () => {
+    document.getElementById("comment").textContent =
+      "🎤 Nasłuchuję... (" + steps[currentStep] + ")";
+  };
+
   rec.onresult = (e) => {
     const text = e.results[0][0].transcript.trim();
+    document.getElementById("recognized").textContent =
+      "Rozpoznano: " + text;
     handleRecognized(text);
     try { recognition.stop(); } catch {}
   };
 
+  rec.onerror = (e) => {
+    console.error("Recognition ERROR:", e.error);
+    document.getElementById("comment").textContent =
+      "❌ Błąd rozpoznawania: " + e.error;
+    recognizing = false;
+  };
+
   rec.onend = () => {
-    if (!recognizing) return;
+    if (!recognizing) {
+      document.getElementById("comment").textContent =
+        "⏹ Sekwencja zatrzymana";
+      return;
+    }
     if (currentStep < steps.length) {
       sayStep();
       setTimeout(() => {
-        try { recognition.start(); } catch {}
-      }, 700);
+        try {
+          recognition.start();
+        } catch (err) {
+          console.error("Recognition restart error:", err);
+          document.getElementById("comment").textContent =
+            "❌ Błąd restartu nasłuchu: " + err.message;
+          recognizing = false;
+        }
+      }, 900);
     }
   };
 
@@ -109,6 +141,7 @@ function normalizeInterval(tf) {
   if (tf === "H1" || tf === "1H" || tf === "60") return "H1";
   return tf;
 }
+
 // ======================================================
 //  SYGNAŁ WSPÓLNY (M5 + M15 + H1)
 // ======================================================
@@ -166,7 +199,7 @@ function updateTable() {
     const signal = consensusSignal(tData);
 
     row.innerHTML = `
-      <td>${t}</td>
+      <td class="ticker-cell">${t}</td>
       <td>${M15.close.toFixed(2)}</td>
       <td>${M15.interval}</td>
       <td>${entry.toFixed(2)}</td>
@@ -174,6 +207,8 @@ function updateTable() {
       <td>—</td>
       <td>—</td>
       <td>—</td>
+      <td>—</td>
+      <td>🗑️</td>
     `;
 
     tbody.appendChild(row);
@@ -185,20 +220,17 @@ function updateTable() {
 // ======================================================
 
 function handleRecognized(text) {
-  const step = steps[currentStep];
-
   switch (currentStep) {
     case 0: tempRecord.ticker = text.toUpperCase(); break;
     case 1: tempRecord.interval = normalizeInterval(text); break;
-    case 2: tempRecord.time = text; break;
-    case 3: tempRecord.open = extractNumber(text); break;
-    case 4: tempRecord.low = extractNumber(text); break;
-    case 5: tempRecord.high = extractNumber(text); break;
-    case 6: tempRecord.close = extractNumber(text); break;
-    case 7: tempRecord.volume = extractNumber(text); break;
-    case 8: tempRecord.ma20 = extractNumber(text); break;
-    case 9: tempRecord.dema9 = extractNumber(text); break;
-    case 10: tempRecord.rsi = extractNumber(text); break;
+    case 2: tempRecord.open = extractNumber(text); break;
+    case 3: tempRecord.low = extractNumber(text); break;
+    case 4: tempRecord.high = extractNumber(text); break;
+    case 5: tempRecord.close = extractNumber(text); break;
+    case 6: tempRecord.volume = extractNumber(text); break;
+    case 7: tempRecord.ma20 = extractNumber(text); break;
+    case 8: tempRecord.dema9 = extractNumber(text); break;
+    case 9: tempRecord.rsi = extractNumber(text); break;
   }
 
   currentStep++;
@@ -212,21 +244,45 @@ function handleRecognized(text) {
 function sayStep() {
   const msg = new SpeechSynthesisUtterance(steps[currentStep]);
   msg.lang = "pl-PL";
+  speechSynthesis.cancel();
   speechSynthesis.speak(msg);
 }
 
+// ======================================================
+//  START / STOP SEKWENCJI
+// ======================================================
+
 function startSequence() {
+  if (!recognition) {
+    document.getElementById("comment").textContent =
+      "❌ Brak wsparcia rozpoznawania mowy";
+    return;
+  }
+
   tempRecord = {};
   currentStep = 0;
   recognizing = true;
+
+  document.getElementById("comment").textContent =
+    "▶️ Start sekwencji — " + steps[currentStep];
+
   sayStep();
 
   setTimeout(() => {
-    try { recognition.start(); } catch {}
-  }, 700);
+    try {
+      recognition.start();
+    } catch (err) {
+      console.error("Recognition start error:", err);
+      document.getElementById("comment").textContent =
+        "❌ Błąd startu nasłuchu: " + err.message;
+      recognizing = false;
+    }
+  }, 900);
 }
 
 function stopSequence() {
   recognizing = false;
   try { recognition.stop(); } catch {}
+  document.getElementById("comment").textContent =
+    "⏹ Sekwencja zatrzymana";
 }
