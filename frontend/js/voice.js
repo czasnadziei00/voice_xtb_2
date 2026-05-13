@@ -167,13 +167,12 @@ function extractNumber(text) {
   return isNaN(num) ? null : num;
 }
 
-function normalizeInterval(interval) {
-  const iv = (interval || "").toUpperCase();
-  if (iv === "M5") return "M5";
-  if (iv === "M15") return "M15";
-  if (iv === "H1" || iv === "1H") return "H1";
-  return null;
-    }
+function normalizeInterval(tf) {
+  tf = tf.toUpperCase().trim();
+  if (tf === "M5" || tf === "5") return "M5";
+  if (tf === "M15" || tf === "15") return "M15";
+  if (tf === "H1" || tf === "1H" || tf === "60") return "H1";
+  return tf;
 }
 
 // ======================================================
