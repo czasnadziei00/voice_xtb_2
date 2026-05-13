@@ -27,14 +27,7 @@ const steps = [
 // ======================================================
 
 function finalizeRecord() {
-  // godzina automatyczna
-  tempRecord.time = new Date().toISOString();
-
-  document.getElementById("parsed").textContent =
-    JSON.stringify(tempRecord, null, 2);
-
-  document.getElementById("comment").textContent =
-    "✔️ Wysyłam do backendu 6.5 PRO";
+  tempRecord.time = new Date().toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
 
   fetch(backend, {
     method: "POST",
@@ -43,20 +36,11 @@ function finalizeRecord() {
   })
     .then(res => res.json())
     .then(data => {
-      try {
-        handleBackendData(data);
-        document.getElementById("comment").textContent =
-          "✔️ Dane zapisane, tabela zaktualizowana";
-      } catch (err) {
-        console.error("FRONTEND ERROR:", err);
-        document.getElementById("comment").textContent =
-          "❌ Błąd frontendu: " + err.message;
-      }
+      handleBackendData(data);
+      document.getElementById("comment").textContent = "✔️ Dodano rekord";
     })
     .catch(err => {
-      console.error("FETCH ERROR:", err);
-      document.getElementById("comment").textContent =
-        "❌ Błąd backend/fetch: " + err.message;
+      document.getElementById("comment").textContent = "❌ Błąd backendu";
     });
 }
 
@@ -66,57 +50,22 @@ function finalizeRecord() {
 
 function initRecognition() {
   const SR = window.webkitSpeechRecognition || window.SpeechRecognition;
-  if (!SR) {
-    alert("❌ Brak wsparcia SpeechRecognition w tej przeglądarce");
-    document.getElementById("comment").textContent =
-      "❌ Brak wsparcia SpeechRecognition w tej przeglądarce";
-    return null;
-  }
+  if (!SR) return null;
 
   const rec = new SR();
   rec.lang = "pl-PL";
   rec.continuous = false;
   rec.interimResults = false;
 
-  rec.onstart = () => {
-    document.getElementById("comment").textContent =
-      "🎤 Nasłuchuję... (" + steps[currentStep] + ")";
-  };
-
   rec.onresult = (e) => {
     const text = e.results[0][0].transcript.trim();
-    document.getElementById("recognized").textContent =
-      "Rozpoznano: " + text;
     handleRecognized(text);
     try { recognition.stop(); } catch {}
   };
 
-  rec.onerror = (e) => {
-    console.error("Recognition ERROR:", e.error);
-    document.getElementById("comment").textContent =
-      "❌ Błąd rozpoznawania: " + e.error;
-    recognizing = false;
-  };
-
   rec.onend = () => {
-    if (!recognizing) {
-      document.getElementById("comment").textContent =
-        "⏹ Sekwencja zatrzymana";
-      return;
-    }
-    if (currentStep < steps.length) {
-      sayStep();
-      setTimeout(() => {
-        try {
-          recognition.start();
-        } catch (err) {
-          console.error("Recognition restart error:", err);
-          document.getElementById("comment").textContent =
-            "❌ Błąd restartu nasłuchu: " + err.message;
-          recognizing = false;
-        }
-      }, 900);
-    }
+    if (!recognizing) return;
+    if (currentStep < steps.length) sayStep();
   };
 
   return rec;
@@ -143,7 +92,7 @@ function normalizeInterval(tf) {
 }
 
 // ======================================================
-//  SYGNAŁ WSPÓLNY (M5 + M15 + H1)
+//  SYGNAŁ WSPÓLNY
 // ======================================================
 
 function consensusSignal(tData) {
@@ -153,19 +102,11 @@ function consensusSignal(tData) {
     if (a && a.signal) sigs.push(a.signal);
   });
 
-  if (sigs.length === 0) return "RESET";
-
-  const hasBUY = sigs.includes("BUY");
-  const hasSELL = sigs.includes("SELL");
-  const hasPRAWIE = sigs.includes("PRAWIE BUY");
-  const hasCZK = sigs.includes("CZEKAJ");
-
-  if (hasBUY) return "BUY";
-  if (hasSELL) return "SELL";
-  if (hasPRAWIE) return "PRAWIE BUY";
-  if (hasCZK) return "CZEKAJ";
-
-  return "RESET";
+  if (sigs.includes("BUY")) return "BUY";
+  if (sigs.includes("SELL")) return "SELL";
+  if (sigs.includes("PRAWIE BUY")) return "PRAWIE BUY";
+  if (sigs.includes("CZEKAJ DO")) return "CZEKAJ DO";
+  return "CZEKAJ";
 }
 
 // ======================================================
@@ -193,22 +134,22 @@ function updateTable() {
     const M15 = tData["M15"];
     if (!M15) return;
 
-    const row = document.createElement("tr");
-
-    const entry = M15.entry ?? M15.close;
+    const entry = M15.entry ?? "—";
     const signal = consensusSignal(tData);
+
+    const row = document.createElement("tr");
 
     row.innerHTML = `
       <td class="ticker-cell">${t}</td>
-      <td>${M15.close.toFixed(2)}</td>
+      <td class="price-cell">${M15.close.toFixed(2)}</td>
       <td>${M15.interval}</td>
-      <td>${entry.toFixed(2)}</td>
+      <td>${M15.time}</td>
+      <td class="entry-cell">${entry}</td>
       <td>${signal}</td>
       <td>—</td>
       <td>—</td>
       <td>—</td>
-      <td>—</td>
-      <td>🗑️</td>
+      <td class="delete-cell">🗑️</td>
     `;
 
     tbody.appendChild(row);
@@ -244,45 +185,77 @@ function handleRecognized(text) {
 function sayStep() {
   const msg = new SpeechSynthesisUtterance(steps[currentStep]);
   msg.lang = "pl-PL";
+
+  msg.onend = () => {
+    setTimeout(() => {
+      try { recognition.start(); } catch {}
+    }, 200);
+  };
+
   speechSynthesis.cancel();
   speechSynthesis.speak(msg);
 }
 
 // ======================================================
-//  START / STOP SEKWENCJI
+//  START / STOP
 // ======================================================
 
 function startSequence() {
-  if (!recognition) {
-    document.getElementById("comment").textContent =
-      "❌ Brak wsparcia rozpoznawania mowy";
-    return;
-  }
-
   tempRecord = {};
   currentStep = 0;
   recognizing = true;
-
-  document.getElementById("comment").textContent =
-    "▶️ Start sekwencji — " + steps[currentStep];
-
   sayStep();
-
-  setTimeout(() => {
-    try {
-      recognition.start();
-    } catch (err) {
-      console.error("Recognition start error:", err);
-      document.getElementById("comment").textContent =
-        "❌ Błąd startu nasłuchu: " + err.message;
-      recognizing = false;
-    }
-  }, 900);
 }
 
 function stopSequence() {
   recognizing = false;
   try { recognition.stop(); } catch {}
-  document.getElementById("comment").textContent =
-    "⏹ Sekwencja zatrzymana";
 }
+
+// ======================================================
+//  POPUP + ENTRY + CENA
+// ======================================================
+
+document.addEventListener("click", (e) => {
+  const row = e.target.parentElement;
+  if (!row) return;
+
+  const ticker = row.children[0]?.textContent.trim();
+  if (!ticker) return;
+
+  // popup komentarza
+  if (e.target.classList.contains("ticker-cell")) {
+    const M15 = tickers[ticker]["M15"];
+    const popup = document.getElementById("popup");
+    const body = document.getElementById("popupBody");
+
+    body.innerHTML = `<h2>${ticker}</h2><p>${M15.comment}</p>`;
+    popup.style.display = "block";
+  }
+
+  // cena aktualna
+  if (e.target.classList.contains("price-cell")) {
+    const value = prompt("Podaj cenę aktualną:");
+    if (!value) return;
+    tickers[ticker]["M15"].close = parseFloat(value.replace(",", "."));
+    updateTable();
+  }
+
+  // entry
+  if (e.target.classList.contains("entry-cell")) {
+    const value = prompt("Podaj entry:");
+    if (!value) return;
+    tickers[ticker]["M15"].entry = parseFloat(value.replace(",", "."));
+    updateTable();
+  }
+
+  // delete
+  if (e.target.classList.contains("delete-cell")) {
+    delete tickers[ticker];
+    updateTable();
+  }
+});
+
+document.getElementById("popupClose").onclick = () => {
+  document.getElementById("popup").style.display = "none";
+};
