@@ -27,7 +27,11 @@ const steps = [
 // ======================================================
 
 function finalizeRecord() {
-  tempRecord.time = new Date().toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+  // automatyczna godzina
+  tempRecord.time = new Date().toLocaleTimeString("pl-PL", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
 
   fetch(backend, {
     method: "POST",
@@ -80,7 +84,7 @@ recognition = initRecognition();
 function extractNumber(text) {
   text = text.replace(",", ".").replace(/\s+/g, "");
   const num = parseFloat(text);
-  return isNaN(num) ? null : num;
+  return isNaN(num) ? 0 : num;   // <<< KLUCZOWA POPRAWKA
 }
 
 function normalizeInterval(tf) {
@@ -142,23 +146,29 @@ function updateTable() {
     row.innerHTML = `
       <td class="ticker-cell">${t}</td>
       <td class="price-cell">${M15.close.toFixed(2)}</td>
-      <td> ${M15.interval}<br>
-  <span style="opacity:0.7; font-size:12px;">${M15.time}</span>
-</td>
-      <td class="entry-cell">${entry}</td>
+
       <td>
-  <span style="font-size:16px; font-weight:700;">${signal}</span><br>
-  <span style="font-size:12px; opacity:0.7;">
-    ${
-      signal === "CZEKAJ DO"
-        ? (M15.close > M15.ma20 ? "BUY" : "SELL")
-        : signal
-    }
-  </span>
-</td>
+        ${M15.interval}<br>
+        <span style="opacity:0.7; font-size:12px;">${M15.time}</span>
+      </td>
+
+      <td class="entry-cell">${entry}</td>
+
+      <td>
+        <span style="font-size:16px; font-weight:700;">${signal}</span><br>
+        <span style="font-size:12px; opacity:0.7;">
+          ${
+            signal === "CZEKAJ DO"
+              ? (M15.close > M15.ma20 ? "BUY" : "SELL")
+              : signal
+          }
+        </span>
+      </td>
+
       <td>—</td>
       <td>—</td>
       <td>—</td>
+
       <td class="delete-cell">🗑️</td>
     `;
 
