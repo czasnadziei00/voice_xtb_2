@@ -97,7 +97,6 @@ function handleRecognized(text) {
 // ======================================================
 //  FINALIZACJA — WYSYŁKA DO BACKENDU
 // ======================================================
-
 function finalizeRecord() {
   document.getElementById("parsed").textContent =
     JSON.stringify(tempRecord, null, 2);
@@ -112,10 +111,14 @@ function finalizeRecord() {
   })
     .then(res => res.json())
     .then(data => handleBackendData(data))
-    .catch(() => {
-      document.getElementById("comment").textContent = "❌ Błąd backendu";
+    .catch(err => {
+      console.error("FRONTEND ERROR:", err);
+      document.getElementById("comment").textContent =
+        "❌ Błąd frontendu: " + err.message;
     });
 }
+
+    
 
 
 // ======================================================
