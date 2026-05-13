@@ -644,20 +644,357 @@ function loadTable() {
 //  COMMENT ENGINE
 // ======================================================
 
-function buildDynamicComment(rec) {
+function buildDynamicComment(rec, tData) {
+
+  const c = rec.close;
+  const o = rec.open;
+  const h = rec.high;
+  const l = rec.low;
+
+  const ma = rec.ma20;
+  const de = rec.dema9;
+  const rsi = rec.rsi;
+
+  const range = h - l;
+
+  const body = Math.abs(c - o);
+
+  const upperWick = h - Math.max(c, o);
+  const lowerWick = Math.min(c, o) - l;
+
+  const dirM15 = tData["M15"]
+    ? trendDirectionFromHistory(
+        tData["M15"].history
+      )
+    : "NEUTRAL";
+
+  const dirH1 = tData["H1"]
+    ? trendDirectionFromHistory(
+        tData["H1"].history
+      )
+    : "NEUTRAL";
+
+  // ======================================================
+  // TREND
+  // ======================================================
+
+  let TREND = "";
+
+  const keyLow1 = (ma - range * 0.35).toFixed(0);
+  const keyLow2 = (ma - range * 0.15).toFixed(0);
+
+  if (
+    (dirH1 === "UP" || dirM15 === "UP") &&
+    c < o
+  ) {
+
+    TREND =
+      `Trend wzrostowy, ale świeca spadkowa ` +
+      `wprowadza mocną korektę. ` +
+      `Struktura nadal trzyma, dopóki cena ` +
+      `jest powyżej ${keyLow1}–${keyLow2}.`;
+
+  }
+
+  else if (
+    (dirH1 === "DOWN" || dirM15 === "DOWN") &&
+    c > o
+  ) {
+
+    TREND =
+      `Trend spadkowy, ale pojawiło się ` +
+      `kontrujące odbicie. ` +
+      `Presja podaży nadal dominuje.`;
+
+  }
+
+  else if (
+    dirH1 === "UP" ||
+    dirM15 === "UP"
+  ) {
+
+    TREND =
+      `Trend wzrostowy. ` +
+      `Cena utrzymuje strukturę wyższych dołków ` +
+      `i nadal kontrolowana jest przez popyt.`;
+
+  }
+
+  else if (
+    dirH1 === "DOWN" ||
+    dirM15 === "DOWN"
+  ) {
+
+    TREND =
+      `Trend spadkowy. ` +
+      `Rynek pozostaje pod presją podaży ` +
+      `i każda próba odbicia jest gaszona.`;
+
+  }
+
+  else {
+
+    TREND =
+      `Rynek znajduje się w konsolidacji ` +
+      `i nadal nie ma dominującego kierunku.`;
+
+  }
+
+  // ======================================================
+  // MOMENTUM
+  // ======================================================
+
+  let MOM = "";
+
+  if (rsi <= 25) {
+
+    MOM =
+      `RSI ${rsi} = skrajne wyprzedanie. ` +
+      `To sygnał paniki, nie trendu spadkowego. ` +
+      `Statystycznie rynek odbija z takich poziomów.`;
+
+  }
+
+  else if (rsi <= 35) {
+
+    MOM =
+      `RSI ${rsi} = wyprzedanie rynku. ` +
+      `Momentum spadkowe słabnie i może pojawić się odbicie.`;
+
+  }
+
+  else if (rsi >= 75) {
+
+    MOM =
+      `RSI ${rsi} = ekstremalne wykupienie. ` +
+      `Rynek jest rozgrzany i podatny na korektę.`;
+
+  }
+
+  else if (rsi >= 65) {
+
+    MOM =
+      `RSI ${rsi} = silne momentum wzrostowe, ` +
+      `ale rynek zaczyna być wykupiony.`;
+
+  }
+
+  else {
+
+    MOM =
+      `RSI ${rsi} = neutralne momentum. ` +
+      `Rynek nadal szuka kierunku.`;
+
+  }
+
+  // ======================================================
+  // SIŁA / SŁABOŚĆ
+  // ======================================================
+
+  let SS = "";
+
+  const bigRange =
+    range > (ma * 0.012);
+
+  const strongBull =
+    c > o &&
+    body > range * 0.6;
+
+  const strongBear =
+    o > c &&
+    body > range * 0.6;
+
+  if (
+    bigRange &&
+    c < de
+  ) {
+
+    SS +=
+      `Duży zasięg świecy i zejście pod DEMA9 ` +
+      `= słabość krótkoterminowa. `;
+
+  }
+
+  if (
+    lowerWick > body * 0.8
+  ) {
+
+    SS +=
+      `Długi dolny knot sugeruje obecność popytu ` +
+      `i aktywne bronienie poziomów. `;
+
+  }
+
+  if (
+    upperWick > body * 0.8
+  ) {
+
+    SS +=
+      `Długi górny knot pokazuje aktywną podaż ` +
+      `i odrzucenie wyższych poziomów. `;
+
+  }
+
+  if (strongBull) {
+
+    SS +=
+      `Silna świeca wzrostowa wskazuje ` +
+      `na przewagę kupujących.`;
+
+  }
+
+  if (strongBear) {
+
+    SS +=
+      `Silna świeca spadkowa wskazuje ` +
+      `na dominację sprzedających.`;
+
+  }
+
+  if (SS === "") {
+
+    SS =
+      `Brak dominującej strony rynku. ` +
+      `Cena porusza się neutralnie względem średnich.`;
+
+  }
+
+  // ======================================================
+  // WSPARCIA / OPORY
+  // ======================================================
+
+  const ws1a = (l + range * 0.10).toFixed(0);
+  const ws1b = (l + range * 0.20).toFixed(0);
+
+  const ws2a = (l + range * 0.00).toFixed(0);
+  const ws2b = (l + range * 0.10).toFixed(0);
+
+  const op1a = (h - range * 0.20).toFixed(0);
+  const op1b = (h).toFixed(0);
+
+  const op2a = (de).toFixed(0);
+  const op2b = (de + range * 0.20).toFixed(0);
+
+  const op3a = (ma + range * 0.60).toFixed(0);
+  const op3b = (ma + range * 0.90).toFixed(0);
+
+  // ======================================================
+  // INTERPRETACJA
+  // ======================================================
+
+  let INTER = "";
+
+  const capitulation =
+    rsi <= 28 &&
+    strongBear &&
+    lowerWick > body * 0.5;
+
+  const breakout =
+    c > h - range * 0.15;
+
+  const pullback =
+    c > de &&
+    c < ma;
+
+  if (capitulation) {
+
+    INTER =
+      `To nie jest odwrócenie trendu. ` +
+      `To kapitulacja i mocna korekta po wybiciu. ` +
+      `Rynek często wraca do VWAP po takim ruchu.`;
+
+  }
+
+  else if (breakout) {
+
+    INTER =
+      `Rynek próbuje wybicia górą. ` +
+      `Momentum jest silne, ale po takim ruchu ` +
+      `często pojawia się cofnięcie do średnich.`;
+
+  }
+
+  else if (pullback) {
+
+    INTER =
+      `To wygląda jak klasyczny pullback ` +
+      `do średnich w aktywnym trendzie.`;
+
+  }
+
+  else {
+
+    INTER =
+      `Sytuacja nadal pozostaje neutralna ` +
+      `i rynek nie pokazał pełnej dominacji żadnej strony.`;
+
+  }
+
+  // ======================================================
+  // RYZYKO
+  // ======================================================
+
+  let RISK = "";
+
+  const riskLevel =
+    (l + range * 0.05).toFixed(0);
+
+  if (
+    dirH1 === "UP" ||
+    dirM15 === "UP"
+  ) {
+
+    RISK =
+      `Realne ryzyko pojawia się dopiero ` +
+      `przy zamknięciu M15 poniżej ${riskLevel}.`;
+
+  }
+
+  else if (
+    dirH1 === "DOWN" ||
+    dirM15 === "DOWN"
+  ) {
+
+    RISK =
+      `Rynek pozostaje ryzykowny ` +
+      `dopóki cena nie wróci powyżej ${op1a}.`;
+
+  }
+
+  else {
+
+    RISK =
+      `Ryzyko neutralne — brak aktywnego trendu.`;
+
+  }
+
+  // ======================================================
+  // FINAL
+  // ======================================================
+
   return `
-INTERWAŁ: ${rec.interval}
-CZAS: ${rec.time}
+TREND: ${TREND}
 
-CLOSE: ${rec.close}
-RSI: ${rec.rsi}
+MOMENTUM: ${MOM}
 
-MA20: ${rec.ma20}
-DEMA9: ${rec.dema9}
+SIŁA/SŁABOŚĆ: ${SS}
 
-ANALIZA:
-Rynek analizowany wielointerwałowo.
+WSPARCIA:
+• ${ws1a}–${ws1b} (lokalne)
+• ${ws2a}–${ws2b} (kluczowe)
+
+OPORY:
+• ${op1a}–${op1b} (lokalne)
+• ${op2a}–${op2b} (DEMA9)
+• ${op3a}–${op3b} (normalizacja)
+
+INTERPRETACJA:
+${INTER}
+
+RYZYKO:
+${RISK}
 `;
+
 }
 
 // ======================================================
