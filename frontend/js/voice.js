@@ -142,10 +142,20 @@ function updateTable() {
     row.innerHTML = `
       <td class="ticker-cell">${t}</td>
       <td class="price-cell">${M15.close.toFixed(2)}</td>
-      <td>${M15.interval}</td>
-      <td>${M15.time}</td>
+      <td> ${M15.interval}<br>
+  <span style="opacity:0.7; font-size:12px;">${M15.time}</span>
+</td>
       <td class="entry-cell">${entry}</td>
-      <td>${signal}</td>
+      <td>
+  <span style="font-size:16px; font-weight:700;">${signal}</span><br>
+  <span style="font-size:12px; opacity:0.7;">
+    ${
+      signal === "CZEKAJ DO"
+        ? (M15.close > M15.ma20 ? "BUY" : "SELL")
+        : signal
+    }
+  </span>
+</td>
       <td>—</td>
       <td>—</td>
       <td>—</td>
