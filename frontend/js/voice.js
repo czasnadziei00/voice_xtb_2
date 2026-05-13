@@ -16,8 +16,8 @@ const steps = [
   "Podaj ticker",
   "Podaj interwał",
   "Podaj open",
-  "Podaj low",
   "Podaj high",
+  "Podaj low",
   "Podaj close",
   "Podaj wolumen",
   "Podaj MA20",
@@ -587,8 +587,8 @@ function handleRecognized(text) {
     case 0: tempRecord.ticker = text.toUpperCase(); break;
     case 1: tempRecord.interval = normalizeInterval(text); break;
     case 2: tempRecord.open = extractNumber(text); break;
-    case 3: tempRecord.low = extractNumber(text); break;
-    case 4: tempRecord.high = extractNumber(text); break;
+    case 3: tempRecord.high = extractNumber(text); break;
+    case 4: tempRecord.low = extractNumber(text); break;
     case 5: tempRecord.close = extractNumber(text); break;
     case 6: tempRecord.volume = extractNumber(text); break;
     case 7: tempRecord.ma20 = extractNumber(text); break;
