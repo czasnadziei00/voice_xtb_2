@@ -173,7 +173,6 @@ function updateTable() {
 
   <td class="delete-cell">🗑️</td>
 `;
-
     tbody.appendChild(row);
   });
 }
