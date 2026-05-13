@@ -6,6 +6,9 @@ const backend = "https://voice-xtb.onrender.com/voice-parse";
 
 let recognition = null;
 let recognizing = false;
+let recognitionMode = "SEQUENCE"; // SEQUENCE | AD_HOC
+let adHocCallback = null;
+
 let currentStep = 0;
 let tempRecord = {};
 
@@ -48,7 +51,7 @@ function finalizeRecord() {
 }
 
 // ======================================================
-//  INICJALIZACJA RECOGNITION
+//  INICJALIZACJA MASTER MICROPHONE
 // ======================================================
 
 function initRecognition() {
@@ -62,13 +65,25 @@ function initRecognition() {
 
   rec.onresult = (e) => {
     const text = e.results[0][0].transcript.trim();
-    handleRecognized(text);
-    try { recognition.stop(); } catch {}
+
+    if (recognitionMode === "SEQUENCE") {
+      handleRecognized(text);
+    } else if (recognitionMode === "AD_HOC" && adHocCallback) {
+      adHocCallback(text);
+      adHocCallback = null;
+      recognitionMode = "SEQUENCE";
+      recognizing = false;
+    }
+
+    try { rec.stop(); } catch {}
   };
 
   rec.onend = () => {
     if (!recognizing) return;
-    if (currentStep < steps.length) sayStep();
+
+    if (recognitionMode === "SEQUENCE" && currentStep < steps.length) {
+      sayStep();
+    }
   };
 
   return rec;
@@ -194,7 +209,8 @@ function getRowClass(signal) {
   if (signal === "CZEKAJ DO") return "row-czekajdo";
 
   return "row-czekaj";
-  // ======================================================
+}
+// ======================================================
 //  KOLOROWANIE TP
 // ======================================================
 
@@ -295,7 +311,7 @@ function updateTable() {
 }
 
 // ======================================================
-//  OBSŁUGA ROZPOZNAWANIA
+//  OBSŁUGA ROZPOZNAWANIA — MASTER MIC
 // ======================================================
 
 function handleRecognized(text) {
@@ -341,17 +357,19 @@ function sayStep() {
 function startSequence() {
   tempRecord = {};
   currentStep = 0;
+  recognitionMode = "SEQUENCE";
   recognizing = true;
   sayStep();
 }
 
 function stopSequence() {
   recognizing = false;
-  try { recognition.stop(); } catch {}
+  recognitionMode = "SEQUENCE";
+  try { recognition && recognition.stop(); } catch {}
 }
 
 // ======================================================
-//  GŁOSOWE USTAWIANIE CENY / ENTRY
+//  GŁOSOWE USTAWIANIE CENY / ENTRY — MASTER MIC
 // ======================================================
 
 function startVoiceInput(callback) {
@@ -361,21 +379,18 @@ function startVoiceInput(callback) {
     return;
   }
 
-  const rec = new SR();
-  rec.lang = "pl-PL";
-  rec.continuous = false;
-  rec.interimResults = false;
+  if (!recognition) recognition = initRecognition();
 
-  rec.onresult = (e) => {
-    const text = e.results[0][0].transcript.trim();
-    callback(text);
+  recognitionMode = "AD_HOC";
+  adHocCallback = (spoken) => {
+    callback(spoken.trim());
   };
 
-  rec.onerror = () => {
-    document.getElementById("comment").textContent = "❌ Błąd rozpoznawania mowy";
-  };
+  recognizing = true;
 
-  rec.start();
+  try { recognition.start(); } catch (e) {
+    console.log("Błąd startVoiceInput:", e);
+  }
 }
 
 // ======================================================
@@ -445,4 +460,3 @@ document.addEventListener("click", (e) => {
 document.getElementById("popupClose").onclick = () => {
   document.getElementById("popup").style.display = "none";
 };
-}
