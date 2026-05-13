@@ -42,7 +42,7 @@ function finalizeRecord() {
       handleBackendData(data);
       document.getElementById("comment").textContent = "✔️ Dodano rekord";
     })
-    .catch(err => {
+    .catch(() => {
       document.getElementById("comment").textContent = "❌ Błąd backendu";
     });
 }
@@ -114,6 +114,7 @@ function computeWidelki(rec) {
 
 function consensusSignal(tData) {
   const sigs = [];
+
   ["M5", "M15", "H1"].forEach(tf => {
     const a = tData[tf];
     if (a && a.signal) sigs.push(a.signal);
@@ -123,6 +124,7 @@ function consensusSignal(tData) {
   if (sigs.includes("SELL")) return "SELL";
   if (sigs.includes("PRAWIE BUY")) return "PRAWIE BUY";
   if (sigs.includes("CZEKAJ DO")) return "CZEKAJ DO";
+
   return "CZEKAJ";
 }
 
