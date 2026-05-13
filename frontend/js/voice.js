@@ -308,6 +308,34 @@ function updateTable() {
 
     tbody.appendChild(row);
   });
+
+  saveTable(); // <—— pamięć tabeli
+}
+
+// ======================================================
+//  PAMIĘĆ TABELI — LOCALSTORAGE
+// ======================================================
+
+const STORAGE_KEY = "xtb_table_memory_v1";
+
+function saveTable() {
+  const data = JSON.stringify(tickers);
+  localStorage.setItem(STORAGE_KEY, data);
+}
+
+function loadTable() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return;
+
+  try {
+    const parsed = JSON.parse(raw);
+    Object.keys(parsed).forEach(t => {
+      tickers[t] = parsed[t];
+    });
+    updateTable();
+  } catch (e) {
+    console.error("Błąd wczytywania tabeli:", e);
+  }
 }
 
 // ======================================================
@@ -568,3 +596,9 @@ ${buildDynamicComment(rec)}
 document.getElementById("popupClose").onclick = () => {
   document.getElementById("popup").style.display = "none";
 };
+
+// ======================================================
+//  AUTO-LOAD TABELI PRZY STARCIU
+// ======================================================
+
+document.addEventListener("DOMContentLoaded", loadTable);
