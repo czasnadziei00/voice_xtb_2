@@ -1,4 +1,6 @@
-// VOICE XTB 6.5 PRO — pełna wersja
+// ======================================================
+//  VOICE XTB 6.5 PRO — FINAL VERSION
+// ======================================================
 
 const backend = "https://voice-xtb.onrender.com/voice-parse";
 
@@ -23,7 +25,10 @@ const steps = [
 // struktura danych: ticker → { M5, M15, H1, meta }
 const tickers = {};
 
-// ====== START / STOP ======
+
+// ======================================================
+//  START / STOP
+// ======================================================
 
 function startFullMic() {
   recognizing = true;
@@ -44,7 +49,10 @@ function stopMic() {
   document.getElementById("comment").textContent = "⛔ Mikrofon zatrzymany";
 }
 
-// ====== PROMPTY ======
+
+// ======================================================
+//  PROMPTY
+// ======================================================
 
 function sayStep() {
   const step = steps[currentStep];
@@ -63,7 +71,10 @@ function sayStep() {
   document.getElementById("comment").textContent = "➡️ " + map[step];
 }
 
-// ====== PRZETWARZANIE MOWY ======
+
+// ======================================================
+//  RECOGNITION — PRZETWARZANIE
+// ======================================================
 
 function handleRecognized(text) {
   document.getElementById("recognized").textContent = text;
@@ -104,7 +115,10 @@ function finalizeRecord() {
     });
 }
 
-// ====== INICJALIZACJA RECOGNITION ======
+
+// ======================================================
+//  INICJALIZACJA RECOGNITION
+// ======================================================
 
 function initRecognition() {
   const SR = window.webkitSpeechRecognition || window.SpeechRecognition;
@@ -137,7 +151,10 @@ function initRecognition() {
 
 recognition = initRecognition();
 
-// ====== UTYLITY ======
+
+// ======================================================
+//  UTYLITY
+// ======================================================
 
 function extractNumber(text) {
   text = text.replace(",", ".").replace(/\s+/g, "");
@@ -153,7 +170,10 @@ function normalizeInterval(interval) {
   return null;
 }
 
-// ====== SYGNAŁ WSPÓLNY ======
+
+// ======================================================
+//  SYGNAŁ WSPÓLNY
+// ======================================================
 
 function consensusSignal(tData) {
   const sigs = [];
@@ -177,7 +197,10 @@ function consensusSignal(tData) {
   return "CZEKAJ";
 }
 
-// ====== BACKEND → TICKER ======
+
+// ======================================================
+//  BACKEND → TICKER
+// ======================================================
 
 function handleBackendData(d) {
   const tf = normalizeInterval(d.interval || "");
@@ -266,7 +289,10 @@ function handleBackendData(d) {
   updateTable();
 }
 
-// ====== TABELA PRO ======
+
+// ======================================================
+//  TABELA PRO
+// ======================================================
 
 function updateTable() {
   const tbody = document.querySelector("#proTable tbody");
@@ -349,7 +375,10 @@ function updateTable() {
   });
 }
 
-// ====== POPUP PREMIUM ======
+
+// ======================================================
+//  POPUP PREMIUM
+// ======================================================
 
 const popup = document.getElementById("popup");
 const popupClose = document.getElementById("popupClose");
@@ -360,9 +389,12 @@ if (popupClose) {
 
 window.onclick = (e) => {
   if (e.target === popup) popup.style.display = "none";
-
 };
-// ====== GENERATOR POPUP PREMIUM ======
+
+
+// ======================================================
+//  GENERATOR POPUP PREMIUM
+// ======================================================
 
 function buildPopupHTML(ticker, data) {
   const meta = data.meta || {};
@@ -457,7 +489,10 @@ function buildPopupHTML(ticker, data) {
   `;
 }
 
-// ====== DELEGACJA KLIKNIĘĆ ======
+
+// ======================================================
+//  DELEGACJA KLIKNIĘĆ
+// ======================================================
 
 const proTbody = document.querySelector("#proTable tbody");
 
@@ -486,5 +521,4 @@ if (proTbody) {
       document.getElementById("popupBody").innerHTML =
         buildPopupHTML(t, d);
 
-      popup.style.display = "block";
-      return;
+      popup.style
