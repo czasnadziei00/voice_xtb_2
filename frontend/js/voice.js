@@ -526,24 +526,117 @@ function handleBackendData(d) {
 }
 
 function updateTable() {
+
   const tbody =
     document.getElementById("table-body");
 
   tbody.innerHTML = "";
 
+  // ======================================================
+  // KOLEJNOŚĆ SYGNAŁÓW
+  // ======================================================
+
+  const priority = {
+    "ENTRY": 0,
+    "BUY": 1,
+    "PRAWIE BUY": 2,
+    "CZEKAJ DO": 3,
+    "CZEKAJ": 4,
+    "PRAWIE SELL": 5,
+    "SELL": 6
+  };
+
+  // ======================================================
+  // ZAMIANA NA TABLICĘ
+  // ======================================================
+
+  const rows = [];
+
   Object.keys(tickers).forEach((t) => {
+
     const tData = tickers[t];
 
-    const M5 = tData["M5"]?.last;
-    const M15 = tData["M15"]?.last;
-    const H1 = tData["H1"]?.last;
+    const M5 =
+      tData["M5"]?.last;
 
-    const rec = M15 || H1 || M5;
+    const M15 =
+      tData["M15"]?.last;
+
+    const H1 =
+      tData["H1"]?.last;
+
+    const rec =
+      M15 || H1 || M5;
 
     if (!rec) return;
 
     const signal =
       consensusSignalFromStore(tData);
+
+    const hasEntry =
+      rec.entry !== undefined &&
+      rec.entry !== "" &&
+      rec.entry !== "—";
+
+    rows.push({
+      ticker: t,
+      tData,
+      rec,
+      signal,
+      priority:
+        hasEntry
+          ? priority["ENTRY"]
+          : priority[signal] ?? 999
+    });
+
+  });
+
+  // ======================================================
+  // SORTOWANIE
+  // ======================================================
+
+  rows.sort((a, b) => {
+
+    // ENTRY zawsze na górze
+    if (a.priority !== b.priority) {
+      return a.priority - b.priority;
+    }
+
+    // dodatkowo BUY wyżej jeśli większy RSI
+    if (
+      a.signal === "BUY" &&
+      b.signal === "BUY"
+    ) {
+      return b.rec.rsi - a.rec.rsi;
+    }
+
+    // SELL niżej jeśli mocniejszy SELL
+    if (
+      a.signal === "SELL" &&
+      b.signal === "SELL"
+    ) {
+      return a.rec.rsi - b.rec.rsi;
+    }
+
+    return 0;
+
+  });
+
+  // ======================================================
+  // RENDER
+  // ======================================================
+
+  rows.forEach((item) => {
+
+    const {
+      ticker,
+      tData,
+      rec,
+      signal
+    } = item;
+
+    const M15 =
+      tData["M15"]?.last;
 
     const row =
       document.createElement("tr");
@@ -552,7 +645,10 @@ function updateTable() {
       getRowClass(signal);
 
     row.innerHTML = `
-      <td class="ticker-cell">${t}</td>
+    
+      <td class="ticker-cell">
+        ${ticker}
+      </td>
 
       <td class="price-cell">
         ${rec.close.toFixed(2)}
@@ -560,19 +656,39 @@ function updateTable() {
 
       <td>
         ${rec.interval}<br>
-        <span style="font-size:11px;opacity:0.7;">
+
+        <span style="
+          font-size:11px;
+          opacity:0.7;
+        ">
           ${rec.time ?? ""}
         </span>
       </td>
 
       <td class="entry-cell">
-        ${rec.entry ?? "—"}
+
+        ${
+          rec.entry
+            ? `<span style="
+                 color:#ffd166;
+                 font-weight:700;
+               ">
+                 ${rec.entry}
+               </span>`
+            : "—"
+        }
+
       </td>
 
       <td>
-        <span style="font-size:16px;font-weight:700;">
+
+        <span style="
+          font-size:15px;
+          font-weight:700;
+        ">
           ${signal}
         </span>
+
       </td>
 
       <td>
@@ -603,13 +719,34 @@ function updateTable() {
         ${M15?.tp3 ?? "—"}
       </td>
 
-      <td class="delete-cell">🗑️</td>
+      <td class="delete-cell">
+        🗑️
+      </td>
+
     `;
 
     tbody.appendChild(row);
+
   });
 
+  // ======================================================
+  // PUSTA TABELA
+  // ======================================================
+
+  if (rows.length === 0) {
+
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="10">
+          Brak danych...
+        </td>
+      </tr>
+    `;
+
+  }
+
   saveTable();
+
 }
 
 // ======================================================
