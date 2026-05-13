@@ -210,6 +210,7 @@ function getRowClass(signal) {
 
   return "row-czekaj";
 }
+
 // ======================================================
 //  KOLOROWANIE TP
 // ======================================================
@@ -236,7 +237,6 @@ function tpColor(price, tp, signal) {
 
   return "";
 }
-
 // ======================================================
 //  TABELA
 // ======================================================
@@ -310,6 +310,108 @@ function updateTable() {
   });
 }
 
+// ======================================================
+//  DYNAMICZNY KOMENTARZ PRO
+// ======================================================
+
+function buildDynamicComment(rec) {
+  const c = rec.close;
+  const o = rec.open;
+  const L = rec.low;
+  const H = rec.high;
+  const R = H - L;
+
+  const ma = rec.ma20;
+  const de = rec.dema9;
+  const rsi = rec.rsi;
+
+  const mid = (ma + de) / 2;
+
+  const isKapitulacja = (c < o && rsi <= 28 && c < de && R > (ma * 0.004));
+  const isWybicie = (c > H - R * 0.15 && c > ma && c > de);
+  const isPullback = (c > o && o < ma && c < ma && c > de);
+  const isOdrzucenie = (c > o && L < de && c > de);
+  const isSilnaSwieca = (c > o && (c - o) > R * 0.6);
+  const isSlabaSwieca = (o > c && (o - c) > R * 0.6);
+
+  let TREND = "";
+
+  if (isKapitulacja) {
+    TREND = "Trend wzrostowy, ale świeca kapitulacyjna wprowadza mocną korektę. Struktura nadal trzyma, dopóki cena jest powyżej " 
+      + (mid - R*0.20).toFixed(0) + "–" + (mid - R*0.05).toFixed(0) + ".";
+  }
+  else if (c > ma && ma > de) {
+    TREND = "Trend wzrostowy, struktura jest zdrowa i trzyma kierunek.";
+  }
+  else if (c < ma && ma < de) {
+    TREND = "Trend spadkowy, struktura spadkowa aktywna.";
+  }
+  else {
+    TREND = "Rynek w konsolidacji — brak jednoznacznego kierunku.";
+  }
+
+  let MOM = "";
+
+  if (rsi <= 20) MOM = `RSI ${rsi} = ekstremalne wyprzedanie. To sygnał paniki i często punkt zwrotny.`;
+  else if (rsi <= 30) MOM = `RSI ${rsi} = skrajne wyprzedanie. Rynek statystycznie odbija z takich poziomów.`;
+  else if (rsi >= 75) MOM = `RSI ${rsi} = ekstremalne wykupienie. Rynek może potrzebować korekty.`;
+  else if (rsi >= 65) MOM = `RSI ${rsi} = wykupienie, momentum silne, ale kruche.`;
+  else MOM = `RSI ${rsi} = neutralne momentum.`;
+
+  let SS = "";
+
+  if (isSilnaSwieca) SS = "Silna świeca wzrostowa — przewaga kupujących.";
+  else if (isSlabaSwieca) SS = "Silna świeca spadkowa — przewaga sprzedających.";
+  else if (c > de) SS = "Cena powyżej DEMA9 = krótkoterminowa siła.";
+  else SS = "Cena poniżej DEMA9 = krótkoterminowa słabość.";
+
+  if (isOdrzucenie) SS += " Odrzucenie poziomu — popyt aktywny.";
+
+  const ws1 = (L + R * 0.10).toFixed(2);
+  const ws2 = (L + R * 0.20).toFixed(2);
+
+  const op1 = (H - R * 0.20).toFixed(2);
+  const op2 = (H - R * 0.35).toFixed(2);
+
+  let INTER = "";
+
+  if (isKapitulacja) {
+    INTER = "To nie jest odwrócenie trendu. To kapitulacja po wybiciu. Rynek często wraca do średnich lub VWAP po takim ruchu.";
+  }
+  else if (isWybicie) {
+    INTER = "Silne wybicie górą — rynek może kontynuować, ale korekta jest prawdopodobna.";
+  }
+  else if (isPullback) {
+    INTER = "To wygląda jak klasyczny pullback do średnich — rynek może kontynuować trend.";
+  }
+  else if (isOdrzucenie) {
+    INTER = "Odrzucenie poziomu sugeruje aktywny popyt i możliwe odbicie.";
+  }
+  else {
+    INTER = "Neutralna sytuacja — rynek czeka na kierunek.";
+  }
+
+  let RISK = "";
+
+  if (isKapitulacja) RISK = "Ryzyko rośnie tylko przy zamknięciu poniżej " + ws1 + ".";
+  else if (c < ws1) RISK = "Ryzyko podwyższone — cena blisko kluczowego wsparcia.";
+  else RISK = "Ryzyko umiarkowane — struktura nadal trzyma.";
+
+  return `
+TREND: ${TREND}
+
+MOMENTUM: ${MOM}
+
+SIŁA/SŁABOŚĆ: ${SS}
+
+WSPARCIA: ${ws1}–${ws2}
+OPORY: ${op2}–${op1}
+
+INTERPRETACJA: ${INTER}
+
+RYZYKO: ${RISK}
+  `;
+}
 // ======================================================
 //  OBSŁUGA ROZPOZNAWANIA — MASTER MIC
 // ======================================================
@@ -410,7 +512,13 @@ document.addEventListener("click", (e) => {
     const popup = document.getElementById("popup");
     const body = document.getElementById("popupBody");
 
-    body.innerHTML = `<h2>${ticker}</h2><p>${rec.comment}</p>`;
+    body.innerHTML = `
+      <h2>${ticker}</h2>
+      <pre style="white-space: pre-wrap; font-family: inherit; font-size: 14px; line-height: 1.4;">
+${buildDynamicComment(rec)}
+      </pre>
+    `;
+
     popup.style.display = "block";
   }
 
