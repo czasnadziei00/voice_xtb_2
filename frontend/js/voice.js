@@ -197,6 +197,35 @@ function getRowClass(signal) {
 }
 
 // ======================================================
+//  KOLOROWANIE TP
+// ======================================================
+
+function tpColor(price, tp, signal) {
+  if (!tp || tp === "—") return "";
+
+  const p = parseFloat(price);
+  const t = parseFloat(tp);
+
+  if (isNaN(p) || isNaN(t)) return "";
+
+  // BUY logic
+  if (signal.includes("BUY")) {
+    if (p >= t) return "tp-hit";
+    if (p <= t * 0.97) return "tp-fail";
+    if (p >= t * 0.90) return "tp-close";
+  }
+
+  // SELL logic
+  if (signal.includes("SELL")) {
+    if (p <= t) return "tp-hit";
+    if (p >= t * 1.03) return "tp-fail";
+    if (p <= t * 1.10) return "tp-close";
+  }
+
+  return "";
+}
+
+// ======================================================
 //  TABELA
 // ======================================================
 
@@ -257,9 +286,10 @@ function updateTable() {
       </td>
 
       <td>${M15?.widelki ?? "—"}</td>
-      <td>${M15?.tp1 ?? "—"}</td>
-      <td>${M15?.tp2 ?? "—"}</td>
-      <td>${M15?.tp3 ?? "—"}</td>
+
+      <td class="${tpColor(rec.close, M15?.tp1, signal)}">${M15?.tp1 ?? "—"}</td>
+      <td class="${tpColor(rec.close, M15?.tp2, signal)}">${M15?.tp2 ?? "—"}</td>
+      <td class="${tpColor(rec.close, M15?.tp3, signal)}">${M15?.tp3 ?? "—"}</td>
 
       <td class="delete-cell">🗑️</td>
     `;
