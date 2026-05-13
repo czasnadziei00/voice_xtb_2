@@ -489,7 +489,6 @@ function buildPopupHTML(ticker, data) {
   `;
 }
 
-
 // ======================================================
 //  DELEGACJA KLIKNIĘĆ
 // ======================================================
@@ -521,4 +520,24 @@ if (proTbody) {
       document.getElementById("popupBody").innerHTML =
         buildPopupHTML(t, d);
 
-      popup.style
+      popup.style.display = "block";
+      return;
+    }
+
+    // klik w cenę
+    if (priceCell) {
+      const t = priceCell.dataset.ticker;
+      document.getElementById("comment").textContent =
+        `ℹ️ Cena ${t} pochodzi z ostatniego close (backend).`;
+      return;
+    }
+
+    // klik w entry
+    if (entryCell) {
+      const t = entryCell.dataset.ticker;
+      document.getElementById("comment").textContent =
+        `ℹ️ Entry dla ${t} na razie z backendu / meta.`;
+      return;
+    }
+  }
+}
