@@ -55,6 +55,7 @@ function finalizeRecord() {
 //  INICJALIZACJA MASTER MICROPHONE
 // ======================================================
 
+
 function initRecognition() {
   const SR = window.webkitSpeechRecognition || window.SpeechRecognition;
   if (!SR) return null;
@@ -64,7 +65,6 @@ function initRecognition() {
   rec.continuous = false;
   rec.interimResults = false;
 
-  // 🔥 kluczowa flaga — kontroluje, czy można startować
   let safeToStart = true;
 
   rec.onstart = () => {
@@ -100,7 +100,6 @@ function initRecognition() {
     try { rec.stop(); } catch {}
   };
 
-  // 🔥 bezpieczny start — jedyny sposób, żeby Chrome nie zabił mic
   rec.safeStart = () => {
     if (safeToStart) {
       try { rec.start(); } catch {}
@@ -111,7 +110,6 @@ function initRecognition() {
 }
 
 recognition = initRecognition();
-
 // ======================================================
 //  UTILITY
 // ======================================================
