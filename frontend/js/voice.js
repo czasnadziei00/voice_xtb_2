@@ -194,9 +194,7 @@ function getRowClass(signal) {
   if (signal === "CZEKAJ DO") return "row-czekajdo";
 
   return "row-czekaj";
-}
-
-// ======================================================
+  // ======================================================
 //  KOLOROWANIE TP
 // ======================================================
 
@@ -222,6 +220,7 @@ function tpColor(price, tp, signal) {
 
   return "";
 }
+
 // ======================================================
 //  TABELA
 // ======================================================
@@ -446,3 +445,4 @@ document.addEventListener("click", (e) => {
 document.getElementById("popupClose").onclick = () => {
   document.getElementById("popup").style.display = "none";
 };
+}
