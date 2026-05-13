@@ -151,12 +151,8 @@ function updateTable() {
     row.innerHTML = `
       <td class="ticker-cell">${t}</td>
       <td class="price-cell">${rec.close.toFixed(2)}</td>
-
-      <td>
-        ${rec.interval}<br>
-        <span style="opacity:0.7; font-size:12px;">${rec.time}</span>
-      </td>
-
+      
+      <td>${rec.interval}</td>
       <td class="entry-cell">${entry}</td>
 
       <td>
