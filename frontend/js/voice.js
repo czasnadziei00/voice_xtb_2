@@ -182,6 +182,21 @@ function consensusSignal(tData) {
 }
 
 // ======================================================
+//  KOLOROWANIE WIERSZY
+// ======================================================
+
+function getRowClass(signal) {
+  if (!signal) return "row-czekaj";
+
+  if (signal === "BUY") return "row-buy";
+  if (signal === "SELL") return "row-sell";
+  if (signal === "PRAWIE BUY") return "row-prawie";
+  if (signal === "CZEKAJ DO") return "row-czekajdo";
+
+  return "row-czekaj";
+}
+
+// ======================================================
 //  TABELA
 // ======================================================
 
@@ -227,6 +242,7 @@ function updateTable() {
     const signal = consensusSignal(tData);
 
     const row = document.createElement("tr");
+    row.className = getRowClass(signal);
 
     row.innerHTML = `
       <td class="ticker-cell">${t}</td>
