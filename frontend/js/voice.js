@@ -2,16 +2,37 @@
 //  KONFIGURACJA
 // ======================================================
 
-const backend = "https://voice-xtb.onrender.com/voice-parse";
-const STORAGE_KEY = "xtbtablememoryv2multitf";
+const backend =
+  "https://voice-xtb.onrender.com/voice-parse";
+
+const STORAGE_KEY =
+  "xtbtablememoryv2multitf";
+
+// ======================================================
+//  SPEECH STATE
+// ======================================================
 
 let recognition = null;
+
 let recognizing = false;
+
 let recognitionMode = "SEQUENCE";
+
 let adHocCallback = null;
 
+// ======================================================
+//  FLOW
+// ======================================================
+
 let currentStep = 0;
+
 let tempRecord = {};
+
+let isFetching = false;
+
+// ======================================================
+//  STEPS
+// ======================================================
 
 const steps = [
   "Podaj ticker",
@@ -27,8 +48,25 @@ const steps = [
 ];
 
 // ======================================================
-//  UTILITY
+//  STORAGE
 // ======================================================
+
+const tickers = {};
+
+// ======================================================
+//  HISTORY LIMITS
+// ======================================================
+
+const HISTORY_LIMITS = {
+  M5: 14,
+  M15: 7,
+  H1: 3
+};
+
+// ======================================================
+//  UTILS
+// ======================================================
+
 function extractNumber(text) {
 
   if (!text) return 0;
@@ -38,31 +76,49 @@ function extractNumber(text) {
     .trim()
     .toLowerCase();
 
-  // tylko zamiana słowna → znak
   text = text
-    .replace("kropka", ".")
-    .replace("przecinek", ".")
+    .replaceAll("kropka", ".")
+    .replaceAll("przecinek", ".")
     .replace(/\s+/g, "");
 
   const num = Number(text);
 
-  return isFinite(num) ? num : 0;
+  return isFinite(num)
+    ? num
+    : 0;
 }
 
-
 function normalizeInterval(tf) {
-  tf = tf.toUpperCase().trim();
 
-  if (tf === "M5" || tf === "5") return "M5";
-  if (tf === "M15" || tf === "15") return "M15";
-  if (tf === "H1" || tf === "1H" || tf === "60") return "H1";
+  tf = tf
+    .toUpperCase()
+    .trim();
+
+  if (tf === "5" || tf === "M5") {
+    return "M5";
+  }
+
+  if (tf === "15" || tf === "M15") {
+    return "M15";
+  }
+
+  if (
+    tf === "H1" ||
+    tf === "1H" ||
+    tf === "60"
+  ) {
+    return "H1";
+  }
 
   return tf;
 }
 
+// ======================================================
+//  VALIDATE
+// ======================================================
+
 function validateCandle(c) {
 
-  // brak danych
   if (
     !isFinite(c.open) ||
     !isFinite(c.high) ||
@@ -72,7 +128,6 @@ function validateCandle(c) {
     return false;
   }
 
-  // absurdalne wartości
   if (
     c.open <= 0 ||
     c.high <= 0 ||
@@ -82,283 +137,31 @@ function validateCandle(c) {
     return false;
   }
 
-  // AUTO FIX HIGH / LOW
-  // jeśli voice pomylił kolejność
-
-  if (c.low > c.high) {
-    const tmp = c.low;
-    c.low = c.high;
-    c.high = tmp;
-  }
-
-  // tolerancja 5%
-  const tolerance =
-    Math.abs(c.high - c.low) * 0.05;
-
-  // OPEN poza zakresem
-  if (c.open < c.low - tolerance) {
-    c.open = c.low;
-  }
-
-  if (c.open > c.high + tolerance) {
-    c.open = c.high;
-  }
-
-  // CLOSE poza zakresem
-  if (c.close < c.low - tolerance) {
-    c.close = c.low;
-  }
-
-  if (c.close > c.high + tolerance) {
-    c.close = c.high;
-  }
-
-  return true;
+  return (
+    c.high >= c.low &&
+    c.open >= c.low &&
+    c.open <= c.high &&
+    c.close >= c.low &&
+    c.close <= c.high
+  );
 }
 
 // ======================================================
-//  FINALIZACJA
+//  HISTORY
 // ======================================================
 
-function finalizeRecord() {
+function pushToHistory(
+  store,
+  tf,
+  candle
+) {
 
-  tempRecord.time = new Date().toLocaleTimeString("pl-PL", {
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-
-  // tylko ostrzeżenie — NIE blokujemy wysyłki
-
-  if (!validateCandle(tempRecord)) {
-
-    console.warn(
-      "Nietypowa świeca OHLC:",
-      tempRecord
-    );
-
-    document.getElementById("comment").textContent =
-      "⚠ Nietypowa świeca OHLC";
-  }
-
-  fetch(backend, {
-
-    method: "POST",
-
-    headers: {
-      "Content-Type": "application/json"
-    },
-
-    body: JSON.stringify(tempRecord)
-
-  })
-
-  .then((res) => res.json())
-
-  .then((data) => {
-
-    if (!data.time)
-      data.time = tempRecord.time;
-
-    try {
-
-      handleBackendData(data);
-
-      document.getElementById("comment").textContent =
-        "✔️ Dodano świecę";
-
-    } catch(err) {
-
-      console.error(
-        "HANDLE ERROR:",
-        err
-      );
-
-      document.getElementById("comment").textContent =
-        "❌ FRONT ERROR: " + err.message;
-    }
-
-  })
-
-  .catch((err) => {
-
-    console.error(
-      "FETCH ERROR:",
-      err
-    );
-
-    document.getElementById("comment").textContent =
-      "❌ BACKEND/FETCH ERROR: " + err.message;
-  });
-
-}
-
-// ======================================================
-//  SPEECH RECOGNITION
-// ======================================================
-
-function initRecognition() {
-  const SR =
-    window.webkitSpeechRecognition ||
-    window.SpeechRecognition;
-
-  if (!SR) return null;
-
-  const rec = new SR();
-
-  rec.lang = "pl-PL";
-  rec.continuous = false;
-  rec.interimResults = false;
-
-  rec.onresult = (e) => {
-    const text = e.results[0][0].transcript.trim();
-
-    document.getElementById("recognized").textContent =
-      `Rozpoznano: ${text}`;
-
-    if (recognitionMode === "SEQUENCE") {
-      handleRecognized(text);
-    } else if (
-      recognitionMode === "AD_HOC" &&
-      adHocCallback
-    ) {
-      adHocCallback(text);
-
-      adHocCallback = null;
-      recognitionMode = "SEQUENCE";
-      recognizing = false;
-    }
-
-    try {
-      rec.stop();
-    } catch {}
-  };
-
-  rec.onend = () => {
-    if (!recognizing) return;
-
-    if (
-      recognitionMode === "SEQUENCE" &&
-      currentStep < steps.length
-    ) {
-      sayStep();
-    }
-  };
-
-  rec.onerror = (e) => {
-    console.log("Speech error:", e);
-  };
-
-  return rec;
-}
-
-recognition = initRecognition();
-
-// ======================================================
-//  WIDEŁKI
-// ======================================================
-
-function computeWidelki(rec) {
-  const L = rec.low;
-  const H = rec.high;
-
-  const dol = L + (H - L) * 0.2;
-  const gor = L + (H - L) * 0.35;
-
-  return `${dol.toFixed(2)} - ${gor.toFixed(2)}`;
-}
-
-// ======================================================
-//  TP1 / TP2
-// ======================================================
-
-function computeTP12(rec, widDol, widGor) {
-  const L = rec.low;
-  const H = rec.high;
-
-  const R = H - L;
-
-  const s = rec.signal;
-
-  if (!s) {
-    return {
-      tp1: "—",
-      tp2: "—"
-    };
-  }
-
-  if (s.includes("BUY")) {
-    return {
-      tp1: (widGor + 0.5 * R).toFixed(2),
-      tp2: (widGor + 1.0 * R).toFixed(2)
-    };
-  }
-
-  if (s.includes("SELL")) {
-    return {
-      tp1: (widDol - 0.5 * R).toFixed(2),
-      tp2: (widDol - 1.0 * R).toFixed(2)
-    };
-  }
-
-  return {
-    tp1: "—",
-    tp2: "—"
-  };
-}
-
-// ======================================================
-//  TP3
-// ======================================================
-
-function computeTP3(rec) {
-  const c = rec.close;
-  const ma = rec.ma20;
-  const de = rec.dema9;
-
-  const s = rec.signal;
-
-  if (
-    !s ||
-    s === "CZEKAJ" ||
-    s === "CZEKAJ DO"
-  ) {
-    return "—";
-  }
-
-  const trendStrength = Math.abs(ma - de);
-
-  const mid = (ma + de) / 2;
-
-  const distance = Math.abs(c - mid);
-
-  const tp = distance + trendStrength;
-
-  if (s.includes("BUY")) {
-    return (c + tp).toFixed(2);
-  }
-
-  if (s.includes("SELL")) {
-    return (c - tp).toFixed(2);
-  }
-
-  return "—";
-}
-
-// ======================================================
-//  HISTORIA
-// ======================================================
-
-const HISTORY_LIMITS = {
-  M5: 14,
-  M15: 7,
-  H1: 3
-};
-
-function pushToHistory(store, tf, candle) {
   if (!store[tf]) {
+
     store[tf] = {
       history: []
     };
+
   }
 
   if (!store[tf].history) {
@@ -367,51 +170,100 @@ function pushToHistory(store, tf, candle) {
 
   store[tf].history.push(candle);
 
-  const limit = HISTORY_LIMITS[tf] || 5;
+  const limit =
+    HISTORY_LIMITS[tf] || 5;
 
-  if (store[tf].history.length > limit) {
+  if (
+    store[tf].history.length > limit
+  ) {
+
     store[tf].history =
-      store[tf].history.slice(-limit);
+      store[tf].history.slice(
+        -limit
+      );
+
   }
+
 }
 
-function trendDirectionFromHistory(history) {
-  if (!history || history.length < 2) {
+// ======================================================
+//  TREND
+// ======================================================
+
+function trendDirectionFromHistory(
+  history
+) {
+
+  if (
+    !history ||
+    history.length < 2
+  ) {
     return "NEUTRAL";
   }
 
-  const first = history[0];
-  const last = history[history.length - 1];
+  const first =
+    history[0];
+
+  const last =
+    history[
+      history.length - 1
+    ];
 
   const diff =
-    Math.abs(last.close - first.close) /
-    first.close;
+    Math.abs(
+      last.close - first.close
+    ) / first.close;
 
-  if (last.close > first.close && diff > 0.01) {
+  if (
+    last.close > first.close &&
+    diff > 0.01
+  ) {
     return "UP";
   }
 
-  if (last.close < first.close && diff > 0.01) {
+  if (
+    last.close < first.close &&
+    diff > 0.01
+  ) {
     return "DOWN";
   }
 
   return "NEUTRAL";
 }
 
-function trendStrengthFromHistory(history) {
-  if (!history || history.length === 0) {
+function trendStrengthFromHistory(
+  history
+) {
+
+  if (
+    !history ||
+    history.length === 0
+  ) {
     return 0;
   }
 
-  const last = history[history.length - 1];
+  const last =
+    history[
+      history.length - 1
+    ];
+
   const prev =
-    history[Math.max(0, history.length - 2)];
+    history[
+      Math.max(
+        0,
+        history.length - 2
+      )
+    ];
 
   const spread =
-    Math.abs(last.ma20 - last.dema9);
+    Math.abs(
+      last.ma20 - last.dema9
+    );
 
   const slope =
-    Math.abs(last.ma20 - prev.ma20);
+    Math.abs(
+      last.ma20 - prev.ma20
+    );
 
   return spread + slope;
 }
@@ -420,24 +272,43 @@ function trendStrengthFromHistory(history) {
 //  SIGNAL ENGINE
 // ======================================================
 
-function computeSignalForTF(history) {
-  if (!history || history.length === 0) {
+function computeSignalForTF(
+  history
+) {
+
+  if (
+    !history ||
+    history.length === 0
+  ) {
     return "CZEKAJ";
   }
 
-  const last = history[history.length - 1];
+  const last =
+    history[
+      history.length - 1
+    ];
 
   const dir =
-    trendDirectionFromHistory(history);
+    trendDirectionFromHistory(
+      history
+    );
 
   const strength =
-    trendStrengthFromHistory(history);
+    trendStrengthFromHistory(
+      history
+    );
 
-  const rsi = last.rsi;
+  const rsi =
+    last.rsi;
 
-  const c = last.close;
-  const ma = last.ma20;
-  const de = last.dema9;
+  const c =
+    last.close;
+
+  const ma =
+    last.ma20;
+
+  const de =
+    last.dema9;
 
   const aboveMA =
     c > de && de > ma;
@@ -447,14 +318,34 @@ function computeSignalForTF(history) {
 
   let base = "CZEKAJ";
 
-  if (dir === "UP" && aboveMA) {
+  if (
+    dir === "UP" &&
+    aboveMA
+  ) {
+
     base = "BUY";
-  } else if (dir === "DOWN" && belowMA) {
+
+  }
+
+  else if (
+    dir === "DOWN" &&
+    belowMA
+  ) {
+
     base = "SELL";
-  } else if (dir === "UP") {
+
+  }
+
+  else if (dir === "UP") {
+
     base = "PRAWIE BUY";
-  } else if (dir === "DOWN") {
+
+  }
+
+  else if (dir === "DOWN") {
+
     base = "PRAWIE SELL";
+
   }
 
   if (
@@ -478,35 +369,66 @@ function computeSignalForTF(history) {
   return base;
 }
 
-function consensusSignalFromStore(tData) {
+function consensusSignalFromStore(
+  tData
+) {
+
   const sigs = [];
 
-  ["M5", "M15", "H1"].forEach((tf) => {
-    const tfData = tData[tf];
+  [
+    "M5",
+    "M15",
+    "H1"
+  ].forEach((tf) => {
+
+    const tfData =
+      tData[tf];
 
     if (tfData?.signal) {
       sigs.push(tfData.signal);
     }
+
   });
 
   const buyCount =
-    sigs.filter((s) => s === "BUY").length;
+    sigs.filter(
+      (s) => s === "BUY"
+    ).length;
 
   const sellCount =
-    sigs.filter((s) => s === "SELL").length;
+    sigs.filter(
+      (s) => s === "SELL"
+    ).length;
 
-  if (buyCount >= 2) return "BUY";
-  if (sellCount >= 2) return "SELL";
+  if (buyCount >= 2) {
+    return "BUY";
+  }
 
-  if (sigs.includes("PRAWIE BUY")) {
+  if (sellCount >= 2) {
+    return "SELL";
+  }
+
+  if (
+    sigs.includes(
+      "PRAWIE BUY"
+    )
+  ) {
     return "PRAWIE BUY";
   }
 
-  if (sigs.includes("PRAWIE SELL")) {
+  if (
+    sigs.includes(
+      "PRAWIE SELL"
+    )
+  ) {
     return "PRAWIE SELL";
   }
 
-  if (sigs.includes("CZEKAJ DO")) {
+  if (
+    sigs.includes(
+      "CZEKAJ DO"
+    )
+  ) {
     return "CZEKAJ DO";
   }
 
@@ -514,14 +436,351 @@ function consensusSignalFromStore(tData) {
 }
 
 // ======================================================
+//  WIDEŁKI
+// ======================================================
+
+function computeWidelki(rec) {
+
+  const L = rec.low;
+  const H = rec.high;
+
+  const dol =
+    L + (H - L) * 0.2;
+
+  const gor =
+    L + (H - L) * 0.35;
+
+  return `
+    ${dol.toFixed(2)}
+    -
+    ${gor.toFixed(2)}
+  `;
+}
+
+// ======================================================
+//  TP1 TP2
+// ======================================================
+
+function computeTP12(
+  rec,
+  widDol,
+  widGor
+) {
+
+  const L = rec.low;
+  const H = rec.high;
+
+  const R = H - L;
+
+  const s = rec.signal;
+
+  if (!s) {
+
+    return {
+      tp1: "—",
+      tp2: "—"
+    };
+
+  }
+
+  if (
+    s.includes("BUY")
+  ) {
+
+    return {
+
+      tp1:
+        (
+          widGor +
+          0.5 * R
+        ).toFixed(2),
+
+      tp2:
+        (
+          widGor +
+          1.0 * R
+        ).toFixed(2)
+
+    };
+
+  }
+
+  if (
+    s.includes("SELL")
+  ) {
+
+    return {
+
+      tp1:
+        (
+          widDol -
+          0.5 * R
+        ).toFixed(2),
+
+      tp2:
+        (
+          widDol -
+          1.0 * R
+        ).toFixed(2)
+
+    };
+
+  }
+
+  return {
+    tp1: "—",
+    tp2: "—"
+  };
+}
+
+// ======================================================
+//  TP3
+// ======================================================
+
+function computeTP3(rec) {
+
+  const c =
+    rec.close;
+
+  const ma =
+    rec.ma20;
+
+  const de =
+    rec.dema9;
+
+  const s =
+    rec.signal;
+
+  if (
+    !s ||
+    s === "CZEKAJ" ||
+    s === "CZEKAJ DO"
+  ) {
+    return "—";
+  }
+
+  const trendStrength =
+    Math.abs(ma - de);
+
+  const mid =
+    (ma + de) / 2;
+
+  const distance =
+    Math.abs(c - mid);
+
+  const tp =
+    distance +
+    trendStrength;
+
+  if (
+    s.includes("BUY")
+  ) {
+
+    return (
+      c + tp
+    ).toFixed(2);
+
+  }
+
+  if (
+    s.includes("SELL")
+  ) {
+
+    return (
+      c - tp
+    ).toFixed(2);
+
+  }
+
+  return "—";
+}
+
+// ======================================================
+//  COMMENT ENGINE
+// ======================================================
+
+function buildDynamicComment(
+  rec,
+  tData
+) {
+
+  const c = rec.close;
+  const o = rec.open;
+  const h = rec.high;
+  const l = rec.low;
+
+  const ma = rec.ma20;
+  const de = rec.dema9;
+  const rsi = rec.rsi;
+
+  const range = h - l;
+
+  const body =
+    Math.abs(c - o);
+
+  const upperWick =
+    h - Math.max(c, o);
+
+  const lowerWick =
+    Math.min(c, o) - l;
+
+  const dirM15 =
+    tData["M15"]
+      ? trendDirectionFromHistory(
+          tData["M15"].history
+        )
+      : "NEUTRAL";
+
+  const dirH1 =
+    tData["H1"]
+      ? trendDirectionFromHistory(
+          tData["H1"].history
+        )
+      : "NEUTRAL";
+
+  let TREND = "";
+
+  if (
+    dirH1 === "UP" ||
+    dirM15 === "UP"
+  ) {
+
+    TREND =
+      "Trend wzrostowy. " +
+      "Rynek utrzymuje wyższe dołki.";
+
+  }
+
+  else if (
+    dirH1 === "DOWN" ||
+    dirM15 === "DOWN"
+  ) {
+
+    TREND =
+      "Trend spadkowy. " +
+      "Podaż nadal kontroluje rynek.";
+
+  }
+
+  else {
+
+    TREND =
+      "Rynek pozostaje neutralny.";
+
+  }
+
+  let MOM = "";
+
+  if (rsi <= 25) {
+
+    MOM =
+      `RSI ${rsi} = skrajne wyprzedanie.`;
+
+  }
+
+  else if (rsi >= 75) {
+
+    MOM =
+      `RSI ${rsi} = ekstremalne wykupienie.`;
+
+  }
+
+  else {
+
+    MOM =
+      `RSI ${rsi} = neutralne momentum.`;
+
+  }
+
+  let SS = "";
+
+  const strongBull =
+    c > o &&
+    body > range * 0.6;
+
+  const strongBear =
+    o > c &&
+    body > range * 0.6;
+
+  if (strongBull) {
+
+    SS =
+      "Silna świeca wzrostowa.";
+
+  }
+
+  else if (strongBear) {
+
+    SS =
+      "Silna świeca spadkowa.";
+
+  }
+
+  else {
+
+    SS =
+      "Brak dominującej strony.";
+
+  }
+
+  const ws1 =
+    (l + range * 0.15)
+      .toFixed(2);
+
+  const op1 =
+    (h - range * 0.15)
+      .toFixed(2);
+
+  return `
+
+TREND:
+${TREND}
+
+MOMENTUM:
+${MOM}
+
+SIŁA:
+${SS}
+
+WSPARCIE:
+${ws1}
+
+OPÓR:
+${op1}
+
+CLOSE:
+${c}
+
+MA20:
+${ma}
+
+DEMA9:
+${de}
+
+RSI:
+${rsi}
+
+`;
+
+}
+
+// ======================================================
 //  ROW COLOR
 // ======================================================
 
 function getRowClass(signal) {
-  if (!signal) return "row-czekaj";
 
-  if (signal === "BUY") return "row-buy";
-  if (signal === "SELL") return "row-sell";
+  if (!signal) {
+    return "row-czekaj";
+  }
+
+  if (signal === "BUY") {
+    return "row-buy";
+  }
+
+  if (signal === "SELL") {
+    return "row-sell";
+  }
 
   if (
     signal === "PRAWIE BUY" ||
@@ -530,7 +789,9 @@ function getRowClass(signal) {
     return "row-prawie";
   }
 
-  if (signal === "CZEKAJ DO") {
+  if (
+    signal === "CZEKAJ DO"
+  ) {
     return "row-czekajdo";
   }
 
@@ -541,180 +802,213 @@ function getRowClass(signal) {
 //  TP COLOR
 // ======================================================
 
-function tpColor(price, tp, signal) {
-  if (!tp || tp === "—") return "";
+function tpColor(
+  price,
+  tp,
+  signal
+) {
 
-  const p = parseFloat(price);
-  const t = parseFloat(tp);
-
-  if (isNaN(p) || isNaN(t)) return "";
-
-  if (signal?.includes("BUY")) {
-    if (p >= t) return "tp-hit";
-    if (p <= t * 0.97) return "tp-fail";
-    if (p >= t * 0.9) return "tp-close";
+  if (
+    !tp ||
+    tp === "—"
+  ) {
+    return "";
   }
 
-  if (signal?.includes("SELL")) {
-    if (p <= t) return "tp-hit";
-    if (p >= t * 1.03) return "tp-fail";
-    if (p <= t * 1.1) return "tp-close";
+  const p =
+    parseFloat(price);
+
+  const t =
+    parseFloat(tp);
+
+  if (
+    isNaN(p) ||
+    isNaN(t)
+  ) {
+    return "";
+  }
+
+  if (
+    signal?.includes("BUY")
+  ) {
+
+    if (p >= t) {
+      return "tp-hit";
+    }
+
+    if (p >= t * 0.9) {
+      return "tp-close";
+    }
+
+    return "tp-fail";
+
+  }
+
+  if (
+    signal?.includes("SELL")
+  ) {
+
+    if (p <= t) {
+      return "tp-hit";
+    }
+
+    if (p <= t * 1.1) {
+      return "tp-close";
+    }
+
+    return "tp-fail";
+
   }
 
   return "";
 }
 
 // ======================================================
-//  TICKERS
+//  HANDLE BACKEND
 // ======================================================
 
-const tickers = {};
-
 function handleBackendData(d) {
-  const tf = normalizeInterval(d.interval);
-  const t = d.ticker;
+
+  const tf =
+    normalizeInterval(
+      d.interval
+    );
+
+  const t =
+    d.ticker;
 
   if (!tickers[t]) {
     tickers[t] = {};
   }
 
-  pushToHistory(tickers[t], tf, d);
+  // ======================================================
+  // LAST UPDATE
+  // ======================================================
 
-  const tfStore = tickers[t][tf];
+  tickers[t].lastTF = tf;
 
-  const history = tfStore.history;
+  tickers[t].lastTime =
+    d.time;
+
+  // ======================================================
+  // HISTORY
+  // ======================================================
+
+  pushToHistory(
+    tickers[t],
+    tf,
+    d
+  );
+
+  const tfStore =
+    tickers[t][tf];
+
+  const history =
+    tfStore.history;
 
   const last =
-    history[history.length - 1];
+    history[
+      history.length - 1
+    ];
 
   const tfSignal =
-    computeSignalForTF(history);
+    computeSignalForTF(
+      history
+    );
 
-  tfStore.signal = tfSignal;
-  tfStore.last = last;
+  tfStore.signal =
+    tfSignal;
 
-  last.signal = tfSignal;
+  tfStore.last =
+    last;
+
+  last.signal =
+    tfSignal;
+
+  // ======================================================
+  // M15 EXTRA
+  // ======================================================
 
   if (tf === "M15") {
+
     last.widelki =
       computeWidelki(last);
 
-    const [dol, gor] =
+    const [
+      dol,
+      gor
+    ] =
       last.widelki
-        .split(" - ")
-        .map(Number);
+        .split("-")
+        .map((x) =>
+          Number(x.trim())
+        );
 
     const tp12 =
-      computeTP12(last, dol, gor);
+      computeTP12(
+        last,
+        dol,
+        gor
+      );
 
-    last.tp1 = tp12.tp1;
-    last.tp2 = tp12.tp2;
-    last.tp3 = computeTP3(last);
+    last.tp1 =
+      tp12.tp1;
+
+    last.tp2 =
+      tp12.tp2;
+
+    last.tp3 =
+      computeTP3(last);
+
   }
 
   updateTable();
 }
 
+// ======================================================
+//  UPDATE TABLE
+// ======================================================
+
 function updateTable() {
 
   const tbody =
-    document.getElementById("table-body");
+    document.getElementById(
+      "table-body"
+    );
 
   tbody.innerHTML = "";
 
-  // ======================================================
-  // KOLEJNOŚĆ SYGNAŁÓW
-  // ======================================================
-
-  const priority = {
-    "ENTRY": 0,
-    "BUY": 1,
-    "PRAWIE BUY": 2,
-    "CZEKAJ DO": 3,
-    "CZEKAJ": 4,
-    "PRAWIE SELL": 5,
-    "SELL": 6
-  };
-
-  // ======================================================
-  // ZAMIANA NA TABLICĘ
-  // ======================================================
-
   const rows = [];
 
-  Object.keys(tickers).forEach((t) => {
+  Object.keys(tickers)
+    .forEach((ticker) => {
 
-    const tData = tickers[t];
+      const tData =
+        tickers[ticker];
 
-    const M5 =
-      tData["M5"]?.last;
+      const lastTF =
+        tData.lastTF;
 
-    const M15 =
-      tData["M15"]?.last;
+      if (!lastTF) return;
 
-    const H1 =
-      tData["H1"]?.last;
+      const rec =
+        tData[lastTF]?.last;
 
-    const rec =
-      M15 || H1 || M5;
+      if (!rec) return;
 
-    if (!rec) return;
+      const signal =
+        consensusSignalFromStore(
+          tData
+        );
 
-    const signal =
-      consensusSignalFromStore(tData);
+      rows.push({
+        ticker,
+        tData,
+        rec,
+        signal
+      });
 
-    const hasEntry =
-      rec.entry !== undefined &&
-      rec.entry !== "" &&
-      rec.entry !== "—";
-
-    rows.push({
-      ticker: t,
-      tData,
-      rec,
-      signal,
-      priority:
-        hasEntry
-          ? priority["ENTRY"]
-          : priority[signal] ?? 999
     });
-
-  });
-
-  // ======================================================
-  // SORTOWANIE
-  // ======================================================
-
-  rows.sort((a, b) => {
-
-    // ENTRY zawsze na górze
-    if (a.priority !== b.priority) {
-      return a.priority - b.priority;
-    }
-
-    // dodatkowo BUY wyżej jeśli większy RSI
-    if (
-      a.signal === "BUY" &&
-      b.signal === "BUY"
-    ) {
-      return b.rec.rsi - a.rec.rsi;
-    }
-
-    // SELL niżej jeśli mocniejszy SELL
-    if (
-      a.signal === "SELL" &&
-      b.signal === "SELL"
-    ) {
-      return a.rec.rsi - b.rec.rsi;
-    }
-
-    return 0;
-
-  });
-
-  // ======================================================
-  // RENDER
-  // ======================================================
 
   rows.forEach((item) => {
 
@@ -729,823 +1023,773 @@ function updateTable() {
       tData["M15"]?.last;
 
     const row =
-      document.createElement("tr");
+      document.createElement(
+        "tr"
+      );
 
     row.className =
       getRowClass(signal);
 
     row.innerHTML = `
-    
-      <td class="ticker-cell">
-        ${ticker}
-      </td>
 
-      <td class="price-cell">
-        ${rec.close.toFixed(2)}
-      </td>
+<td class="ticker-cell">
+  ${ticker}
+</td>
 
-      <td>
-        ${rec.interval}<br>
+<td class="price-cell">
+  ${rec.close.toFixed(2)}
+</td>
 
-        <span style="
-          font-size:11px;
-          opacity:0.7;
-        ">
-          ${rec.time ?? ""}
-        </span>
-      </td>
+<td>
 
-      <td class="entry-cell">
+  ${tData.lastTF}
 
-        ${
-          rec.entry
-            ? `<span style="
-                 color:#ffd166;
-                 font-weight:700;
-               ">
-                 ${rec.entry}
-               </span>`
-            : "—"
-        }
+  <br>
 
-      </td>
+  <span class="time-mini">
+    ${tData.lastTime ?? ""}
+  </span>
 
-      <td>
+</td>
+
+<td class="entry-cell">
+
+  ${
+    rec.entry
+      ? rec.entry
+      : "—"
+  }
+
+</td>
+
+<td>
 
   <div class="signal-box">
     ${signal}
   </div>
 
-  <div class="time-mini">
-    ${rec.time ?? ""}
-  </div>
-
 </td>
 
-      <td>
-        ${M15?.widelki ?? "—"}
-      </td>
+<td>
+  ${
+    M15?.widelki ?? "—"
+  }
+</td>
 
-      <td class="${tpColor(
-        rec.close,
-        M15?.tp1,
-        signal
-      )}">
-        ${M15?.tp1 ?? "—"}
-      </td>
+<td class="${tpColor(
+  rec.close,
+  M15?.tp1,
+  signal
+)}">
+  ${M15?.tp1 ?? "—"}
+</td>
 
-      <td class="${tpColor(
-        rec.close,
-        M15?.tp2,
-        signal
-      )}">
-        ${M15?.tp2 ?? "—"}
-      </td>
+<td class="${tpColor(
+  rec.close,
+  M15?.tp2,
+  signal
+)}">
+  ${M15?.tp2 ?? "—"}
+</td>
 
-      <td class="${tpColor(
-        rec.close,
-        M15?.tp3,
-        signal
-      )}">
-        ${M15?.tp3 ?? "—"}
-      </td>
+<td class="${tpColor(
+  rec.close,
+  M15?.tp3,
+  signal
+)}">
+  ${M15?.tp3 ?? "—"}
+</td>
 
-      <td class="delete-cell">
-        🗑️
-      </td>
+<td class="delete-cell">
+  🗑️
+</td>
 
-    `;
+`;
 
     tbody.appendChild(row);
 
   });
 
-  // ======================================================
-  // PUSTA TABELA
-  // ======================================================
-
-  if (rows.length === 0) {
+  if (
+    rows.length === 0
+  ) {
 
     tbody.innerHTML = `
-      <tr>
-        <td colspan="10">
-          Brak danych...
-        </td>
-      </tr>
-    `;
+
+<tr>
+<td colspan="10">
+Brak danych...
+</td>
+</tr>
+
+`;
 
   }
 
   saveTable();
-
 }
 
 // ======================================================
-//  LOCAL STORAGE
+//  STORAGE
 // ======================================================
 
 function saveTable() {
+
   localStorage.setItem(
     STORAGE_KEY,
     JSON.stringify(tickers)
   );
+
 }
 
 function loadTable() {
+
   const raw =
-    localStorage.getItem(STORAGE_KEY);
+    localStorage.getItem(
+      STORAGE_KEY
+    );
 
   if (!raw) return;
 
   try {
-    const parsed = JSON.parse(raw);
 
-    Object.assign(tickers, parsed);
+    const parsed =
+      JSON.parse(raw);
+
+    Object.assign(
+      tickers,
+      parsed
+    );
 
     updateTable();
-  } catch (e) {
+
+  }
+
+  catch (e) {
+
     console.error(e);
+
   }
+
 }
 
 // ======================================================
-//  COMMENT ENGINE
+//  SPEECH
 // ======================================================
 
-function buildDynamicComment(rec, tData) {
+function initRecognition() {
 
-  const c = rec.close;
-  const o = rec.open;
-  const h = rec.high;
-  const l = rec.low;
+  const SR =
+    window.webkitSpeechRecognition ||
+    window.SpeechRecognition;
 
-  const ma = rec.ma20;
-  const de = rec.dema9;
-  const rsi = rec.rsi;
-
-  const range = h - l;
-
-  const body = Math.abs(c - o);
-
-  const upperWick = h - Math.max(c, o);
-  const lowerWick = Math.min(c, o) - l;
-
-  const dirM15 = tData["M15"]
-    ? trendDirectionFromHistory(
-        tData["M15"].history
-      )
-    : "NEUTRAL";
-
-  const dirH1 = tData["H1"]
-    ? trendDirectionFromHistory(
-        tData["H1"].history
-      )
-    : "NEUTRAL";
-
-  // ======================================================
-  // TREND
-  // ======================================================
-
-  let TREND = "";
-
-  const keyLow1 = (ma - range * 0.35).toFixed(0);
-  const keyLow2 = (ma - range * 0.15).toFixed(0);
-
-  if (
-    (dirH1 === "UP" || dirM15 === "UP") &&
-    c < o
-  ) {
-
-    TREND =
-      `Trend wzrostowy, ale świeca spadkowa ` +
-      `wprowadza mocną korektę. ` +
-      `Struktura nadal trzyma, dopóki cena ` +
-      `jest powyżej ${keyLow1}–${keyLow2}.`;
-
+  if (!SR) {
+    return null;
   }
 
-  else if (
-    (dirH1 === "DOWN" || dirM15 === "DOWN") &&
-    c > o
-  ) {
+  const rec = new SR();
 
-    TREND =
-      `Trend spadkowy, ale pojawiło się ` +
-      `kontrujące odbicie. ` +
-      `Presja podaży nadal dominuje.`;
+  rec.lang = "pl-PL";
 
-  }
+  rec.continuous = false;
 
-  else if (
-    dirH1 === "UP" ||
-    dirM15 === "UP"
-  ) {
+  rec.interimResults = false;
 
-    TREND =
-      `Trend wzrostowy. ` +
-      `Cena utrzymuje strukturę wyższych dołków ` +
-      `i nadal kontrolowana jest przez popyt.`;
+  rec.onresult = (e) => {
 
-  }
+    const text =
+      e.results[0][0]
+        .transcript
+        .trim();
 
-  else if (
-    dirH1 === "DOWN" ||
-    dirM15 === "DOWN"
-  ) {
+    document.getElementById(
+      "recognized"
+    ).textContent =
+      `Rozpoznano: ${text}`;
 
-    TREND =
-      `Trend spadkowy. ` +
-      `Rynek pozostaje pod presją podaży ` +
-      `i każda próba odbicia jest gaszona.`;
+    if (
+      recognitionMode ===
+      "SEQUENCE"
+    ) {
 
-  }
+      handleRecognized(text);
 
-  else {
+    }
 
-    TREND =
-      `Rynek znajduje się w konsolidacji ` +
-      `i nadal nie ma dominującego kierunku.`;
+    else if (
+      recognitionMode ===
+        "AD_HOC" &&
+      adHocCallback
+    ) {
 
-  }
+      adHocCallback(text);
 
-  // ======================================================
-  // MOMENTUM
-  // ======================================================
+      adHocCallback = null;
 
-  let MOM = "";
+      recognitionMode =
+        "SEQUENCE";
 
-  if (rsi <= 25) {
+      recognizing = false;
 
-    MOM =
-      `RSI ${rsi} = skrajne wyprzedanie. ` +
-      `To sygnał paniki, nie trendu spadkowego. ` +
-      `Statystycznie rynek odbija z takich poziomów.`;
+    }
 
-  }
+    try {
+      rec.stop();
+    } catch {}
 
-  else if (rsi <= 35) {
+  };
 
-    MOM =
-      `RSI ${rsi} = wyprzedanie rynku. ` +
-      `Momentum spadkowe słabnie i może pojawić się odbicie.`;
-
-  }
-
-  else if (rsi >= 75) {
-
-    MOM =
-      `RSI ${rsi} = ekstremalne wykupienie. ` +
-      `Rynek jest rozgrzany i podatny na korektę.`;
-
-  }
-
-  else if (rsi >= 65) {
-
-    MOM =
-      `RSI ${rsi} = silne momentum wzrostowe, ` +
-      `ale rynek zaczyna być wykupiony.`;
-
-  }
-
-  else {
-
-    MOM =
-      `RSI ${rsi} = neutralne momentum. ` +
-      `Rynek nadal szuka kierunku.`;
-
-  }
-
-  // ======================================================
-  // SIŁA / SŁABOŚĆ
-  // ======================================================
-
-  let SS = "";
-
-  const bigRange =
-    range > (ma * 0.012);
-
-  const strongBull =
-    c > o &&
-    body > range * 0.6;
-
-  const strongBear =
-    o > c &&
-    body > range * 0.6;
-
-  if (
-    bigRange &&
-    c < de
-  ) {
-
-    SS +=
-      `Duży zasięg świecy i zejście pod DEMA9 ` +
-      `= słabość krótkoterminowa. `;
-
-  }
-
-  if (
-    lowerWick > body * 0.8
-  ) {
-
-    SS +=
-      `Długi dolny knot sugeruje obecność popytu ` +
-      `i aktywne bronienie poziomów. `;
-
-  }
-
-  if (
-    upperWick > body * 0.8
-  ) {
-
-    SS +=
-      `Długi górny knot pokazuje aktywną podaż ` +
-      `i odrzucenie wyższych poziomów. `;
-
-  }
-
-  if (strongBull) {
-
-    SS +=
-      `Silna świeca wzrostowa wskazuje ` +
-      `na przewagę kupujących.`;
-
-  }
-
-  if (strongBear) {
-
-    SS +=
-      `Silna świeca spadkowa wskazuje ` +
-      `na dominację sprzedających.`;
-
-  }
-
-  if (SS === "") {
-
-    SS =
-      `Brak dominującej strony rynku. ` +
-      `Cena porusza się neutralnie względem średnich.`;
-
-  }
-
-  // ======================================================
-  // WSPARCIA / OPORY
-  // ======================================================
-
-  const ws1a = (l + range * 0.10).toFixed(0);
-  const ws1b = (l + range * 0.20).toFixed(0);
-
-  const ws2a = (l + range * 0.00).toFixed(0);
-  const ws2b = (l + range * 0.10).toFixed(0);
-
-  const op1a = (h - range * 0.20).toFixed(0);
-  const op1b = (h).toFixed(0);
-
-  const op2a = (de).toFixed(0);
-  const op2b = (de + range * 0.20).toFixed(0);
-
-  const op3a = (ma + range * 0.60).toFixed(0);
-  const op3b = (ma + range * 0.90).toFixed(0);
-
-  // ======================================================
-  // INTERPRETACJA
-  // ======================================================
-
-  let INTER = "";
-
-  const capitulation =
-    rsi <= 28 &&
-    strongBear &&
-    lowerWick > body * 0.5;
-
-  const breakout =
-    c > h - range * 0.15;
-
-  const pullback =
-    c > de &&
-    c < ma;
-
-  if (capitulation) {
-
-    INTER =
-      `To nie jest odwrócenie trendu. ` +
-      `To kapitulacja i mocna korekta po wybiciu. ` +
-      `Rynek często wraca do VWAP po takim ruchu.`;
-
-  }
-
-  else if (breakout) {
-
-    INTER =
-      `Rynek próbuje wybicia górą. ` +
-      `Momentum jest silne, ale po takim ruchu ` +
-      `często pojawia się cofnięcie do średnich.`;
-
-  }
-
-  else if (pullback) {
-
-    INTER =
-      `To wygląda jak klasyczny pullback ` +
-      `do średnich w aktywnym trendzie.`;
-
-  }
-
-  else {
-
-    INTER =
-      `Sytuacja nadal pozostaje neutralna ` +
-      `i rynek nie pokazał pełnej dominacji żadnej strony.`;
-
-  }
-
-  // ======================================================
-  // RYZYKO
-  // ======================================================
-
-  let RISK = "";
-
-  const riskLevel =
-    (l + range * 0.05).toFixed(0);
-
-  if (
-    dirH1 === "UP" ||
-    dirM15 === "UP"
-  ) {
-
-    RISK =
-      `Realne ryzyko pojawia się dopiero ` +
-      `przy zamknięciu M15 poniżej ${riskLevel}.`;
-
-  }
-
-  else if (
-    dirH1 === "DOWN" ||
-    dirM15 === "DOWN"
-  ) {
-
-    RISK =
-      `Rynek pozostaje ryzykowny ` +
-      `dopóki cena nie wróci powyżej ${op1a}.`;
-
-  }
-
-  else {
-
-    RISK =
-      `Ryzyko neutralne — brak aktywnego trendu.`;
-
-  }
-
-  // ======================================================
-  // FINAL
-  // ======================================================
-
-  return `
-TREND: ${TREND}
-
-MOMENTUM: ${MOM}
-
-SIŁA/SŁABOŚĆ: ${SS}
-
-WSPARCIA:
-• ${ws1a}–${ws1b} (lokalne)
-• ${ws2a}–${ws2b} (kluczowe)
-
-OPORY:
-• ${op1a}–${op1b} (lokalne)
-• ${op2a}–${op2b} (DEMA9)
-• ${op3a}–${op3b} (normalizacja)
-
-INTERPRETACJA:
-${INTER}
-
-RYZYKO:
-${RISK}
-`;
-
+  return rec;
 }
 
-let isFetching = false;
+recognition =
+  initRecognition();
 
 // ======================================================
-//  LOGIKA ROZPOZNAWANIA (SWITCH)
+//  RECOGNIZED
 // ======================================================
 
-function handleRecognized(text) {
+function handleRecognized(
+  text
+) {
+
   switch (currentStep) {
+
     case 0:
-      tempRecord.ticker = text.toUpperCase();
+      tempRecord.ticker =
+        text.toUpperCase();
       break;
+
     case 1:
-      tempRecord.interval = normalizeInterval(text);
+      tempRecord.interval =
+        normalizeInterval(text);
       break;
+
     case 2:
-      tempRecord.open = extractNumber(text);
+      tempRecord.open =
+        extractNumber(text);
       break;
+
     case 3:
-      tempRecord.high = extractNumber(text);
+      tempRecord.high =
+        extractNumber(text);
       break;
+
     case 4:
-      tempRecord.low = extractNumber(text);
+      tempRecord.low =
+        extractNumber(text);
       break;
+
     case 5:
-      tempRecord.close = extractNumber(text);
+      tempRecord.close =
+        extractNumber(text);
       break;
+
     case 6:
-      tempRecord.volume = extractNumber(text);
+      tempRecord.volume =
+        extractNumber(text);
       break;
+
     case 7:
-      tempRecord.ma20 = extractNumber(text);
+      tempRecord.ma20 =
+        extractNumber(text);
       break;
+
     case 8:
-      tempRecord.dema9 = extractNumber(text);
+      tempRecord.dema9 =
+        extractNumber(text);
       break;
+
     case 9:
-      tempRecord.rsi = extractNumber(text);
+      tempRecord.rsi =
+        extractNumber(text);
       break;
+
   }
 
   currentStep++;
 
-  if (currentStep >= steps.length) {
+  if (
+    currentStep >=
+    steps.length
+  ) {
+
     recognizing = false;
-    try {
-      recognition.stop();
-      speechSynthesis.cancel();
-    } catch (e) {}
+
     finalizeRecord();
+
   }
+
 }
 
 // ======================================================
-//  OBSŁUGA GŁOSU LEKTORA
+//  SPEAK STEP
 // ======================================================
 
 function sayStep() {
-  if (currentStep >= steps.length) return;
 
-  const msg = new SpeechSynthesisUtterance(steps[currentStep]);
-  msg.lang = "pl-PL";
-
-  msg.onend = () => {
-    setTimeout(() => {
-      try {
-        if (recognizing) {
-          recognition.start();
-        }
-      } catch (e) {
-        console.log("Recognition start error:", e);
-      }
-    }, 300);
-  };
-
-  speechSynthesis.cancel();
-  speechSynthesis.speak(msg);
-}
-
-// ======================================================
-//  FINALIZACJA I WYSYŁKA (BEZPIECZNY FETCH)
-// ======================================================
-
-async function finalizeRecord() {
-  if (isFetching) return;
-  isFetching = true;
-  
-  document.getElementById("recognized").textContent = "Status: Analizuję dane...";
-
-  setTimeout(async () => {
-    try {
-      const urlWithTimestamp = `${backend}?t=${Date.now()}`;
-
-      const response = await fetch(urlWithTimestamp, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(tempRecord),
-      });
-
-      if (!response.ok) throw new Error(`Błąd serwera (${response.status})`);
-
-      const data = await response.json();
-      
-      tempRecord = {};
-      currentStep = 0;
-      isFetching = false;
-      document.getElementById("recognized").textContent = "Analiza gotowa!";
-
-    } catch (err) {
-      console.error("Błąd fetch:", err);
-      document.getElementById("recognized").textContent = "BŁĄD: " + err.message;
-      tempRecord = {};
-      currentStep = 0;
-      isFetching = false;
-    }
-  }, 1000);
-}
-
-// ======================================================
-//  START / STOP SEKWENCJI
-// ======================================================
-
-function startSequence() {
-  if (recognizing) return;
-
-  tempRecord = {};
-  currentStep = 0;
-  recognitionMode = "SEQUENCE";
-  recognizing = true;
-  isFetching = false;
-
-  sayStep();
-}
-
-function stopSequence() {
-  recognizing = false;
-  isFetching = false;
-  speechSynthesis.cancel();
-  try {
-    recognition?.stop();
-  } catch (e) {}
-}
-
-// ======================================================
-//  AD-HOC INPUT
-// ======================================================
-
-function startVoiceInput(callback) {
-  if (recognizing) return;
-
-  const SR = window.webkitSpeechRecognition || window.SpeechRecognition;
-
-  if (!SR) {
-    alert("Brak wsparcia dla rozpoznawania mowy.");
+  if (
+    currentStep >=
+    steps.length
+  ) {
     return;
   }
 
-  if (!recognition) {
-    recognition = initRecognition();
+  const msg =
+    new SpeechSynthesisUtterance(
+      steps[currentStep]
+    );
+
+  msg.lang = "pl-PL";
+
+  msg.onend = () => {
+
+    setTimeout(() => {
+
+      try {
+
+        if (recognizing) {
+          recognition.start();
+        }
+
+      } catch (e) {
+
+        console.log(e);
+
+      }
+
+    }, 250);
+
+  };
+
+  speechSynthesis.cancel();
+
+  speechSynthesis.speak(msg);
+
+}
+
+// ======================================================
+//  FINALIZE
+// ======================================================
+
+async function finalizeRecord() {
+
+  if (isFetching) {
+    return;
   }
 
-  recognitionMode = "AD_HOC";
-  adHocCallback = (spoken) => {
-    callback(spoken.trim());
-  };
+  isFetching = true;
+
+  tempRecord.time =
+    new Date()
+      .toLocaleTimeString(
+        "pl-PL",
+        {
+          hour: "2-digit",
+          minute: "2-digit"
+        }
+      );
+
+  document.getElementById(
+    "comment"
+  ).textContent =
+    "⏳ Analiza...";
+
+  // ======================================================
+  // VALIDATE
+  // ======================================================
+
+  if (
+    !validateCandle(
+      tempRecord
+    )
+  ) {
+
+    console.warn(
+      "OHLC WARNING:",
+      tempRecord
+    );
+
+  }
+
+  try {
+
+    const response =
+      await fetch(
+        `${backend}?t=${Date.now()}`,
+        {
+
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body:
+            JSON.stringify(
+              tempRecord
+            )
+
+        }
+      );
+
+    if (!response.ok) {
+
+      throw new Error(
+        `HTTP ${response.status}`
+      );
+
+    }
+
+    const data =
+      await response.json();
+
+    if (!data.time) {
+
+      data.time =
+        tempRecord.time;
+
+    }
+
+    handleBackendData(
+      data
+    );
+
+    document.getElementById(
+      "comment"
+    ).textContent =
+      "✔️ Dodano świecę";
+
+  }
+
+  catch (err) {
+
+    console.error(err);
+
+    document.getElementById(
+      "comment"
+    ).textContent =
+      "❌ BACKEND ERROR";
+
+  }
+
+  finally {
+
+    tempRecord = {};
+
+    currentStep = 0;
+
+    isFetching = false;
+
+  }
+
+}
+
+// ======================================================
+//  START STOP
+// ======================================================
+
+function startSequence() {
+
+  if (recognizing) {
+    return;
+  }
+
+  tempRecord = {};
+
+  currentStep = 0;
+
+  recognitionMode =
+    "SEQUENCE";
+
+  recognizing = true;
+
+  sayStep();
+
+}
+
+function stopSequence() {
+
+  recognizing = false;
+
+  speechSynthesis.cancel();
+
+  try {
+    recognition?.stop();
+  } catch {}
+
+}
+
+// ======================================================
+//  VOICE INPUT
+// ======================================================
+
+function startVoiceInput(
+  callback
+) {
+
+  if (recognizing) {
+    return;
+  }
+
+  const SR =
+    window.webkitSpeechRecognition ||
+    window.SpeechRecognition;
+
+  if (!SR) {
+
+    alert(
+      "Brak SpeechRecognition"
+    );
+
+    return;
+
+  }
+
+  if (!recognition) {
+    recognition =
+      initRecognition();
+  }
+
+  recognitionMode =
+    "AD_HOC";
+
+  adHocCallback =
+    (spoken) => {
+      callback(
+        spoken.trim()
+      );
+    };
 
   recognizing = true;
 
   try {
+
     recognition.start();
+
   } catch (e) {
+
     console.log(e);
+
   }
+
 }
-
-  
-
 
 // ======================================================
 //  CLICK EVENTS
 // ======================================================
 
-document.addEventListener("click", (e) => {
+document.addEventListener(
+  "click",
+  (e) => {
 
-  const cell = e.target.closest("td");
-  const row = e.target.closest("tr");
+    const cell =
+      e.target.closest("td");
 
-  if (!cell || !row) return;
+    const row =
+      e.target.closest("tr");
 
-  const ticker =
-    row.querySelector(".ticker-cell")
+    if (
+      !cell ||
+      !row
+    ) {
+      return;
+    }
+
+    const ticker =
+      row.querySelector(
+        ".ticker-cell"
+      )
       ?.textContent
       ?.trim();
 
-  if (!ticker) return;
+    if (!ticker) {
+      return;
+    }
 
-  const tData = tickers[ticker];
+    const tData =
+      tickers[ticker];
 
-  if (!tData) return;
+    if (!tData) {
+      return;
+    }
 
-  const rec =
-    tData["M15"]?.last ||
-    tData["H1"]?.last ||
-    tData["M5"]?.last;
+    const rec =
+      tData[
+        tData.lastTF
+      ]?.last;
 
-  if (!rec) return;
+    if (!rec) {
+      return;
+    }
 
-  // ======================================================
-  // POPUP — TYLKO TICKER
-  // ======================================================
+    // ======================================================
+    // POPUP
+    // ======================================================
 
-  if (cell.classList.contains("ticker-cell")) {
+    if (
+      cell.classList.contains(
+        "ticker-cell"
+      )
+    ) {
 
-    const popup =
-      document.getElementById("popup");
-
-    const body =
-      document.getElementById("popupBody");
-
-    body.innerHTML = `
-      <h2>
-        ${ticker}
-      </h2>
-
-      <pre style="
-        white-space:pre-wrap;
-        font-family:inherit;
-        line-height:1.5;
-      ">
-${buildDynamicComment(rec, tData)}
-      </pre>
-    `;
-
-    popup.style.display = "block";
-
-    return;
-  }
-
-  // ======================================================
-  // PRICE
-  // ======================================================
-
-  if (cell.classList.contains("price-cell")) {
-
-    document.getElementById(
-      "comment"
-    ).textContent =
-      "🎤 Podaj nową cenę";
-
-    startVoiceInput((spoken) => {
-
-      const value =
-        parseFloat(
-          spoken.replace(",", ".")
+      const popup =
+        document.getElementById(
+          "popup"
         );
 
-      if (!isNaN(value)) {
-
-        rec.close = value;
-
-        updateTable();
-
+      const body =
         document.getElementById(
-          "comment"
-        ).textContent =
-          "✔️ Cena ustawiona";
-      }
-
-    });
-
-    return;
-  }
-
-  // ======================================================
-  // ENTRY
-  // ======================================================
-
-  if (cell.classList.contains("entry-cell")) {
-
-    document.getElementById(
-      "comment"
-    ).textContent =
-      "🎤 Podaj entry";
-
-    startVoiceInput((spoken) => {
-
-      const value =
-        parseFloat(
-          spoken.replace(",", ".")
+          "popupBody"
         );
 
-      if (!isNaN(value)) {
+      body.innerHTML = `
 
-        rec.entry = value;
+<h2>
+${ticker}
+</h2>
 
-        updateTable();
+<pre style="
+white-space:pre-wrap;
+font-family:inherit;
+line-height:1.5;
+">
+${buildDynamicComment(
+  rec,
+  tData
+)}
+</pre>
 
-        document.getElementById(
-          "comment"
-        ).textContent =
-          "✔️ Entry ustawione";
-      }
+`;
 
-    });
+      popup.style.display =
+        "block";
 
-    return;
+      return;
+
+    }
+
+    // ======================================================
+    // PRICE
+    // ======================================================
+
+    if (
+      cell.classList.contains(
+        "price-cell"
+      )
+    ) {
+
+      document.getElementById(
+        "comment"
+      ).textContent =
+        "🎤 Podaj cenę";
+
+      startVoiceInput(
+        (spoken) => {
+
+          const value =
+            parseFloat(
+              spoken.replace(
+                ",",
+                "."
+              )
+            );
+
+          if (
+            !isNaN(value)
+          ) {
+
+            rec.close =
+              value;
+
+            updateTable();
+
+            document.getElementById(
+              "comment"
+            ).textContent =
+              "✔️ Cena ustawiona";
+
+          }
+
+        }
+      );
+
+      return;
+
+    }
+
+    // ======================================================
+    // ENTRY
+    // ======================================================
+
+    if (
+      cell.classList.contains(
+        "entry-cell"
+      )
+    ) {
+
+      document.getElementById(
+        "comment"
+      ).textContent =
+        "🎤 Podaj entry";
+
+      startVoiceInput(
+        (spoken) => {
+
+          const value =
+            parseFloat(
+              spoken.replace(
+                ",",
+                "."
+              )
+            );
+
+          if (
+            !isNaN(value)
+          ) {
+
+            rec.entry =
+              value;
+
+            updateTable();
+
+            document.getElementById(
+              "comment"
+            ).textContent =
+              "✔️ Entry ustawione";
+
+          }
+
+        }
+      );
+
+      return;
+
+    }
+
+    // ======================================================
+    // DELETE
+    // ======================================================
+
+    if (
+      cell.classList.contains(
+        "delete-cell"
+      )
+    ) {
+
+      delete tickers[
+        ticker
+      ];
+
+      updateTable();
+
+      return;
+
+    }
+
   }
-
-  // ======================================================
-  // DELETE
-  // ======================================================
-
-  if (cell.classList.contains("delete-cell")) {
-
-    delete tickers[ticker];
-
-    updateTable();
-
-    return;
-  }
-
-});
+);
 
 // ======================================================
 //  POPUP CLOSE
@@ -1554,22 +1798,30 @@ ${buildDynamicComment(rec, tData)}
 document.getElementById(
   "popupClose"
 ).onclick = () => {
+
   document.getElementById(
     "popup"
-  ).style.display = "none";
+  ).style.display =
+    "none";
+
 };
 
 // ======================================================
 //  CLEANUP
 // ======================================================
 
-window.onbeforeunload = () => {
-  speechSynthesis.cancel();
+window.onbeforeunload =
+  () => {
 
-  try {
-    recognition?.stop();
-  } catch {}
-};
+    speechSynthesis.cancel();
+
+    try {
+
+      recognition?.stop();
+
+    } catch {}
+
+  };
 
 // ======================================================
 //  AUTO LOAD
