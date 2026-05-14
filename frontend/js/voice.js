@@ -121,25 +121,39 @@ function validateCandle(c) {
 // ======================================================
 
 function finalizeRecord() {
+
   tempRecord.time = new Date().toLocaleTimeString("pl-PL", {
     hour: "2-digit",
     minute: "2-digit"
   });
 
+  // tylko ostrzeżenie — NIE blokujemy wysyłki
+
   if (!validateCandle(tempRecord)) {
+
+    console.warn(
+      "Nietypowa świeca OHLC:",
+      tempRecord
+    );
+
     document.getElementById("comment").textContent =
-      "⚠ Skorygowano świecę OHLC";
-    return;
+      "⚠ Nietypowa świeca OHLC";
   }
 
   fetch(backend, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify(tempRecord)
-})
+
+    method: "POST",
+
+    headers: {
+      "Content-Type": "application/json"
+    },
+
+    body: JSON.stringify(tempRecord)
+
+  })
+
   .then((res) => res.json())
+
   .then((data) => {
 
     if (!data.time)
@@ -154,20 +168,29 @@ function finalizeRecord() {
 
     } catch(err) {
 
-      console.error("HANDLE ERROR:", err);
+      console.error(
+        "HANDLE ERROR:",
+        err
+      );
 
       document.getElementById("comment").textContent =
         "❌ FRONT ERROR: " + err.message;
     }
 
   })
+
   .catch((err) => {
 
-    console.error("FETCH ERROR:", err);
+    console.error(
+      "FETCH ERROR:",
+      err
+    );
 
     document.getElementById("comment").textContent =
       "❌ BACKEND/FETCH ERROR: " + err.message;
   });
+
+}
 
 // ======================================================
 //  SPEECH RECOGNITION
