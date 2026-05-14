@@ -1232,53 +1232,34 @@ ${RISK}
 function handleRecognized(text) {
   switch (currentStep) {
     case 0:
-      tempRecord.ticker =
-        text.toUpperCase();
+      tempRecord.ticker = text.toUpperCase();
       break;
-
     case 1:
-      tempRecord.interval =
-        normalizeInterval(text);
+      tempRecord.interval = normalizeInterval(text);
       break;
-
     case 2:
-      tempRecord.open =
-        extractNumber(text);
+      tempRecord.open = extractNumber(text);
       break;
-
     case 3:
-      tempRecord.high =
-        extractNumber(text);
+      tempRecord.high = extractNumber(text);
       break;
-
     case 4:
-      tempRecord.low =
-        extractNumber(text);
+      tempRecord.low = extractNumber(text);
       break;
-
     case 5:
-      tempRecord.close =
-        extractNumber(text);
+      tempRecord.close = extractNumber(text);
       break;
-
     case 6:
-      tempRecord.volume =
-        extractNumber(text);
+      tempRecord.volume = extractNumber(text);
       break;
-
     case 7:
-      tempRecord.ma20 =
-        extractNumber(text);
+      tempRecord.ma20 = extractNumber(text);
       break;
-
     case 8:
-      tempRecord.dema9 =
-        extractNumber(text);
+      tempRecord.dema9 = extractNumber(text);
       break;
-
     case 9:
-      tempRecord.rsi =
-        extractNumber(text);
+      tempRecord.rsi = extractNumber(text);
       break;
   }
 
@@ -1286,24 +1267,31 @@ function handleRecognized(text) {
 
   if (currentStep >= steps.length) {
     recognizing = false;
+    
+    try {
+      recognition.stop();
+    } catch (e) {}
+    
     finalizeRecord();
   }
 }
 
 function sayStep() {
-  const msg =
-    new SpeechSynthesisUtterance(
-      steps[currentStep]
-    );
+  if (currentStep >= steps.length) return;
 
+  const msg = new SpeechSynthesisUtterance(steps[currentStep]);
   msg.lang = "pl-PL";
 
   msg.onend = () => {
     setTimeout(() => {
       try {
-        recognition.start();
-      } catch {}
-    }, 200);
+        if (recognizing) {
+          recognition.start();
+        }
+      } catch (e) {
+        console.log("Recognition start error:", e);
+      }
+    }, 300);
   };
 
   speechSynthesis.cancel();
@@ -1311,31 +1299,72 @@ function sayStep() {
 }
 
 // ======================================================
-//  START / STOP
+// FINALIZACJA I WYSYŁKA
+// ======================================================
+
+async function finalizeRecord() {
+  document.getElementById("recognized").textContent = "Status: Analizuję dane...";
+
+  setTimeout(async () => {
+    try {
+      // 2. UNIKALNY ADRES (t=...) - rozwiązuje problem blokady tego samego interwału
+      const urlWithTimestamp = `${backend}?t=${Date.now()}`;
+
+      const response = await fetch(urlWithTimestamp, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(tempRecord),
+      });
+
+      if (!response.ok) throw new Error(`Błąd serwera (${response.status})`);
+
+      const data = await response.json();
+      console.log("Analiza zakończona:", data);
+
+      // --- RESET SYSTEMU ---
+      // Czyścimy wszystko, aby można było od razu zrobić nową analizę (np. znów M15)
+      tempRecord = {};
+      currentStep = 0;
+      document.getElementById("recognized").textContent = "Analiza gotowa!";
+
+      // Jeśli masz funkcję do odświeżania tabeli na stronie, wywołaj ją tutaj, np.:
+      // if (typeof refreshTable === 'function') refreshTable();
+
+    } catch (err) {
+      console.error("Błąd fetch:", err);
+      document.getElementById("recognized").textContent = "BŁĄD: " + err.message;
+      
+      // Resetujemy kroki nawet przy błędzie, żeby nie "zawiesić" aplikacji
+      tempRecord = {};
+      currentStep = 0;
+    }
+  }, 800);
+}
+
+// ======================================================
+// START / STOP
 // ======================================================
 
 function startSequence() {
   if (recognizing) return;
 
+  // Reset na start
   tempRecord = {};
-
   currentStep = 0;
-
   recognitionMode = "SEQUENCE";
-
   recognizing = true;
 
+  // Najpierw system mówi, potem onend odpala mikrofon
   sayStep();
 }
 
 function stopSequence() {
   recognizing = false;
-
   recognitionMode = "SEQUENCE";
-
+  speechSynthesis.cancel();
   try {
     recognition?.stop();
-  } catch {}
+  } catch (e) {}
 }
 
 // ======================================================
