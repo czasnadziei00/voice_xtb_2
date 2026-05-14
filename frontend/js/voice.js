@@ -133,28 +133,41 @@ function finalizeRecord() {
   }
 
   fetch(backend, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(tempRecord)
-  })
-    .then((res) => res.json())
-    .then((data) => {
-      if (!data.time) data.time = tempRecord.time;
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify(tempRecord)
+})
+  .then((res) => res.json())
+  .then((data) => {
+
+    if (!data.time)
+      data.time = tempRecord.time;
+
+    try {
 
       handleBackendData(data);
 
       document.getElementById("comment").textContent =
         "✔️ Dodano świecę";
-    })
-    .catch((err) => {
-      console.error(err);
+
+    } catch(err) {
+
+      console.error("HANDLE ERROR:", err);
 
       document.getElementById("comment").textContent =
-        "❌ Błąd backendu";
-    });
-}
+        "❌ FRONT ERROR: " + err.message;
+    }
+
+  })
+  .catch((err) => {
+
+    console.error("FETCH ERROR:", err);
+
+    document.getElementById("comment").textContent =
+      "❌ BACKEND/FETCH ERROR: " + err.message;
+  });
 
 // ======================================================
 //  SPEECH RECOGNITION
