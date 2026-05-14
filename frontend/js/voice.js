@@ -1249,78 +1249,66 @@ recognition =
 //  RECOGNIZED
 // ======================================================
 
-function handleRecognized(
-  text
-) {
+
+    function handleRecognized(text) {
 
   switch (currentStep) {
-
     case 0:
-      tempRecord.ticker =
-        text.toUpperCase();
+      tempRecord.ticker = text.toUpperCase();
       break;
-
     case 1:
-      tempRecord.interval =
-        normalizeInterval(text);
+      tempRecord.interval = normalizeInterval(text);
       break;
-
     case 2:
-      tempRecord.open =
-        extractNumber(text);
+      tempRecord.open = extractNumber(text);
       break;
-
     case 3:
-      tempRecord.high =
-        extractNumber(text);
+      tempRecord.high = extractNumber(text);
       break;
-
     case 4:
-      tempRecord.low =
-        extractNumber(text);
+      tempRecord.low = extractNumber(text);
       break;
-
     case 5:
-      tempRecord.close =
-        extractNumber(text);
+      tempRecord.close = extractNumber(text);
       break;
-
     case 6:
-      tempRecord.volume =
-        extractNumber(text);
+      tempRecord.volume = extractNumber(text);
       break;
-
     case 7:
-      tempRecord.ma20 =
-        extractNumber(text);
+      tempRecord.ma20 = extractNumber(text);
       break;
-
     case 8:
-      tempRecord.dema9 =
-        extractNumber(text);
+      tempRecord.dema9 = extractNumber(text);
       break;
-
     case 9:
-      tempRecord.rsi =
-        extractNumber(text);
+      tempRecord.rsi = extractNumber(text);
       break;
-
   }
 
   currentStep++;
 
-  if (
-    currentStep >=
-    steps.length
-  ) {
+  // 🔴 KLUCZ: jeśli nie koniec → idź dalej
+  if (currentStep < steps.length) {
 
-    recognizing = false;
+    setTimeout(() => {
+      sayStep();   // <<< TO ODPALA NASTĘPNY MIKROFON
+    }, 300);
 
-    finalizeRecord();
-
+    return;
   }
 
+  // koniec sekwencji
+  recognizing = false;
+
+  try {
+    recognition.stop();
+    speechSynthesis.cancel();
+  } catch {}
+
+  finalizeRecord();
 }
+
+  
 
 // ======================================================
 //  SPEAK STEP
