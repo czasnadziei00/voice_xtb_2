@@ -34,48 +34,39 @@ function extractNumber(text) {
 
   if (!text) return 0;
 
-  // lowercase
-  text = text.toLowerCase();
-
-  // usuń spacje
-  text = text.replace(/\s+/g, "");
-
-  // przecinki → kropki
-  text = text.replace(/,/g, ".");
-
-  // typowe błędy speech api
   text = text
-    .replace("tys", "000")
-    .replace("tysiąc", "1000")
-    .replace("kropka", ".")
-    .replace("przecinek", ".");
+    .toString()
+    .trim()
 
-  // zostaw tylko cyfry i kropkę
-  text = text.replace(/[^0-9.]/g, "");
+    // usuń spacje
+    .replace(/\s+/g, "")
 
-  // fix typu 1.119 → 1119
-  if (
-    text.includes(".") &&
-    text.split(".")[1]?.length === 3
-  ) {
-    text = text.replace(".", "");
+    // przecinek → kropka
+    .replace(/,/g, ".");
+
+  // jeśli są 2+ kropek
+  // zostaw ostatnią jako dziesiętną
+
+  const dots =
+    (text.match(/\./g) || []).length;
+
+  if (dots > 1) {
+
+    const parts = text.split(".");
+
+    const decimal = parts.pop();
+
+    text =
+      parts.join("") +
+      "." +
+      decimal;
   }
 
-  // fix gdy speech ucina 1 z przodu:
-  // 119 przy rynku 1000+
   const num = parseFloat(text);
 
-  if (isNaN(num)) return 0;
-
-  // heurystyka dla indeksów
-  if (
-    num < 200 &&
-    text.length === 3
-  ) {
-    return parseFloat("1" + text);
-  }
-
-  return num;
+  return isNaN(num)
+    ? 0
+    : num;
 }
 
 function normalizeInterval(tf) {
