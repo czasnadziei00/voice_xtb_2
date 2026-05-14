@@ -89,13 +89,59 @@ function normalizeInterval(tf) {
 }
 
 function validateCandle(c) {
-  return (
-    c.high >= c.low &&
-    c.open >= c.low &&
-    c.open <= c.high &&
-    c.close >= c.low &&
-    c.close <= c.high
-  );
+
+  // brak danych
+  if (
+    !isFinite(c.open) ||
+    !isFinite(c.high) ||
+    !isFinite(c.low) ||
+    !isFinite(c.close)
+  ) {
+    return false;
+  }
+
+  // absurdalne wartości
+  if (
+    c.open <= 0 ||
+    c.high <= 0 ||
+    c.low <= 0 ||
+    c.close <= 0
+  ) {
+    return false;
+  }
+
+  // AUTO FIX HIGH / LOW
+  // jeśli voice pomylił kolejność
+
+  if (c.low > c.high) {
+    const tmp = c.low;
+    c.low = c.high;
+    c.high = tmp;
+  }
+
+  // tolerancja 5%
+  const tolerance =
+    Math.abs(c.high - c.low) * 0.05;
+
+  // OPEN poza zakresem
+  if (c.open < c.low - tolerance) {
+    c.open = c.low;
+  }
+
+  if (c.open > c.high + tolerance) {
+    c.open = c.high;
+  }
+
+  // CLOSE poza zakresem
+  if (c.close < c.low - tolerance) {
+    c.close = c.low;
+  }
+
+  if (c.close > c.high + tolerance) {
+    c.close = c.high;
+  }
+
+  return true;
 }
 
 // ======================================================
@@ -110,7 +156,7 @@ function finalizeRecord() {
 
   if (!validateCandle(tempRecord)) {
     document.getElementById("comment").textContent =
-      "❌ Nieprawidłowa świeca OHLC";
+      "⚠ Skorygowano świecę OHLC";
     return;
   }
 
