@@ -1225,8 +1225,10 @@ ${RISK}
 
 }
 
+let isFetching = false;
+
 // ======================================================
-//  HANDLE SPEECH
+//  LOGIKA ROZPOZNAWANIA (SWITCH)
 // ======================================================
 
 function handleRecognized(text) {
@@ -1267,14 +1269,17 @@ function handleRecognized(text) {
 
   if (currentStep >= steps.length) {
     recognizing = false;
-    
     try {
       recognition.stop();
+      speechSynthesis.cancel();
     } catch (e) {}
-    
     finalizeRecord();
   }
 }
+
+// ======================================================
+//  OBSŁUGA GŁOSU LEKTORA
+// ======================================================
 
 function sayStep() {
   if (currentStep >= steps.length) return;
@@ -1299,15 +1304,17 @@ function sayStep() {
 }
 
 // ======================================================
-// FINALIZACJA I WYSYŁKA
+//  FINALIZACJA I WYSYŁKA (BEZPIECZNY FETCH)
 // ======================================================
 
 async function finalizeRecord() {
+  if (isFetching) return;
+  isFetching = true;
+  
   document.getElementById("recognized").textContent = "Status: Analizuję dane...";
 
   setTimeout(async () => {
     try {
-      // 2. UNIKALNY ADRES (t=...) - rozwiązuje problem blokady tego samego interwału
       const urlWithTimestamp = `${backend}?t=${Date.now()}`;
 
       const response = await fetch(urlWithTimestamp, {
@@ -1319,48 +1326,41 @@ async function finalizeRecord() {
       if (!response.ok) throw new Error(`Błąd serwera (${response.status})`);
 
       const data = await response.json();
-      console.log("Analiza zakończona:", data);
-
-      // --- RESET SYSTEMU ---
-      // Czyścimy wszystko, aby można było od razu zrobić nową analizę (np. znów M15)
+      
       tempRecord = {};
       currentStep = 0;
+      isFetching = false;
       document.getElementById("recognized").textContent = "Analiza gotowa!";
-
-      // Jeśli masz funkcję do odświeżania tabeli na stronie, wywołaj ją tutaj, np.:
-      // if (typeof refreshTable === 'function') refreshTable();
 
     } catch (err) {
       console.error("Błąd fetch:", err);
       document.getElementById("recognized").textContent = "BŁĄD: " + err.message;
-      
-      // Resetujemy kroki nawet przy błędzie, żeby nie "zawiesić" aplikacji
       tempRecord = {};
       currentStep = 0;
+      isFetching = false;
     }
-  }, 800);
+  }, 1000);
 }
 
 // ======================================================
-// START / STOP
+//  START / STOP SEKWENCJI
 // ======================================================
 
 function startSequence() {
   if (recognizing) return;
 
-  // Reset na start
   tempRecord = {};
   currentStep = 0;
   recognitionMode = "SEQUENCE";
   recognizing = true;
+  isFetching = false;
 
-  // Najpierw system mówi, potem onend odpala mikrofon
   sayStep();
 }
 
 function stopSequence() {
   recognizing = false;
-  recognitionMode = "SEQUENCE";
+  isFetching = false;
   speechSynthesis.cancel();
   try {
     recognition?.stop();
@@ -1374,15 +1374,10 @@ function stopSequence() {
 function startVoiceInput(callback) {
   if (recognizing) return;
 
-  const SR =
-    window.webkitSpeechRecognition ||
-    window.SpeechRecognition;
+  const SR = window.webkitSpeechRecognition || window.SpeechRecognition;
 
   if (!SR) {
-    alert(
-      "Brak wsparcia dla rozpoznawania mowy."
-    );
-
+    alert("Brak wsparcia dla rozpoznawania mowy.");
     return;
   }
 
@@ -1391,7 +1386,6 @@ function startVoiceInput(callback) {
   }
 
   recognitionMode = "AD_HOC";
-
   adHocCallback = (spoken) => {
     callback(spoken.trim());
   };
@@ -1404,6 +1398,9 @@ function startVoiceInput(callback) {
     console.log(e);
   }
 }
+
+  
+
 
 // ======================================================
 //  CLICK EVENTS
