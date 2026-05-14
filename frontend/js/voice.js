@@ -1327,12 +1327,16 @@ function startVoiceInput(callback) {
 // ======================================================
 
 document.addEventListener("click", (e) => {
-  const row = e.target.parentElement;
 
-  if (!row) return;
+  const cell = e.target.closest("td");
+  const row = e.target.closest("tr");
+
+  if (!cell || !row) return;
 
   const ticker =
-    row.children[0]?.textContent.trim();
+    row.querySelector(".ticker-cell")
+      ?.textContent
+      ?.trim();
 
   if (!ticker) return;
 
@@ -1347,13 +1351,12 @@ document.addEventListener("click", (e) => {
 
   if (!rec) return;
 
-  // POPUP
+  // ======================================================
+  // POPUP — TYLKO TICKER
+  // ======================================================
 
-  if (
-    e.target.classList.contains(
-      "ticker-cell"
-    )
-  ) {
+  if (cell.classList.contains("ticker-cell")) {
+
     const popup =
       document.getElementById("popup");
 
@@ -1368,33 +1371,37 @@ document.addEventListener("click", (e) => {
       <pre style="
         white-space:pre-wrap;
         font-family:inherit;
+        line-height:1.5;
       ">
-${buildDynamicComment(rec)}
+${buildDynamicComment(rec, tData)}
       </pre>
     `;
 
     popup.style.display = "block";
+
+    return;
   }
 
+  // ======================================================
   // PRICE
+  // ======================================================
 
-  if (
-    e.target.classList.contains(
-      "price-cell"
-    )
-  ) {
+  if (cell.classList.contains("price-cell")) {
+
     document.getElementById(
       "comment"
     ).textContent =
       "🎤 Podaj nową cenę";
 
     startVoiceInput((spoken) => {
+
       const value =
         parseFloat(
           spoken.replace(",", ".")
         );
 
       if (!isNaN(value)) {
+
         rec.close = value;
 
         updateTable();
@@ -1404,28 +1411,32 @@ ${buildDynamicComment(rec)}
         ).textContent =
           "✔️ Cena ustawiona";
       }
+
     });
+
+    return;
   }
 
+  // ======================================================
   // ENTRY
+  // ======================================================
 
-  if (
-    e.target.classList.contains(
-      "entry-cell"
-    )
-  ) {
+  if (cell.classList.contains("entry-cell")) {
+
     document.getElementById(
       "comment"
     ).textContent =
       "🎤 Podaj entry";
 
     startVoiceInput((spoken) => {
+
       const value =
         parseFloat(
           spoken.replace(",", ".")
         );
 
       if (!isNaN(value)) {
+
         rec.entry = value;
 
         updateTable();
@@ -1435,20 +1446,25 @@ ${buildDynamicComment(rec)}
         ).textContent =
           "✔️ Entry ustawione";
       }
+
     });
+
+    return;
   }
 
+  // ======================================================
   // DELETE
+  // ======================================================
 
-  if (
-    e.target.classList.contains(
-      "delete-cell"
-    )
-  ) {
+  if (cell.classList.contains("delete-cell")) {
+
     delete tickers[ticker];
 
     updateTable();
+
+    return;
   }
+
 });
 
 // ======================================================
