@@ -29,7 +29,6 @@ const steps = [
 // ======================================================
 //  UTILITY
 // ======================================================
-
 function extractNumber(text) {
 
   if (!text) return 0;
@@ -37,37 +36,19 @@ function extractNumber(text) {
   text = text
     .toString()
     .trim()
+    .toLowerCase();
 
-    // usuń spacje
-    .replace(/\s+/g, "")
+  // tylko zamiana słowna → znak
+  text = text
+    .replace("kropka", ".")
+    .replace("przecinek", ".")
+    .replace(/\s+/g, "");
 
-    // przecinek → kropka
-    .replace(/,/g, ".");
+  const num = Number(text);
 
-  // jeśli są 2+ kropek
-  // zostaw ostatnią jako dziesiętną
-
-  const dots =
-    (text.match(/\./g) || []).length;
-
-  if (dots > 1) {
-
-    const parts = text.split(".");
-
-    const decimal = parts.pop();
-
-    text =
-      parts.join("") +
-      "." +
-      decimal;
-  }
-
-  const num = parseFloat(text);
-
-  return isNaN(num)
-    ? 0
-    : num;
+  return isFinite(num) ? num : 0;
 }
+
 
 function normalizeInterval(tf) {
   tf = tf.toUpperCase().trim();
