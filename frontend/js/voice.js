@@ -734,12 +734,11 @@ document.addEventListener(
     tickers[ticker];
   if (!tData)
     return;
-  const rec =
-    tData[
-      tData.lastTF
-    ]?.last;
-  if (!rec)
-    return;
+
+
+  const lastTF = tData.lastTF || "M5";
+  const rec = tData[lastTF]?.last;
+
   if (
     cell.classList.contains(
       "ticker-cell"
@@ -762,13 +761,14 @@ document.addEventListener(
         font-family:inherit;
         line-height:1.5;
       ">
-${rec.comment || "Brak komentarza"}
+${rec?.comment || "Brak komentarza"}
       </pre>
     `;
     popup.style.display =
       "block";
     return;
   }
+
   if (
     cell.classList.contains(
       "entry-cell"
@@ -778,6 +778,7 @@ ${rec.comment || "Brak komentarza"}
       "comment"
     ).textContent =
       "🎤 Podaj entry";
+    
     startVoiceInput(
       async (spoken) => {
       const value =
@@ -785,20 +786,23 @@ ${rec.comment || "Brak komentarza"}
           spoken
         );
       if (value === 0) return;
+
+  
       const cleanData = {
         ticker: ticker,
-        interval: tData.lastTF || "M5",
-        open: rec.open,
-        high: rec.high,
-        low: rec.low,
-        close: rec.close,
-        volume: rec.volume,
-        ma20: rec.ma20,
-        dema9: rec.dema9,
-        rsi: rec.rsi,
-        entry: value,
-        time: rec.time
+        interval: lastTF,
+        open: parseFloat(rec?.open) || 0,
+        high: parseFloat(rec?.high) || 0,
+        low: parseFloat(rec?.low) || 0,
+        close: parseFloat(rec?.close) || 0,
+        volume: parseFloat(rec?.volume) || 0,
+        ma20: parseFloat(rec?.ma20) || 0,
+        dema9: parseFloat(rec?.dema9) || 0,
+        rsi: parseFloat(rec?.rsi) || 0,
+        entry: parseFloat(value),
+        time: rec?.time || ""
       };
+
       try {
         const res =
           await fetch(
@@ -815,7 +819,9 @@ ${rec.comment || "Brak komentarza"}
                 )
             }
           );
+        
         if (!res.ok) throw new Error("Server error");
+        
         const updated =
           await res.json();
         handleBackendData(
@@ -826,7 +832,7 @@ ${rec.comment || "Brak komentarza"}
         ).textContent =
           "✔️ Entry: " + value;
       } catch (err) {
-        console.error(err);
+        console.error("ENTRY ERROR:", err);
         document.getElementById(
           "comment"
         ).textContent =
@@ -835,6 +841,8 @@ ${rec.comment || "Brak komentarza"}
     });
     return;
   }
+
+  // Usuwanie
   if (
     cell.classList.contains(
       "delete-cell"
@@ -845,6 +853,7 @@ ${rec.comment || "Brak komentarza"}
     return;
   }
 });
+
 
 // ======================================================
 //  POPUP CLOSE
