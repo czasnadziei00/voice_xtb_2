@@ -20,10 +20,6 @@
 
 <style>
 
-/* ======================================================
-   GLOBAL
-====================================================== */
-
 *{
   box-sizing:border-box;
 }
@@ -33,80 +29,53 @@ html{
 }
 
 body{
-
   margin:0;
   padding:14px;
-
   background:#0d0d0d;
   color:#e6e6e6;
-
   font-family:
     "Segoe UI",
     Arial,
     sans-serif;
 }
 
-/* ======================================================
-   HEADER
-====================================================== */
-
 h1{
-
   margin:0 0 16px 0;
-
   font-size:22px;
   font-weight:700;
-
   color:#f2f2f2;
-
   letter-spacing:0.3px;
 }
 
-/* ======================================================
-   CONTROLS
-====================================================== */
-
 #controls{
-
   display:flex;
   flex-wrap:wrap;
   gap:10px;
-
   margin-bottom:14px;
 }
 
 button{
-
   border:none;
   border-radius:10px;
-
   padding:10px 16px;
-
   cursor:pointer;
-
   color:#fff;
-
   font-size:14px;
   font-weight:700;
-
   transition:0.18s;
-
   box-shadow:
     0 0 10px rgba(0,0,0,0.25);
 }
 
 button:hover{
-
   transform:translateY(-1px);
 }
 
 button:active{
-
   transform:scale(0.98);
 }
 
 .btn-start{
-
   background:
     linear-gradient(
       135deg,
@@ -116,7 +85,6 @@ button:active{
 }
 
 .btn-stop{
-
   background:
     linear-gradient(
       135deg,
@@ -125,364 +93,262 @@ button:active{
     );
 }
 
-/* ======================================================
-   STATUS
-====================================================== */
-
 #comment,
 #recognized,
 #parsed{
-
   margin:6px 0;
-
   font-size:13px;
-
-  color:#bfbfbf;
-
   word-wrap:break-word;
 }
 
 #comment{
-
   color:#f0f0f0;
   font-weight:600;
 }
 
 #recognized{
-
   color:#7ec8ff;
 }
 
 #parsed{
-
   color:#ffd166;
 }
 
-/* ======================================================
-   TABLE WRAPPER
-====================================================== */
-
 .table-wrapper{
-
   width:100%;
-
   overflow-x:auto;
-
   margin-top:15px;
-
   border-radius:14px;
 }
 
-/* ======================================================
-   TABLE
-====================================================== */
-
 #proTable{
-
   width:100%;
-
   min-width:980px;
-
   border-collapse:separate;
   border-spacing:0 6px;
-
   font-size:14px;
 }
 
 #proTable thead th{
-
   background:#1a1a1a;
-
   padding:11px 6px;
-
   border-bottom:2px solid #333;
-
   color:#dcdcdc;
-
   text-align:center;
-
   font-weight:700;
-
   position:sticky;
   top:0;
   z-index:10;
 }
 
 #proTable tbody tr{
-
   background:#141414;
-
   transition:0.16s;
 }
 
 #proTable tbody tr:hover{
-
   background:#1d1d1d;
 }
 
 #proTable td{
-
   padding:10px 6px;
-
   text-align:center;
-
   border-top:1px solid #222;
   border-bottom:1px solid #222;
-
   vertical-align:middle;
 }
-
-/* ======================================================
-   CELLS
-====================================================== */
 
 .ticker-cell,
 .price-cell,
 .entry-cell,
 .delete-cell{
-
   user-select:none;
   cursor:pointer;
 }
 
 .ticker-cell{
-
   min-width:100px;
-
   color:#6fb6ff;
-
   font-weight:700;
 }
 
 .ticker-cell:hover{
-
   color:#9ed0ff;
 }
 
 .price-cell{
-
   min-width:90px;
-
   color:#ffffff;
-
   font-weight:700;
-
   font-size:15px;
 }
 
 .entry-cell{
-
   min-width:85px;
-
   color:#ffd166;
-
   font-weight:700;
 }
 
 .delete-cell{
-
   width:50px;
-
   font-size:18px;
 }
 
-/* ======================================================
-   SIGNAL
-====================================================== */
-
 .signal-box{
-
   font-size:16px;
-
   font-weight:800;
-
   letter-spacing:0.3px;
 }
 
-/* ======================================================
-   TIME MINI
-====================================================== */
-
 .time-mini{
-
   margin-top:2px;
-
   font-size:11px;
-
-  opacity:0.7;
+  opacity:0.72;
 }
 
-/* ======================================================
-   INTERVAL CELL
-====================================================== */
-
 .interval-box{
-
   font-weight:700;
-
   color:#f3f3f3;
 }
 
 .interval-time{
-
   margin-top:3px;
-
   font-size:11px;
-
-  opacity:0.7;
+  opacity:0.72;
 }
 
-/* ======================================================
-   SIGNAL ROW COLORS
-====================================================== */
-
 .row-buy{
-    background:rgba(0,180,0,0.22)!important;
+  background:rgba(0,180,0,0.22)!important;
 }
 
 .row-sell{
-    background:rgba(255,0,0,0.22)!important;
+  background:rgba(255,0,0,0.22)!important;
 }
 
 .row-prawie{
-    background:rgba(255,215,0,0.22)!important;
+  background:rgba(255,215,0,0.22)!important;
 }
 
 .row-czekajdo{
-    background:rgba(0,120,255,0.22)!important;
+  background:rgba(0,120,255,0.22)!important;
 }
 
 .row-czekaj{
-    background:rgba(160,160,160,0.14)!important;
+  background:rgba(160,160,160,0.14)!important;
 }
 
-/* ======================================================
-   TP COLORS
-====================================================== */
-
 .tp-hit{
-    color:#00ff7f!important;
-    font-weight:700;
+  color:#00ff7f!important;
+  font-weight:700;
 }
 
 .tp-close{
-    color:#ffd700!important;
-    font-weight:700;
+  color:#ffd700!important;
+  font-weight:700;
 }
 
 .tp-fail{
-    color:#ff4d4d!important;
-    font-weight:700;
+  color:#ff4d4d!important;
+  font-weight:700;
 }
 
-/* ======================================================
-   POPUP
-====================================================== */
-
 .popup{
-    display:none;
-    position:fixed;
-    z-index:999;
-    inset:0;
-    width:100%;
-    height:100%;
-    background:rgba(0,0,0,0.82);
-    backdrop-filter:blur(4px);
-    padding:20px;
+  display:none;
+  position:fixed;
+  z-index:999;
+  inset:0;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,0.82);
+  backdrop-filter:blur(4px);
+  padding:20px;
 }
 
 .popup-content{
-    background:#121212;
-    width:100%;
-    max-width:560px;
-    margin:auto;
-    padding:22px;
-    border-radius:18px;
-    border:1px solid #222;
-    box-shadow:0 0 30px rgba(0,0,0,0.55);
-    color:#eee;
-    max-height:88vh;
-    overflow-y:auto;
+  background:#121212;
+  width:100%;
+  max-width:560px;
+  margin:auto;
+  padding:22px;
+  border-radius:18px;
+  border:1px solid #222;
+  box-shadow:0 0 30px rgba(0,0,0,0.55);
+  color:#eee;
+  max-height:88vh;
+  overflow-y:auto;
 }
 
 .popup-close{
-    float:right;
-    font-size:24px;
-    cursor:pointer;
-    opacity:0.75;
-    transition:0.2s;
+  float:right;
+  font-size:24px;
+  cursor:pointer;
+  opacity:0.75;
+  transition:0.2s;
 }
 
 .popup-close:hover{
-    opacity:1;
-    transform:scale(1.08);
+  opacity:1;
+  transform:scale(1.08);
 }
 
 .popup-content h2{
-    margin-top:0;
-    margin-bottom:14px;
-    font-size:22px;
+  margin-top:0;
+  margin-bottom:14px;
+  font-size:22px;
 }
 
 .popup-content pre{
-    white-space:pre-wrap;
-    font-family:inherit;
-    font-size:14px;
-    line-height:1.6;
-    color:#d8d8d8;
+  white-space:pre-wrap;
+  font-family:inherit;
+  font-size:14px;
+  line-height:1.6;
+  color:#d8d8d8;
 }
-
-/* ======================================================
-   MOBILE
-====================================================== */
 
 @media (max-width:768px){
 
-    body{
-        padding:10px;
-    }
+  body{
+    padding:10px;
+  }
 
-    h1{
-        font-size:18px;
-    }
+  h1{
+    font-size:18px;
+  }
 
-    button{
-        width:100%;
-    }
+  button{
+    width:100%;
+  }
 
-    #controls{
-        flex-direction:column;
-    }
+  #controls{
+    flex-direction:column;
+  }
 
-    #proTable{
-        min-width:850px;
-    }
+  #proTable{
+    min-width:850px;
+  }
 
 }
 
-/* ======================================================
-   SCROLLBAR
-====================================================== */
-
 ::-webkit-scrollbar{
-    width:10px;
-    height:10px;
+  width:10px;
+  height:10px;
 }
 
 ::-webkit-scrollbar-track{
-    background:#111;
+  background:#111;
 }
 
 ::-webkit-scrollbar-thumb{
-    background:#333;
-    border-radius:10px;
+  background:#333;
+  border-radius:10px;
 }
 
 ::-webkit-scrollbar-thumb:hover{
-    background:#444;
+  background:#444;
 }
 
 </style>
+
 </head>
 
 <body>
@@ -491,47 +357,35 @@ button:active{
 VOICE XTB 7.4 PRO — M5 / M15 / H1
 </h1>
 
-<!-- ======================================================
-     CONTROLS
-====================================================== -->
-
 <div id="controls">
 
-    <button
-        class="btn-start"
-        onclick="startSequence()"
-    >
-        🎤 Start sekwencji
-    </button>
+  <button
+    class="btn-start"
+    onclick="startSequence()"
+  >
+    🎤 Start sekwencji
+  </button>
 
-    <button
-        class="btn-stop"
-        onclick="stopSequence()"
-    >
-        ⛔ Stop
-    </button>
+  <button
+    class="btn-stop"
+    onclick="stopSequence()"
+  >
+    ⛔ Stop
+  </button>
 
 </div>
 
-<!-- ======================================================
-     STATUS
-====================================================== -->
-
 <div id="comment">
-    Status systemu...
+  Status systemu...
 </div>
 
 <div id="recognized">
-    Rozpoznano: —
+  Rozpoznano: —
 </div>
 
 <div id="parsed">
-    Bufor JSON: —
+  Bufor JSON: —
 </div>
-
-<!-- ======================================================
-     TABLE
-====================================================== -->
 
 <div class="table-wrapper">
 
@@ -540,16 +394,16 @@ VOICE XTB 7.4 PRO — M5 / M15 / H1
 <thead>
 
 <tr>
-    <th>Ticker</th>
-    <th>Cena</th>
-    <th>Ostatnia świeca</th>
-    <th>Entry</th>
-    <th>Sygnał</th>
-    <th>Widełki</th>
-    <th>TP1</th>
-    <th>TP2</th>
-    <th>TP3</th>
-    <th>🗑️</th>
+  <th>Ticker</th>
+  <th>Cena</th>
+  <th>Ostatnia świeca</th>
+  <th>Entry</th>
+  <th>Sygnał</th>
+  <th>Widełki</th>
+  <th>TP1</th>
+  <th>TP2</th>
+  <th>TP3</th>
+  <th>🗑️</th>
 </tr>
 
 </thead>
@@ -558,7 +412,7 @@ VOICE XTB 7.4 PRO — M5 / M15 / H1
 
 <tr>
 <td colspan="10">
-    Oczekiwanie na dane...
+  Oczekiwanie na dane...
 </td>
 </tr>
 
@@ -568,23 +422,19 @@ VOICE XTB 7.4 PRO — M5 / M15 / H1
 
 </div>
 
-<!-- ======================================================
-     POPUP
-====================================================== -->
-
 <div
-    id="popup"
-    class="popup"
-    role="dialog"
-    aria-modal="true"
+  id="popup"
+  class="popup"
+  role="dialog"
+  aria-modal="true"
 >
 
 <div class="popup-content">
 
 <span
-    id="popupClose"
-    class="popup-close"
-    aria-label="Zamknij"
+  id="popupClose"
+  class="popup-close"
+  aria-label="Zamknij"
 >
 ✖
 </span>
@@ -593,10 +443,6 @@ VOICE XTB 7.4 PRO — M5 / M15 / H1
 
 </div>
 </div>
-
-<!-- ======================================================
-     VOICE ENGINE
-====================================================== -->
 
 <script defer src="js/voice.js"></script>
 
