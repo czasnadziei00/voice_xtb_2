@@ -296,16 +296,22 @@
     <div id="parsed">Bufor JSON: {}</div>
 </div>
 
-<div id="popupOverlay" class="popup-overlay" onclick="document.getElementById('popup').style.display='none'; document.getElementById('popupOverlay').style.display='none';"></div>
+<div id="popupOverlay" class="popup-overlay" onclick="closeModal()"></div>
 
 <div id="popup" class="modal">
     <div class="modal-content">
-        <span class="close-btn" onclick="document.getElementById('popup').style.display='none'; document.getElementById('popupOverlay').style.display='none';">&times;</span>
+        <span class="close-btn" onclick="closeModal()">&times;</span>
         <h3 style="margin-top:0; color:var(--accent-color);">🎙️ Raport Szczegółowy</h3>
         <div id="popupBody"></div>
     </div>
 </div>
 
+<script>
+    function closeModal() {
+        document.getElementById('popup').style.display = 'none';
+        document.getElementById('popupOverlay').style.display = 'none';
+    }
+</script>
 <script src="voice.js"></script>
 
 </body>
