@@ -154,6 +154,7 @@
             background-color: rgba(255, 209, 102, 0.05);
             text-align: center;
             transition: background 0.2s;
+            cursor: pointer;
         }
         
         .entry-cell:hover {
@@ -544,8 +545,11 @@ function handleBackendData(d) {
   tickers[ticker].updatedAt = Date.now();
   tickers[ticker].lastTF = tf;
 
+  // AKTUALIZACJA LOKALNEGO ENTRY NA PODSTAWIE ZWROTKI Z BACKENDU
   if (d.entry !== undefined && d.entry !== null && d.entry !== "") {
     tickers[ticker].globalEntry = d.entry.toString();
+  } else {
+    tickers[ticker].globalEntry = "";
   }
 
   if (!tickers[ticker][tf]) tickers[ticker][tf] = { history: [] };
@@ -626,9 +630,19 @@ document.addEventListener("click", async (e) => {
 
   const ticker = row.querySelector(".ticker-cell")?.textContent.trim();
   
+  // CAŁKOWITE USUWANIE TICKERA Z RAMU I CZYSZCZENIE BACKENDU
   if (cell.classList.contains("delete-cell")) {
     delete tickers[ticker];
     updateTable();
+    try {
+      await fetch(`${backend}/delete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ticker: ticker })
+      });
+    } catch(err) {
+      console.log("Błąd czyszczenia bazy serwera:", err);
+    }
     return;
   }
   
@@ -682,7 +696,7 @@ document.addEventListener("click", async (e) => {
           ma20: lastRec.ma20,
           dema9: lastRec.dema9,
           rsi: lastRec.rsi,
-          entry: numVal > 0 ? numVal : null
+          entry: numVal > 0 ? numVal : 0 // WYMUSZENIE WARTOŚCI ZERO DLA POZBYCIA SIĘSTAREGO STANU W PAMIĘCI SERWERA
         };
         
         try {
