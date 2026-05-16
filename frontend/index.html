@@ -312,10 +312,6 @@ function closeModal() {
     document.getElementById('popupOverlay').style.display = 'none';
 }
 
-// ======================================================
-//  VOICE XTB 8.1 HYBRID - INTERFEJS GŁOSOWY KOD EMBEDDED
-// ======================================================
-
 const backend = "https://voice-xtb.onrender.com/voice-parse";
 const STORAGE_KEY = "xtbtablememoryv2multitf";
 
@@ -328,6 +324,7 @@ let isFetching = false;
 const steps = [
   "Podaj ticker",
   "Podaj interwał",
+  "Podaj czas lub dzień",
   "Podaj cenę open",
   "Podaj cenę high",
   "Podaj cenę low",
@@ -401,18 +398,85 @@ function sayStep() {
   speechSynthesis.speak(msg);
 }
 
+function parseAndAlignTime(rawText, intervalStr) {
+  const now = new Date();
+  
+  if (intervalStr === "D1") {
+    let dayNum = parseInt(rawText.toString().replace(/[^0-9]/g, ""), 10);
+    
+    if (isNaN(dayNum) || dayNum < 1 || dayNum > 31) {
+      dayNum = now.getDate();
+    }
+    
+    let year = now.getFullYear();
+    let month = now.getMonth() + 1;
+    
+    if (dayNum > now.getDate() && now.getDate() < 7) {
+      month = month - 1;
+      if (month === 0) {
+        month = 12;
+        year = year - 1;
+      }
+    }
+    
+    const strMonth = month.toString().padStart(2, '0');
+    const strDay = dayNum.toString().padStart(2, '0');
+    
+    return `${year}-${strMonth}-${strDay}`;
+  }
+
+  let hours = 0;
+  let minutes = 0;
+  let cleanText = rawText.toString().trim().toLowerCase().replace(/[.:\- ]/g, " ");
+  let parts = cleanText.split(/\s+/).filter(p => p.length > 0);
+
+  if (parts.length >= 2) {
+    hours = parseInt(parts[0], 10) || 0;
+    minutes = parseInt(parts[1], 10) || 0;
+  } else if (parts.length === 1 && !isNaN(parts[0])) {
+    let num = parts[0];
+    if (num.length === 3) {
+      hours = parseInt(num.substring(0, 1), 10);
+      minutes = parseInt(num.substring(1), 10);
+    } else if (num.length === 4) {
+      hours = parseInt(num.substring(0, 2), 10);
+      minutes = parseInt(num.substring(2), 10);
+    } else {
+      hours = parseInt(num, 10) || 0;
+      minutes = 0;
+    }
+  } else {
+    hours = now.getHours();
+    minutes = now.getMinutes();
+  }
+
+  hours = Math.min(Math.max(hours, 0), 23);
+  minutes = Math.min(Math.max(minutes, 0), 59);
+
+  if (intervalStr === "M5") {
+    minutes = Math.floor(minutes / 5) * 5;
+  } else if (intervalStr === "M15") {
+    minutes = Math.floor(minutes / 15) * 15;
+  } else if (intervalStr === "H1") {
+    minutes = 0;
+  }
+
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+}
+
 function handleRecognized(text) {
   switch (currentStep) {
     case 0: tempRecord.ticker = text.toUpperCase().replace(/\s+/g, ""); break;
     case 1: tempRecord.interval = normalizeInterval(text); break;
-    case 2: tempRecord.open = extractNumber(text); break;
-    case 3: tempRecord.high = extractNumber(text); break;
-    case 4: tempRecord.low = extractNumber(text); break;
-    case 5: tempRecord.close = extractNumber(text); break;
-    case 6: tempRecord.volume = extractNumber(text); break;
-    case 7: tempRecord.ma20 = extractNumber(text); break;
-    case 8: tempRecord.dema9 = extractNumber(text); break;
-    case 9: tempRecord.rsi = extractNumber(text); break;
+    case 2: tempRecord.time = parseAndAlignTime(text, tempRecord.interval); break;
+    case 3: tempRecord.open = extractNumber(text); break;
+    case 4: tempRecord.high = extractNumber(text); break;
+    case 5: tempRecord.low = extractNumber(text); break;
+    case 6: tempRecord.close = extractNumber(text); break;
+    case 7: tempRecord.volume = extractNumber(text); break;
+    case 8: tempRecord.ma20 = extractNumber(text); break;
+    case 9: tempRecord.dema9 = extractNumber(text); break;
+    case 10: tempRecord.rsi = extractNumber(text); break;
   }
   currentStep++;
 }
@@ -438,7 +502,10 @@ function normalizeInterval(tf) {
 async function finalizeRecord() {
   if (isFetching) return;
   isFetching = true;
-  tempRecord.time = new Date().toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+  
+  if (!tempRecord.time) {
+    tempRecord.time = parseAndAlignTime("", tempRecord.interval);
+  }
   
   const t = tempRecord.ticker;
   if (tickers[t] && tickers[t].globalEntry) {
