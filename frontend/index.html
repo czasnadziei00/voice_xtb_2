@@ -545,7 +545,6 @@ function handleBackendData(d) {
   tickers[ticker].updatedAt = Date.now();
   tickers[ticker].lastTF = tf;
 
-  // AKTUALIZACJA LOKALNEGO ENTRY NA PODSTAWIE ZWROTKI Z BACKENDU
   if (d.entry !== undefined && d.entry !== null && d.entry !== "") {
     tickers[ticker].globalEntry = d.entry.toString();
   } else {
@@ -565,6 +564,7 @@ function updateTable() {
 
   if (sortedTickers.length === 0) {
     tbody.innerHTML = `<tr><td colspan="10">Oczekiwanie na dane z bazy...</td></tr>`;
+    saveTable(); // Zapisz pusty stan natychmiast
     return;
   }
 
@@ -630,18 +630,23 @@ document.addEventListener("click", async (e) => {
 
   const ticker = row.querySelector(".ticker-cell")?.textContent.trim();
   
-  // CAŁKOWITE USUWANIE TICKERA Z RAMU I CZYSZCZENIE BACKENDU
+  // POPRAWKA: Synchroniczne czyszczenie RAMU + wymuszenie zapisu przed wywołaniem API sieciowego
   if (cell.classList.contains("delete-cell")) {
+    document.getElementById("comment").textContent = `🗑️ Usuwanie ${ticker}...`;
+    
     delete tickers[ticker];
-    updateTable();
+    updateTable(); // To automatycznie wyczyści też localStorage
+    
     try {
       await fetch(`${backend}/delete`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ticker: ticker })
       });
+      document.getElementById("comment").textContent = "✔️ Usunięto z bazy danych";
     } catch(err) {
-      console.log("Błąd czyszczenia bazy serwera:", err);
+      console.log("Błąd synchronizacji serwera:", err);
+      document.getElementById("comment").textContent = "❌ Błąd czyszczenia bazy serwera";
     }
     return;
   }
@@ -696,7 +701,7 @@ document.addEventListener("click", async (e) => {
           ma20: lastRec.ma20,
           dema9: lastRec.dema9,
           rsi: lastRec.rsi,
-          entry: numVal > 0 ? numVal : 0 // WYMUSZENIE WARTOŚCI ZERO DLA POZBYCIA SIĘSTAREGO STANU W PAMIĘCI SERWERA
+          entry: numVal > 0 ? numVal : 0
         };
         
         try {
@@ -740,7 +745,12 @@ document.addEventListener("click", async (e) => {
 function saveTable() { localStorage.setItem(STORAGE_KEY, JSON.stringify(tickers)); }
 function loadTable() {
   const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw) { Object.assign(tickers, JSON.parse(raw)); updateTable(); }
+  if (raw) { 
+    // Wyczyszczenie starego obiektu przed przypisaniem
+    for (let member in tickers) delete tickers[member];
+    Object.assign(tickers, JSON.parse(raw)); 
+    updateTable(); 
+  }
 }
 
 document.addEventListener("DOMContentLoaded", loadTable);
