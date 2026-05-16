@@ -11,7 +11,6 @@ let currentStep = 0;
 let tempRecord = {};
 let isFetching = false;
 
-// Stałe 10 kroków rynkowych - mikrofon działa bez zakłóceń
 const steps = [
   "Podaj ticker",
   "Podaj interwał",
@@ -127,7 +126,6 @@ async function finalizeRecord() {
   isFetching = true;
   tempRecord.time = new Date().toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
   
-  // Pobieramy zapamiętane lokalnie entry dla danego tickera, by nie wyczyścić go przy wysyłce nowej świecy
   const t = tempRecord.ticker;
   if (tickers[t] && tickers[t].globalEntry) {
     tempRecord.entry = parseFloat(tickers[t].globalEntry);
@@ -195,13 +193,12 @@ function updateTable() {
     const rec = tData[tf]?.last;
     if (!rec) return;
 
-    // Bezpieczne sprawdzanie wejścia z pamięci lokalnej lokatora tabeli
     const displayEntry = (tData.globalEntry && parseFloat(tData.globalEntry) > 0) ? tData.globalEntry : "—";
 
     const row = document.createElement("tr");
     row.className = getRowClass(rec.signal);
     row.innerHTML = `
-      <td class="ticker-cell">${ticker}</td>
+      <td class="ticker-cell" style="cursor:pointer; font-weight:bold; color:#ffd166;">${ticker}</td>
       <td class="price-cell">${Number(rec.close).toFixed(2)}</td>
       <td>${rec.interval} <br><small>${rec.time}</small></td>
       <td class="entry-cell" style="border: 1px dashed #ffd166; border-radius: 4px; cursor: pointer;">${displayEntry}</td>
@@ -219,8 +216,8 @@ function updateTable() {
 
 function getRowClass(sig) {
   if (sig?.includes("PREMIUM")) return "row-buy-premium";
-  if (sig?.includes("BUY")) return "row-buy";
-  if (sig?.includes("SELL") || sig?.includes("SHORT")) return "row-sell";
+  if (sig?.includes("BUY") || sig?.includes("ACCEL")) return "row-buy";
+  if (sig?.includes("EXIT") || sig?.includes("REDUKUJ")) return "row-sell";
   return "row-czekaj";
 }
 
@@ -249,7 +246,6 @@ function stopSequence() {
   document.getElementById("comment").textContent = "⛔ Sekwencja zatrzymana.";
 }
 
-// Obsługa kliknięć w tabeli
 document.addEventListener("click", async (e) => {
   const cell = e.target.closest("td");
   const row = e.target.closest("tr");
@@ -257,27 +253,23 @@ document.addEventListener("click", async (e) => {
 
   const ticker = row.querySelector(".ticker-cell")?.textContent.trim();
   
-  // 1. Usuwanie wiersza
   if (cell.classList.contains("delete-cell")) {
     delete tickers[ticker];
     updateTable();
     return;
   }
   
-  // 2. RĘCZNE WPISYWANIE ENTRY Z KLAWIATURĄ NUMERYCZNĄ PO KLIKNIĘCIU
   if (cell.classList.contains("entry-cell")) {
-    if (cell.querySelector("input")) return; // Zapobiega powielaniu pól tekstowych
+    if (cell.querySelector("input")) return;
 
     const currentVal = tickers[ticker].globalEntry || "";
     
-    // Budowanie dynamicznego pola tekstowego
     const input = document.createElement("input");
     input.type = "number";
     input.step = "any";
-    input.inputMode = "decimal"; // Wymuszenie klawiatury numerycznej (z kropką/przecinkiem) na smartfonach
+    input.inputMode = "decimal";
     input.value = currentVal;
     
-    // Stylizacja dopasowana do wiersza tabeli
     input.style.width = "80px";
     input.style.background = "#222";
     input.style.color = "#ffd166";
@@ -285,14 +277,13 @@ document.addEventListener("click", async (e) => {
     input.style.borderRadius = "4px";
     input.style.padding = "4px";
     input.style.textAlign = "center";
-    input.style.fontSize = "16px"; // Zapobiega irytującemu zoomowaniu ekranu na urządzeniach iOS
+    input.style.fontSize = "16px";
 
     cell.textContent = "";
     cell.appendChild(input);
     input.focus();
     input.select();
 
-    // Funkcja wywoływana przy zapisie zmian
     const saveData = async () => {
       const manual = input.value;
       const numVal = extractNumber(manual);
@@ -338,7 +329,6 @@ document.addEventListener("click", async (e) => {
       }
     };
 
-    // Zdarzenia powodujące zatwierdzenie wartości
     input.addEventListener("blur", saveData);
     input.addEventListener("keydown", (evt) => {
       if (evt.key === "Enter") {
@@ -348,13 +338,13 @@ document.addEventListener("click", async (e) => {
     return;
   }
 
-  // 3. Otwieranie raportu (kliknięcie w Ticker)
   if (cell.classList.contains("ticker-cell")) {
     const tf = tickers[ticker].lastTF;
     const rec = tickers[ticker][tf]?.last;
     if (rec && rec.comment) {
       document.getElementById("popupBody").innerHTML = `<pre>${rec.comment}</pre>`;
       document.getElementById("popup").style.display = "block";
+      document.getElementById("popupOverlay").style.display = "block";
     } else {
       alert("Brak danych komentarza");
     }
