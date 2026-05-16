@@ -1,3 +1,7 @@
+// ======================================================
+//  VOICE XTB 8.1 HYBRID - INTERFEJS GŁOSOWY KOD EMBEDDED
+// ======================================================
+
 const backend = "https://voice-xtb.onrender.com/voice-parse";
 const STORAGE_KEY = "xtbtablememoryv2multitf";
 
@@ -22,7 +26,6 @@ const steps = [
 ];
 
 const tickers = {};
-const HISTORY_LIMITS = { M5: 14, M15: 7, H1: 3, D1: 4 };
 
 function initRecognition() {
   const SR = window.webkitSpeechRecognition || window.SpeechRecognition;
@@ -233,6 +236,8 @@ function handleBackendData(d) {
 
   if (d.entry !== undefined && d.entry !== null && d.entry !== "") {
     tickers[ticker].globalEntry = d.entry.toString();
+  } else {
+    tickers[ticker].globalEntry = "";
   }
 
   if (!tickers[ticker][tf]) tickers[ticker][tf] = { history: [] };
@@ -316,6 +321,15 @@ document.addEventListener("click", async (e) => {
   if (cell.classList.contains("delete-cell")) {
     delete tickers[ticker];
     updateTable();
+    try {
+      await fetch(`${backend}/delete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ticker: ticker })
+      });
+    } catch(err) {
+      console.log("Błąd czyszczenia bazy serwera:", err);
+    }
     return;
   }
   
@@ -369,7 +383,7 @@ document.addEventListener("click", async (e) => {
           ma20: lastRec.ma20,
           dema9: lastRec.dema9,
           rsi: lastRec.rsi,
-          entry: numVal > 0 ? numVal : null
+          entry: numVal > 0 ? numVal : 0 // JAWNE PRZEKAZANIE ZERO DLA BACKENDU W CELU WYCZYSZCZENIA
         };
         
         try {
