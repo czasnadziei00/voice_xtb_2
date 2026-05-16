@@ -1,5 +1,5 @@
 // ======================================================
-//  VOICE XTB 8.1 HYBRID - INTERFEJS GŁOSOWY
+//  VOICE XTB 8.1 HYBRID - INTERFEJS GŁOSOWY (Z D1)
 // ======================================================
 
 const backend = "https://voice-xtb.onrender.com/voice-parse";
@@ -27,10 +27,10 @@ const steps = [
 ];
 
 const tickers = {};
-const HISTORY_LIMITS = { M5: 14, M15: 7, H1: 3 };
+const HISTORY_LIMITS = { M5: 14, M15: 7, H1: 3, D1: 2 };
 
 // ======================================================
-//  SPEECH ENGINE (POPRAWIONY)
+//  SPEECH ENGINE
 // ======================================================
 
 function initRecognition() {
@@ -64,7 +64,6 @@ recognition = initRecognition();
 function sayStep() {
   if (currentStep >= steps.length || !recognizing) return;
 
-  // 1. Czyścimy kolejkę mowy
   speechSynthesis.cancel();
 
   const msg = new SpeechSynthesisUtterance(steps[currentStep]);
@@ -72,7 +71,6 @@ function sayStep() {
   msg.rate = 1.1;
 
   msg.onend = () => {
-    // 2. Mikrofon startuje dopiero GDY system skończy mówić
     if (recognizing) {
       setTimeout(() => {
         try {
@@ -86,7 +84,6 @@ function sayStep() {
 }
 
 function handleRecognized(text) {
-  // Mapowanie danych
   switch (currentStep) {
     case 0: tempRecord.ticker = text.toUpperCase(); break;
     case 1: tempRecord.interval = normalizeInterval(text); break;
@@ -100,7 +97,6 @@ function handleRecognized(text) {
     case 9: tempRecord.rsi = extractNumber(text); break;
   }
 
-  // 3. Zatrzymujemy mikrofon jawnie, aby nie blokował głosu w następnym kroku
   try { recognition.stop(); } catch(e) {}
 
   currentStep++;
@@ -131,6 +127,7 @@ function normalizeInterval(tf) {
   if (tf === "5" || tf === "M5") return "M5";
   if (tf === "15" || tf === "M15") return "M15";
   if (tf === "H1" || tf === "1H" || tf === "60") return "H1";
+  if (tf === "D1" || tf === "D" || tf === "1D" || tf === "DZIENNY") return "D1";
   return tf;
 }
 
@@ -208,9 +205,9 @@ function updateTable() {
 }
 
 function getRowClass(sig) {
-  if (sig?.includes("PREMIUM")) return "row-buy-premium"; // Dodaj te klasy do CSS
+  if (sig?.includes("PREMIUM")) return "row-buy-premium";
   if (sig?.includes("BUY")) return "row-buy";
-  if (sig?.includes("SELL")) return "row-sell";
+  if (sig?.includes("SELL") || sig?.includes("SHORT")) return "row-sell";
   return "row-czekaj";
 }
 
@@ -221,7 +218,6 @@ function getRowClass(sig) {
 function startSequence() {
   if (recognizing) return;
   
-  // Reset mowy (wymagane przez przeglądarkę)
   speechSynthesis.cancel();
   const wakeUp = new SpeechSynthesisUtterance("");
   speechSynthesis.speak(wakeUp);
