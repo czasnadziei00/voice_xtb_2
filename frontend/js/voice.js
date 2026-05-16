@@ -23,7 +23,8 @@ const steps = [
   "Podaj wolumen",
   "Podaj MA 20",
   "Podaj DEMA 9",
-  "Podaj RSI"
+  "Podaj RSI",
+  "Podaj cenę wejścia" // DODANO KROK ENTRY DO SEKWENCJI GŁOSOWEJ
 ];
 
 const tickers = {};
@@ -85,7 +86,7 @@ function sayStep() {
 
 function handleRecognized(text) {
   switch (currentStep) {
-    case 0: tempRecord.ticker = text.toUpperCase(); break;
+    case 0: tempRecord.ticker = text.toUpperCase().replace(/\s+/g, ""); break;
     case 1: tempRecord.interval = normalizeInterval(text); break;
     case 2: tempRecord.open = extractNumber(text); break;
     case 3: tempRecord.high = extractNumber(text); break;
@@ -95,6 +96,7 @@ function handleRecognized(text) {
     case 7: tempRecord.ma20 = extractNumber(text); break;
     case 8: tempRecord.dema9 = extractNumber(text); break;
     case 9: tempRecord.rsi = extractNumber(text); break;
+    case 10: tempRecord.entry = extractNumber(text); break; // MAPOWANIE WPISU ENTRY
   }
 
   try { recognition.stop(); } catch(e) {}
@@ -137,6 +139,7 @@ async function finalizeRecord() {
   tempRecord.time = new Date().toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
   
   document.getElementById("comment").textContent = "⏳ Analiza 8.1 Hybrid...";
+  document.getElementById("parsed").textContent = `Bufor JSON: ${JSON.stringify(tempRecord)}`;
   
   try {
     const response = await fetch(`${backend}?t=${Date.now()}`, {
@@ -167,7 +170,11 @@ function handleBackendData(d) {
   
   tickers[ticker].updatedAt = Date.now();
   tickers[ticker].lastTF = tf;
-  if (d.entry) tickers[ticker].globalEntry = d.entry;
+  
+  // Zapisuj entry tylko jeśli serwer zwrócił niepustą wartość
+  if (d.entry !== undefined && d.entry !== null && d.entry !== "") {
+    tickers[ticker].globalEntry = d.entry;
+  }
 
   if (!tickers[ticker][tf]) tickers[ticker][tf] = { history: [] };
   tickers[ticker][tf].last = d;
@@ -179,6 +186,11 @@ function updateTable() {
   const tbody = document.getElementById("table-body");
   tbody.innerHTML = "";
   const sortedTickers = Object.keys(tickers).sort((a, b) => tickers[b].updatedAt - tickers[a].updatedAt);
+
+  if (sortedTickers.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="10">Oczekiwanie na dane...</td></tr>`;
+    return;
+  }
 
   sortedTickers.forEach(ticker => {
     const tData = tickers[ticker];
@@ -228,6 +240,14 @@ function startSequence() {
   sayStep();
 }
 
+function stopSequence() {
+  recognizing = false;
+  currentStep = 0;
+  tempRecord = {};
+  try { recognition.stop(); } catch(e) {}
+  document.getElementById("comment").textContent = "⛔ Sekwencja zatrzymana.";
+}
+
 function startVoiceInput(callback) {
   recognitionMode = "AD_HOC";
   adHocCallback = (spoken) => callback(spoken);
@@ -247,7 +267,12 @@ document.addEventListener("click", (e) => {
   }
   if (cell.classList.contains("ticker-cell")) {
     const rec = tickers[ticker][tickers[ticker].lastTF]?.last;
-    alert(rec?.comment || "Brak danych");
+    if (rec && rec.comment) {
+      document.getElementById("popupBody").innerHTML = `<pre>${rec.comment}</pre>`;
+      document.getElementById("popup").style.display = "block";
+    } else {
+      alert("Brak danych komentarza");
+    }
   }
 });
 
