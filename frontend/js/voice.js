@@ -45,7 +45,24 @@ function initRecognition() {
     handleRecognized(text);
   };
 
-  rec.onerror = (e) => { console.log("Speech error:", e.error); };
+  rec.onend = () => {
+    if (recognizing) {
+      currentStep++;
+      if (currentStep < steps.length) {
+        setTimeout(() => { sayStep(); }, 300);
+      } else {
+        recognizing = false;
+        finalizeRecord();
+      }
+    }
+  };
+
+  rec.onerror = (e) => { 
+    console.log("Speech error:", e.error); 
+    if (e.error === "no-speech" && recognizing) {
+      setTimeout(() => { sayStep(); }, 300);
+    }
+  };
   return rec;
 }
 
@@ -65,7 +82,10 @@ function sayStep() {
       setTimeout(() => {
         try {
           recognition.start();
-        } catch (e) { console.log("Mic restart error"); }
+        } catch (e) { 
+          console.log("Mic restart error, retrying..."); 
+          setTimeout(() => { if (recognizing) recognition.start(); }, 400);
+        }
       }, 200);
     }
   };
@@ -85,17 +105,6 @@ function handleRecognized(text) {
     case 7: tempRecord.ma20 = extractNumber(text); break;
     case 8: tempRecord.dema9 = extractNumber(text); break;
     case 9: tempRecord.rsi = extractNumber(text); break;
-  }
-
-  try { recognition.stop(); } catch(e) {}
-
-  currentStep++;
-
-  if (currentStep < steps.length) {
-    setTimeout(() => { sayStep(); }, 400);
-  } else {
-    recognizing = false;
-    finalizeRecord();
   }
 }
 
