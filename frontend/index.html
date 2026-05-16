@@ -1,25 +1,11 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-
-<meta charset="UTF-8">
-
-<meta
-  name="viewport"
-  content="width=device-width, initial-scale=1.0"
-/>
-
-<title>
-  VOICE XTB 7.4 PRO MULTI-TF
-</title>
-
-<link
-  rel="icon"
-  href="favicon.ico"
-/>
-
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VOICE XTB 8.1 HYBRID</title>
+<link rel="icon" href="favicon.ico" />
 <style>
-
 *{
   box-sizing:border-box;
 }
@@ -217,20 +203,16 @@ button:active{
   opacity:0.72;
 }
 
+.row-buy-premium{
+  background:rgba(0,210,0,0.35)!important;
+}
+
 .row-buy{
   background:rgba(0,180,0,0.22)!important;
 }
 
 .row-sell{
   background:rgba(255,0,0,0.22)!important;
-}
-
-.row-prawie{
-  background:rgba(255,215,0,0.22)!important;
-}
-
-.row-czekajdo{
-  background:rgba(0,120,255,0.22)!important;
 }
 
 .row-czekaj{
@@ -306,7 +288,6 @@ button:active{
 }
 
 @media (max-width:768px){
-
   body{
     padding:10px;
   }
@@ -326,7 +307,6 @@ button:active{
   #proTable{
     min-width:850px;
   }
-
 }
 
 ::-webkit-scrollbar{
@@ -346,33 +326,21 @@ button:active{
 ::-webkit-scrollbar-thumb:hover{
   background:#444;
 }
-
 </style>
-
 </head>
-
 <body>
 
 <h1>
-VOICE XTB 7.4 PRO — M5 / M15 / H1
+  VOICE XTB 8.1 HYBRID — M5 / M15 / H1 / D1
 </h1>
 
 <div id="controls">
-
-  <button
-    class="btn-start"
-    onclick="startSequence()"
-  >
+  <button class="btn-start" onclick="startSequence()">
     🎤 Start sekwencji
   </button>
-
-  <button
-    class="btn-stop"
-    onclick="stopSequence()"
-  >
+  <button class="btn-stop" onclick="stopSequence()">
     ⛔ Stop
   </button>
-
 </div>
 
 <div id="comment">
@@ -388,63 +356,47 @@ VOICE XTB 7.4 PRO — M5 / M15 / H1
 </div>
 
 <div class="table-wrapper">
-
-<table id="proTable">
-
-<thead>
-
-<tr>
-  <th>Ticker</th>
-  <th>Cena</th>
-  <th>Ostatnia świeca</th>
-  <th>Entry</th>
-  <th>Sygnał</th>
-  <th>Widełki</th>
-  <th>TP1</th>
-  <th>TP2</th>
-  <th>TP3</th>
-  <th>🗑️</th>
-</tr>
-
-</thead>
-
-<tbody id="table-body">
-
-<tr>
-<td colspan="10">
-  Oczekiwanie na dane...
-</td>
-</tr>
-
-</tbody>
-
-</table>
-
+  <table id="proTable">
+    <thead>
+      <tr>
+        <th>Ticker</th>
+        <th>Cena</th>
+        <th>Ostatnia świeca</th>
+        <th>Entry</th>
+        <th>Sygnał</th>
+        <th>Widełki</th>
+        <th>TP1</th>
+        <th>TP2</th>
+        <th>TP3</th>
+        <th>🗑️</th>
+      </tr>
+    </thead>
+    <tbody id="table-body">
+      <tr>
+        <td colspan="10">
+          Oczekiwanie na dane...
+        </td>
+      </tr>
+    </tbody>
+  </table>
 </div>
 
-<div
-  id="popup"
-  class="popup"
-  role="dialog"
-  aria-modal="true"
->
-
-<div class="popup-content">
-
-<span
-  id="popupClose"
-  class="popup-close"
-  aria-label="Zamknij"
->
-✖
-</span>
-
-<div id="popupBody"></div>
-
-</div>
+<div id="popup" class="popup" role="dialog" aria-modal="true">
+  <div class="popup-content">
+    <span id="popupClose" class="popup-close" aria-label="Zamknij">
+      ✖
+    </span>
+    <div id="popupBody"></div>
+  </div>
 </div>
 
 <script defer src="js/voice.js"></script>
+
+<script>
+  document.getElementById("popupClose").addEventListener("click", () => {
+    document.getElementById("popup").style.display = "none";
+  });
+</script>
 
 </body>
 </html>
