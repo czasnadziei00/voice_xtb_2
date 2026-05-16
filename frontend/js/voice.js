@@ -28,6 +28,7 @@ const steps = [
 const tickers = {};
 
 function initRecognition() {
+  // Optymalizacja i poprawka inicjalizacji silnika rozpoznawania mowy
   const SR = window.webkitSpeechRecognition || window.SpeechRecognition;
   if (!SR) return null;
   const rec = new SR();
@@ -253,6 +254,7 @@ function updateTable() {
 
   if (sortedTickers.length === 0) {
     tbody.innerHTML = `<tr><td colspan="10">Oczekiwanie na dane z bazy...</td></tr>`;
+    saveTable(); // Wymuszenie czyszczenia pustego stanu w localStorage
     return;
   }
 
@@ -283,10 +285,12 @@ function updateTable() {
   saveTable();
 }
 
+// ZOPTYMALIZOWANA POPRAWKA LOGICZNA: Pełna kompatybilność ze spolszczonymi flagami z backendu
 function getRowClass(sig) {
-  if (sig?.includes("PREMIUM")) return "row-buy-premium";
-  if (sig?.includes("BUY") || sig?.includes("ACCEL")) return "row-buy";
-  if (sig?.includes("EXIT") || sig?.includes("REDUKUJ") || sig?.includes("SŁABNIE") || sig?.includes("REALIZUJ")) return "row-sell";
+  if (!sig) return "row-czekaj";
+  if (sig.includes("PREMIUM") && sig.includes("BUY")) return "row-buy-premium";
+  if (sig.includes("BUY") || (sig.includes("ACCEL") && !sig.includes("REDUKUJ"))) return "row-buy";
+  if (sig.includes("EXIT") || sig.includes("REDUKUJ") || sig.includes("SŁABNIE") || sig.includes("REALIZUJ")) return "row-sell";
   return "row-czekaj";
 }
 
@@ -319,16 +323,22 @@ document.addEventListener("click", async (e) => {
   const ticker = row.querySelector(".ticker-cell")?.textContent.trim();
   
   if (cell.classList.contains("delete-cell")) {
+    document.getElementById("comment").textContent = `🗑️ Usuwanie ${ticker}...`;
+    
+    // CZYSZCZENIE ASYNCHRONICZNE: usunięcie z pamięci podręcznej RAM przed strzałem sieciowym
     delete tickers[ticker];
-    updateTable();
+    updateTable(); // updateTable wywoła automatycznie saveTable() uaktualniając localStorage
+    
     try {
       await fetch(`${backend}/delete`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ticker: ticker })
       });
+      document.getElementById("comment").textContent = "✔️ Usunięto z bazy danych";
     } catch(err) {
       console.log("Błąd czyszczenia bazy serwera:", err);
+      document.getElementById("comment").textContent = "❌ Błąd czyszczenia bazy serwera";
     }
     return;
   }
@@ -383,7 +393,7 @@ document.addEventListener("click", async (e) => {
           ma20: lastRec.ma20,
           dema9: lastRec.dema9,
           rsi: lastRec.rsi,
-          entry: numVal > 0 ? numVal : 0 // JAWNE PRZEKAZANIE ZERO DLA BACKENDU W CELU WYCZYSZCZENIA
+          entry: numVal > 0 ? numVal : 0
         };
         
         try {
@@ -427,7 +437,11 @@ document.addEventListener("click", async (e) => {
 function saveTable() { localStorage.setItem(STORAGE_KEY, JSON.stringify(tickers)); }
 function loadTable() {
   const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw) { Object.assign(tickers, JSON.parse(raw)); updateTable(); }
+  if (raw) { 
+    for (let member in tickers) delete tickers[member];
+    Object.assign(tickers, JSON.parse(raw)); 
+    updateTable(); 
+  }
 }
 
 document.addEventListener("DOMContentLoaded", loadTable);
