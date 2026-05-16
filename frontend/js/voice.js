@@ -47,7 +47,6 @@ function initRecognition() {
 
   rec.onend = () => {
     if (recognizing) {
-      currentStep++;
       if (currentStep < steps.length) {
         setTimeout(() => { sayStep(); }, 300);
       } else {
@@ -59,7 +58,7 @@ function initRecognition() {
 
   rec.onerror = (e) => { 
     console.log("Speech error:", e.error); 
-    if (e.error === "no-speech" && recognizing) {
+    if (recognizing) {
       setTimeout(() => { sayStep(); }, 300);
     }
   };
@@ -106,6 +105,7 @@ function handleRecognized(text) {
     case 8: tempRecord.dema9 = extractNumber(text); break;
     case 9: tempRecord.rsi = extractNumber(text); break;
   }
+  currentStep++;
 }
 
 // ======================================================
@@ -139,7 +139,7 @@ async function finalizeRecord() {
   if (tickers[t] && tickers[t].globalEntry) {
     tempRecord.entry = parseFloat(tickers[t].globalEntry);
   } else {
-    tempRecord.entry = 0;
+    tempRecord.entry = null;
   }
 
   document.getElementById("comment").textContent = "⏳ Analiza 8.1 Hybrid...";
@@ -192,7 +192,7 @@ function updateTable() {
   const sortedTickers = Object.keys(tickers).sort((a, b) => tickers[b].updatedAt - tickers[a].updatedAt);
 
   if (sortedTickers.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="10">Oczekiwanie na dane...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10">Oczekiwanie na dane z bazy...</td></tr>`;
     return;
   }
 
@@ -207,16 +207,16 @@ function updateTable() {
     const row = document.createElement("tr");
     row.className = getRowClass(rec.signal);
     row.innerHTML = `
-      <td class="ticker-cell" style="cursor:pointer; font-weight:bold; color:#ffd166;">${ticker}</td>
+      <td class="ticker-cell">${ticker}</td>
       <td class="price-cell">${Number(rec.close).toFixed(2)}</td>
       <td>${rec.interval} <br><small>${rec.time}</small></td>
-      <td class="entry-cell" style="border: 1px dashed #ffd166; border-radius: 4px; cursor: pointer;">${displayEntry}</td>
+      <td class="entry-cell">${displayEntry}</td>
       <td><div class="signal-box">${rec.signal}</div></td>
       <td>${rec.widelki || "—"}</td>
       <td class="tp-cell">${rec.tp1 || "—"}</td>
       <td class="tp-cell">${rec.tp2 || "—"}</td>
       <td class="tp-cell">${rec.tp3 || "—"}</td>
-      <td class="delete-cell" style="cursor: pointer;">🗑️</td>
+      <td class="delete-cell">🗑️</td>
     `;
     tbody.appendChild(row);
   });
@@ -226,7 +226,7 @@ function updateTable() {
 function getRowClass(sig) {
   if (sig?.includes("PREMIUM")) return "row-buy-premium";
   if (sig?.includes("BUY") || sig?.includes("ACCEL")) return "row-buy";
-  if (sig?.includes("EXIT") || sig?.includes("REDUKUJ")) return "row-sell";
+  if (sig?.includes("EXIT") || sig?.includes("REDUKUJ") || sig?.includes("SŁABNIE") || sig?.includes("REALIZUJ")) return "row-sell";
   return "row-czekaj";
 }
 
@@ -318,7 +318,7 @@ document.addEventListener("click", async (e) => {
           ma20: lastRec.ma20,
           dema9: lastRec.dema9,
           rsi: lastRec.rsi,
-          entry: numVal
+          entry: numVal > 0 ? numVal : null
         };
         
         try {
@@ -330,7 +330,6 @@ document.addEventListener("click", async (e) => {
           const data = await response.json();
           handleBackendData(data);
         } catch (err) {
-          console.log("Błąd synchronizacji entry z serwerem, odświeżam lokalnie.");
           updateTable();
         }
       } else {
