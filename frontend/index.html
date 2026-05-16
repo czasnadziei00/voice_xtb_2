@@ -340,7 +340,7 @@ const steps = [
 const tickers = {};
 
 function initRecognition() {
-  const SR = window.webkitSpeechRecognition || window.Recognition;
+  const SR = window.webkitSpeechRecognition || window.SpeechRecognition;
   if (!SR) return null;
   const rec = new SR();
   rec.lang = "pl-PL";
