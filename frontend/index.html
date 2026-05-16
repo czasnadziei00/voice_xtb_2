@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>VOICE XTB 8.1 HYBRID</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎙️</text></svg>">
     <style>
         :root {
             --bg-color: #121212;
@@ -339,7 +340,7 @@ const steps = [
 const tickers = {};
 
 function initRecognition() {
-  const SR = window.webkitSpeechRecognition || window.SpeechRecognition;
+  const SR = window.webkitSpeechRecognition || window.Recognition;
   if (!SR) return null;
   const rec = new SR();
   rec.lang = "pl-PL";
@@ -564,7 +565,7 @@ function updateTable() {
 
   if (sortedTickers.length === 0) {
     tbody.innerHTML = `<tr><td colspan="10">Oczekiwanie na dane z bazy...</td></tr>`;
-    saveTable(); // Zapisz pusty stan natychmiast
+    saveTable();
     return;
   }
 
@@ -595,10 +596,12 @@ function updateTable() {
   saveTable();
 }
 
+// POPRAWKA: Przystosowanie klas wierszy do spolszczonych komunikatów z backendu
 function getRowClass(sig) {
-  if (sig?.includes("PREMIUM")) return "row-buy-premium";
-  if (sig?.includes("BUY") || sig?.includes("ACCEL")) return "row-buy";
-  if (sig?.includes("EXIT") || sig?.includes("REDUKUJ") || sig?.includes("SŁABNIE") || sig?.includes("REALIZUJ")) return "row-sell";
+  if (!sig) return "row-czekaj";
+  if (sig.includes("PREMIUM") && sig.includes("BUY")) return "row-buy-premium";
+  if (sig.includes("BUY") || sig.includes("ACCEL") && !sig.includes("REDUKUJ")) return "row-buy";
+  if (sig.includes("EXIT") || sig.includes("REDUKUJ") || sig.includes("SŁABNIE") || sig.includes("REALIZUJ")) return "row-sell";
   return "row-czekaj";
 }
 
@@ -630,12 +633,11 @@ document.addEventListener("click", async (e) => {
 
   const ticker = row.querySelector(".ticker-cell")?.textContent.trim();
   
-  // POPRAWKA: Synchroniczne czyszczenie RAMU + wymuszenie zapisu przed wywołaniem API sieciowego
   if (cell.classList.contains("delete-cell")) {
     document.getElementById("comment").textContent = `🗑️ Usuwanie ${ticker}...`;
     
     delete tickers[ticker];
-    updateTable(); // To automatycznie wyczyści też localStorage
+    updateTable();
     
     try {
       await fetch(`${backend}/delete`, {
@@ -746,7 +748,6 @@ function saveTable() { localStorage.setItem(STORAGE_KEY, JSON.stringify(tickers)
 function loadTable() {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (raw) { 
-    // Wyczyszczenie starego obiektu przed przypisaniem
     for (let member in tickers) delete tickers[member];
     Object.assign(tickers, JSON.parse(raw)); 
     updateTable(); 
