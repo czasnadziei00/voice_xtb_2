@@ -1,5 +1,5 @@
 // ======================================================
-//  VOICE XTB 8.1 HYBRID - INTERFEJS GŁOSOWY (Z D1)
+//  VOICE XTB 8.1 HYBRID - INTERFEJS GŁOSOWY + RĘCZNE ENTRY
 // ======================================================
 
 const backend = "https://voice-xtb.onrender.com/voice-parse";
@@ -7,12 +7,11 @@ const STORAGE_KEY = "xtbtablememoryv2multitf";
 
 let recognition = null;
 let recognizing = false;
-let recognitionMode = "SEQUENCE";
-let adHocCallback = null;
 let currentStep = 0;
 let tempRecord = {};
 let isFetching = false;
 
+// Stałe 10 kroków rynkowych - mikrofon działa bez zakłóceń
 const steps = [
   "Podaj ticker",
   "Podaj interwał",
@@ -23,8 +22,7 @@ const steps = [
   "Podaj wolumen",
   "Podaj MA 20",
   "Podaj DEMA 9",
-  "Podaj RSI",
-  "Podaj cenę wejścia" // DODANO KROK ENTRY DO SEKWENCJI GŁOSOWEJ
+  "Podaj RSI"
 ];
 
 const tickers = {};
@@ -45,15 +43,7 @@ function initRecognition() {
   rec.onresult = (e) => {
     const text = e.results[0][0].transcript.trim();
     document.getElementById("recognized").textContent = `Rozpoznano: ${text}`;
-    
-    if (recognitionMode === "SEQUENCE") {
-      handleRecognized(text);
-    } else if (recognitionMode === "AD_HOC" && adHocCallback) {
-      adHocCallback(text);
-      adHocCallback = null;
-      recognitionMode = "SEQUENCE";
-      recognizing = false;
-    }
+    handleRecognized(text);
   };
 
   rec.onerror = (e) => { console.log("Speech error:", e.error); };
@@ -96,7 +86,6 @@ function handleRecognized(text) {
     case 7: tempRecord.ma20 = extractNumber(text); break;
     case 8: tempRecord.dema9 = extractNumber(text); break;
     case 9: tempRecord.rsi = extractNumber(text); break;
-    case 10: tempRecord.entry = extractNumber(text); break; // MAPOWANIE WPISU ENTRY
   }
 
   try { recognition.stop(); } catch(e) {}
@@ -138,6 +127,14 @@ async function finalizeRecord() {
   isFetching = true;
   tempRecord.time = new Date().toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
   
+  // Pobieramy zapamiętane lokalnie entry dla danego tickera, by nie wyczyścić go przy wysyłce nowej świecy
+  const t = tempRecord.ticker;
+  if (tickers[t] && tickers[t].globalEntry) {
+    tempRecord.entry = parseFloat(tickers[t].globalEntry);
+  } else {
+    tempRecord.entry = 0;
+  }
+
   document.getElementById("comment").textContent = "⏳ Analiza 8.1 Hybrid...";
   document.getElementById("parsed").textContent = `Bufor JSON: ${JSON.stringify(tempRecord)}`;
   
@@ -164,16 +161,16 @@ async function finalizeRecord() {
 // ======================================================
 
 function handleBackendData(d) {
-  const tf = normalizeInterval(d.interval);
   const ticker = d.ticker;
+  const tf = normalizeInterval(d.interval);
+  
   if (!tickers[ticker]) tickers[ticker] = { globalEntry: "", updatedAt: 0 };
   
   tickers[ticker].updatedAt = Date.now();
   tickers[ticker].lastTF = tf;
-  
-  // Zapisuj entry tylko jeśli serwer zwrócił niepustą wartość
+
   if (d.entry !== undefined && d.entry !== null && d.entry !== "") {
-    tickers[ticker].globalEntry = d.entry;
+    tickers[ticker].globalEntry = d.entry.toString();
   }
 
   if (!tickers[ticker][tf]) tickers[ticker][tf] = { history: [] };
@@ -194,8 +191,12 @@ function updateTable() {
 
   sortedTickers.forEach(ticker => {
     const tData = tickers[ticker];
-    const rec = tData[tData.lastTF]?.last;
+    const tf = tData.lastTF || "M5";
+    const rec = tData[tf]?.last;
     if (!rec) return;
+
+    // Bezpieczne sprawdzanie wejścia z pamięci lokalnej lokatora tabeli
+    const displayEntry = (tData.globalEntry && parseFloat(tData.globalEntry) > 0) ? tData.globalEntry : "—";
 
     const row = document.createElement("tr");
     row.className = getRowClass(rec.signal);
@@ -203,13 +204,13 @@ function updateTable() {
       <td class="ticker-cell">${ticker}</td>
       <td class="price-cell">${Number(rec.close).toFixed(2)}</td>
       <td>${rec.interval} <br><small>${rec.time}</small></td>
-      <td class="entry-cell">${tData.globalEntry || "—"}</td>
+      <td class="entry-cell" style="border: 1px dashed #ffd166; border-radius: 4px; cursor: pointer;">${displayEntry}</td>
       <td><div class="signal-box">${rec.signal}</div></td>
       <td>${rec.widelki || "—"}</td>
       <td class="tp-cell">${rec.tp1 || "—"}</td>
       <td class="tp-cell">${rec.tp2 || "—"}</td>
       <td class="tp-cell">${rec.tp3 || "—"}</td>
-      <td class="delete-cell">🗑️</td>
+      <td class="delete-cell" style="cursor: pointer;">🗑️</td>
     `;
     tbody.appendChild(row);
   });
@@ -248,25 +249,109 @@ function stopSequence() {
   document.getElementById("comment").textContent = "⛔ Sekwencja zatrzymana.";
 }
 
-function startVoiceInput(callback) {
-  recognitionMode = "AD_HOC";
-  adHocCallback = (spoken) => callback(spoken);
-  recognizing = true;
-  try { recognition.start(); } catch(e) {}
-}
-
-document.addEventListener("click", (e) => {
+// Obsługa kliknięć w tabeli
+document.addEventListener("click", async (e) => {
   const cell = e.target.closest("td");
   const row = e.target.closest("tr");
   if (!cell || !row) return;
 
   const ticker = row.querySelector(".ticker-cell")?.textContent.trim();
+  
+  // 1. Usuwanie wiersza
   if (cell.classList.contains("delete-cell")) {
     delete tickers[ticker];
     updateTable();
+    return;
   }
+  
+  // 2. RĘCZNE WPISYWANIE ENTRY Z KLAWIATURĄ NUMERYCZNĄ PO KLIKNIĘCIU
+  if (cell.classList.contains("entry-cell")) {
+    if (cell.querySelector("input")) return; // Zapobiega powielaniu pól tekstowych
+
+    const currentVal = tickers[ticker].globalEntry || "";
+    
+    // Budowanie dynamicznego pola tekstowego
+    const input = document.createElement("input");
+    input.type = "number";
+    input.step = "any";
+    input.inputMode = "decimal"; // Wymuszenie klawiatury numerycznej (z kropką/przecinkiem) na smartfonach
+    input.value = currentVal;
+    
+    // Stylizacja dopasowana do wiersza tabeli
+    input.style.width = "80px";
+    input.style.background = "#222";
+    input.style.color = "#ffd166";
+    input.style.border = "1px solid #ffd166";
+    input.style.borderRadius = "4px";
+    input.style.padding = "4px";
+    input.style.textAlign = "center";
+    input.style.fontSize = "16px"; // Zapobiega irytującemu zoomowaniu ekranu na urządzeniach iOS
+
+    cell.textContent = "";
+    cell.appendChild(input);
+    input.focus();
+    input.select();
+
+    // Funkcja wywoływana przy zapisie zmian
+    const saveData = async () => {
+      const manual = input.value;
+      const numVal = extractNumber(manual);
+      
+      if (numVal > 0) {
+        tickers[ticker].globalEntry = numVal.toString();
+      } else {
+        tickers[ticker].globalEntry = "";
+      }
+      
+      const tf = tickers[ticker].lastTF;
+      if (tf && tickers[ticker][tf]?.last) {
+        const lastRec = tickers[ticker][tf].last;
+        const updatePayload = {
+          ticker: ticker,
+          interval: tf,
+          time: lastRec.time,
+          open: lastRec.open,
+          high: lastRec.high,
+          low: lastRec.low,
+          close: lastRec.close,
+          volume: lastRec.volume,
+          ma20: lastRec.ma20,
+          dema9: lastRec.dema9,
+          rsi: lastRec.rsi,
+          entry: numVal
+        };
+        
+        try {
+          const response = await fetch(`${backend}?t=${Date.now()}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(updatePayload)
+          });
+          const data = await response.json();
+          handleBackendData(data);
+        } catch (err) {
+          console.log("Błąd synchronizacji entry z serwerem, odświeżam lokalnie.");
+          updateTable();
+        }
+      } else {
+        updateTable();
+      }
+    };
+
+    // Zdarzenia powodujące zatwierdzenie wartości
+    input.addEventListener("blur", saveData);
+    input.addEventListener("keydown", (evt) => {
+      if (evt.key === "Enter") {
+        input.blur();
+      }
+    });
+    return;
+  }
+
+  // 3. Otwieranie raportu (kliknięcie w Ticker)
   if (cell.classList.contains("ticker-cell")) {
-    const rec = tickers[ticker][tickers[ticker].lastTF]?.last;
+    const tf = tickers[ticker].lastTF;
+    const rec = tickers[ticker][tf]?.last;
     if (rec && rec.comment) {
       document.getElementById("popupBody").innerHTML = `<pre>${rec.comment}</pre>`;
       document.getElementById("popup").style.display = "block";
