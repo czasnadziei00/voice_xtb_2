@@ -1,760 +1,772 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VOICE XTB 8.1 HYBRID</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎙️</text></svg>">
-    <style>
-        :root {
-            --bg-color: #121212;
-            --card-bg: #1e1e1e;
-            --text-color: #e0e0e0;
-            --accent-color: #ffd166;
-            --buy-premium: #06d6a0;
-            --buy-normal: #4cc9f0;
-            --sell-color: #ef476f;
-            --czekaj-color: #8d99ae;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>VOICE XTB 8.1 HYBRID AGGRESSIVE</title>
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 15px;
-            font-size: 14px;
-        }
+<style>
+:root{
+    --bg-color:#121212;
+    --card-bg:#1e1e1e;
+    --text-color:#e0e0e0;
+    --accent-color:#ffd166;
+    --buy-premium:#06d6a0;
+    --buy-normal:#4cc9f0;
+    --buy-soft:#72efdd;
+    --sell-color:#ef476f;
+    --czekaj-color:#8d99ae;
+}
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
+body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg-color);
+    color:var(--text-color);
+    margin:0;
+    padding:15px;
+}
 
-        header {
-            text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 2px solid var(--card-bg);
-            padding-bottom: 10px;
-        }
+.container{
+    max-width:1200px;
+    margin:auto;
+}
 
-        h1 {
-            color: var(--accent-color);
-            margin: 0;
-            font-size: 1.8rem;
-            letter-spacing: 1px;
-        }
+header{
+    text-align:center;
+    margin-bottom:20px;
+}
 
-        .status-tag {
-            font-size: 0.8rem;
-            background: #2a2a2a;
-            padding: 3px 8px;
-            border-radius: 12px;
-            color: #06d6a0;
-            display: inline-block;
-            margin-top: 5px;
-        }
+h1{
+    color:var(--accent-color);
+}
 
-        .voice-panel {
-            background: var(--card-bg);
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            text-align: center;
-        }
+.voice-panel{
+    background:var(--card-bg);
+    border-radius:10px;
+    padding:15px;
+    margin-bottom:20px;
+}
 
-        .btn {
-            border: none;
-            padding: 12px 24px;
-            font-size: 1rem;
-            font-weight: bold;
-            border-radius: 6px;
-            cursor: pointer;
-            margin: 5px;
-            transition: transform 0.1s, opacity 0.2s;
-        }
+.btn{
+    border:none;
+    padding:12px 20px;
+    border-radius:8px;
+    font-weight:bold;
+    cursor:pointer;
+    margin:5px;
+}
 
-        .btn:active {
-            transform: scale(0.95);
-        }
+.btn-start{
+    background:#06d6a0;
+    color:#000;
+}
 
-        .btn-start {
-            background-color: var(--buy-premium);
-            color: #000;
-        }
+.btn-stop{
+    background:#ef476f;
+    color:#fff;
+}
 
-        .btn-stop {
-            background-color: var(--sell-color);
-            color: #fff;
-        }
+#recognized{
+    margin-top:10px;
+    color:#ffd166;
+}
 
-        #recognized {
-            margin-top: 10px;
-            font-style: italic;
-            color: var(--accent-color);
-            min-height: 20px;
-        }
+#comment{
+    margin-top:5px;
+    font-weight:bold;
+}
 
-        #comment {
-            margin-top: 5px;
-            font-weight: bold;
-            color: #fff;
-        }
+.table-container{
+    overflow-x:auto;
+    background:var(--card-bg);
+    border-radius:10px;
+}
 
-        .table-container {
-            overflow-x: auto;
-            background: var(--card-bg);
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        }
+table{
+    width:100%;
+    border-collapse:collapse;
+}
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-        }
+th,td{
+    padding:12px;
+    border-bottom:1px solid #333;
+}
 
-        th, td {
-            padding: 12px 10px;
-            border-bottom: 1px solid #2d2d2d;
-        }
+th{
+    background:#252525;
+    color:#ffd166;
+}
 
-        th {
-            background-color: #252525;
-            color: var(--accent-color);
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.8rem;
-            letter-spacing: 0.5px;
-        }
+.row-buy-premium{
+    background:rgba(6,214,160,.22);
+}
 
-        .row-buy-premium { background-color: rgba(6, 214, 160, 0.15); }
-        .row-buy { background-color: rgba(76, 201, 240, 0.12); }
-        .row-sell { background-color: rgba(239, 71, 111, 0.15); }
-        .row-czekaj { background-color: transparent; }
+.row-buy{
+    background:rgba(76,201,240,.18);
+}
 
-        .ticker-cell {
-            font-weight: bold;
-            color: #fff;
-            cursor: pointer;
-            text-decoration: underline dotted var(--accent-color);
-        }
+.row-buy-soft{
+    background:rgba(114,239,221,.12);
+}
 
-        .price-cell {
-            font-family: monospace;
-            font-size: 1.1rem;
-            font-weight: bold;
-        }
+.row-sell{
+    background:rgba(239,71,111,.16);
+}
 
-        .entry-cell {
-            color: var(--accent-color);
-            font-weight: bold;
-            font-family: monospace;
-            font-size: 1.05rem;
-            background-color: rgba(255, 209, 102, 0.05);
-            text-align: center;
-            transition: background 0.2s;
-            cursor: pointer;
-        }
-        
-        .entry-cell:hover {
-            background-color: rgba(255, 209, 102, 0.15);
-        }
+.row-czekaj{
+    background:transparent;
+}
 
-        .signal-box {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-            font-size: 0.85rem;
-            background: #2a2a2a;
-            border: 1px solid #444;
-        }
+.ticker-cell{
+    font-weight:bold;
+    cursor:pointer;
+    color:#fff;
+}
 
-        .row-buy-premium .signal-box { color: var(--buy-premium); border-color: var(--buy-premium); }
-        .row-buy .signal-box { color: var(--buy-normal); border-color: var(--buy-normal); }
-        .row-sell .signal-box { color: var(--sell-color); border-color: var(--sell-color); }
-        .row-czekaj .signal-box { color: var(--czekaj-color); }
+.price-cell{
+    font-weight:bold;
+    font-family:monospace;
+}
 
-        .tp-cell {
-            font-family: monospace;
-            color: #b0b0b0;
-        }
+.entry-cell{
+    color:#ffd166;
+    font-family:monospace;
+    cursor:pointer;
+    text-align:center;
+}
 
-        .delete-cell {
-            text-align: center;
-            font-size: 1.2rem;
-            cursor: pointer;
-            user-select: none;
-        }
+.signal-box{
+    display:inline-block;
+    padding:4px 8px;
+    border-radius:5px;
+    background:#2a2a2a;
+    font-weight:bold;
+}
 
-        .popup-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.6);
-            z-index: 999;
-        }
+.delete-cell{
+    cursor:pointer;
+    text-align:center;
+}
 
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            width: 85%;
-            max-width: 550px;
-        }
+.popup-overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.6);
+    z-index:999;
+}
 
-        .modal-content {
-            background-color: var(--card-bg);
-            padding: 20px;
-            border: 1px solid var(--accent-color);
-            border-radius: 8px;
-            position: relative;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-        }
+.modal{
+    display:none;
+    position:fixed;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    width:85%;
+    max-width:600px;
+    z-index:1000;
+}
 
-        .close-btn {
-            position: absolute;
-            top: 10px;
-            right: 15px;
-            color: #aaa;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-        }
+.modal-content{
+    background:#1e1e1e;
+    padding:20px;
+    border-radius:10px;
+    border:1px solid #ffd166;
+}
 
-        .close-btn:hover { color: #fff; }
+.close-btn{
+    position:absolute;
+    right:15px;
+    top:10px;
+    font-size:28px;
+    cursor:pointer;
+}
 
-        pre {
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            font-family: monospace;
-            background: #151515;
-            padding: 15px;
-            border-radius: 5px;
-            border-left: 3px solid var(--accent-color);
-            margin: 10px 0 0 0;
-            color: #fff;
-            font-size: 0.95rem;
-            line-height: 1.4;
-        }
-
-        #parsed {
-            font-family: monospace;
-            font-size: 0.75rem;
-            color: #666;
-            margin-top: 15px;
-            text-align: center;
-            word-break: break-all;
-        }
-    </style>
+pre{
+    white-space:pre-wrap;
+    background:#111;
+    padding:15px;
+    border-radius:8px;
+    color:#fff;
+}
+</style>
 </head>
+
 <body>
 
 <div class="container">
-    <header>
-        <h1>VOICE XTB 8.1 HYBRID</h1>
-        <div class="status-tag">SYSTEM OPERACYJNY ONLINE</div>
-    </header>
 
-    <div class="voice-panel">
-        <button class="btn btn-start" onclick="startSequence()">🎙️ START SKANOWANIA</button>
-        <button class="btn btn-stop" onclick="stopSequence()">⛔ STOP</button>
-        <div id="recognized">Oczekiwanie na uruchomienie mikrofonu...</div>
-        <div id="comment">Gotowy do pracy</div>
-    </div>
+<header>
+<h1>VOICE XTB 8.1 HYBRID</h1>
+<div>TRYB 60% AGRESYWNY / 40% KONSERWATYWNY</div>
+</header>
 
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th>Ticker</th>
-                    <th>Cena</th>
-                    <th>TF / Czas</th>
-                    <th style="text-align: center; width: 100px;">Entry (Ręczne)</th>
-                    <th>Werdykt</th>
-                    <th>Widełki M15</th>
-                    <th>TP 1</th>
-                    <th>TP 2</th>
-                    <th>TP 3</th>
-                    <th style="width: 40px; text-align: center;">Usuń</th>
-                </tr>
-            </thead>
-            <tbody id="table-body">
-                <tr>
-                    <td colspan="10">Oczekiwanie na dane z bazy...</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+<div class="voice-panel">
+<button class="btn btn-start" onclick="startSequence()">🎙️ START</button>
+<button class="btn btn-stop" onclick="stopSequence()">⛔ STOP</button>
 
-    <div id="parsed">Bufor JSON: {}</div>
+<div id="recognized">Oczekiwanie na mikrofon...</div>
+<div id="comment">System gotowy</div>
+</div>
+
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>Ticker</th>
+<th>Cena</th>
+<th>TF</th>
+<th>Entry</th>
+<th>Sygnał</th>
+<th>Widełki</th>
+<th>TP1</th>
+<th>TP2</th>
+<th>TP3</th>
+<th>Usuń</th>
+</tr>
+</thead>
+
+<tbody id="table-body">
+<tr>
+<td colspan="10">Oczekiwanie na dane...</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div id="parsed" style="margin-top:15px;font-family:monospace;color:#666;"></div>
+
 </div>
 
 <div id="popupOverlay" class="popup-overlay" onclick="closeModal()"></div>
 
 <div id="popup" class="modal">
-    <div class="modal-content">
-        <span class="close-btn" onclick="closeModal()">&times;</span>
-        <h3 style="margin-top:0; color:var(--accent-color);">🎙️ Raport Szczegółowy</h3>
-        <div id="popupBody"></div>
-    </div>
+<div class="modal-content">
+<span class="close-btn" onclick="closeModal()">&times;</span>
+<h3 style="color:#ffd166;">Raport</h3>
+<div id="popupBody"></div>
+</div>
 </div>
 
 <script>
-function closeModal() {
-    document.getElementById('popup').style.display = 'none';
-    document.getElementById('popupOverlay').style.display = 'none';
+
+function closeModal(){
+    document.getElementById("popup").style.display="none";
+    document.getElementById("popupOverlay").style.display="none";
 }
 
-const backend = "https://voice-xtb.onrender.com/voice-parse";
-const STORAGE_KEY = "xtbtablememoryv2multitf";
+const backend="https://voice-xtb.onrender.com/voice-parse";
+const STORAGE_KEY="xtbtablememoryv2multitf";
 
-let recognition = null;
-let recognizing = false;
-let currentStep = 0;
-let tempRecord = {};
-let isFetching = false;
+let recognition=null;
+let recognizing=false;
+let currentStep=0;
+let tempRecord={};
+let isFetching=false;
 
-const steps = [
-  "Podaj ticker",
-  "Podaj interwał",
-  "Podaj czas lub dzień",
-  "Podaj cenę open",
-  "Podaj cenę high",
-  "Podaj cenę low",
-  "Podaj cenę close",
-  "Podaj wolumen",
-  "Podaj MA 20",
-  "Podaj DEMA 9",
-  "Podaj RSI"
+const tickers={};
+
+const steps=[
+"Podaj ticker",
+"Podaj interwał",
+"Podaj czas lub dzień",
+"Podaj cenę open",
+"Podaj cenę high",
+"Podaj cenę low",
+"Podaj cenę close",
+"Podaj wolumen",
+"Podaj MA 20",
+"Podaj DEMA 9",
+"Podaj RSI"
 ];
 
-const tickers = {};
+function initRecognition(){
 
-function initRecognition() {
-  const SR = window.webkitSpeechRecognition || window.SpeechRecognition;
-  if (!SR) return null;
-  const rec = new SR();
-  rec.lang = "pl-PL";
-  rec.continuous = false;
-  rec.interimResults = false;
+    const SR=window.webkitSpeechRecognition || window.SpeechRecognition;
 
-  rec.onresult = (e) => {
-    const text = e.results[0][0].transcript.trim();
-    document.getElementById("recognized").textContent = `Rozpoznano: ${text}`;
-    handleRecognized(text);
-  };
+    if(!SR) return null;
 
-  rec.onend = () => {
-    if (recognizing) {
-      if (currentStep < steps.length) {
-        setTimeout(() => { sayStep(); }, 300);
-      } else {
-        recognizing = false;
-        finalizeRecord();
-      }
-    }
-  };
+    const rec=new SR();
 
-  rec.onerror = (e) => { 
-    console.log("Speech error:", e.error); 
-    if (recognizing) {
-      setTimeout(() => { sayStep(); }, 300);
-    }
-  };
-  return rec;
-}
+    rec.lang="pl-PL";
+    rec.continuous=false;
+    rec.interimResults=false;
 
-recognition = initRecognition();
+    rec.onresult=(e)=>{
 
-function sayStep() {
-  if (currentStep >= steps.length || !recognizing) return;
+        const text=e.results[0][0].transcript.trim();
 
-  speechSynthesis.cancel();
+        document.getElementById("recognized").textContent=
+        `Rozpoznano: ${text}`;
 
-  const msg = new SpeechSynthesisUtterance(steps[currentStep]);
-  msg.lang = "pl-PL";
-  msg.rate = 1.1;
-
-  msg.onend = () => {
-    if (recognizing) {
-      setTimeout(() => {
-        try {
-          recognition.start();
-        } catch (e) { 
-          console.log("Mic restart error, retrying..."); 
-          setTimeout(() => { if (recognizing) recognition.start(); }, 400);
-        }
-      }, 200);
-    }
-  };
-
-  speechSynthesis.speak(msg);
-}
-
-function parseAndAlignTime(rawText, intervalStr) {
-  const now = new Date();
-  
-  if (intervalStr === "D1") {
-    let dayNum = parseInt(rawText.toString().replace(/[^0-9]/g, ""), 10);
-    
-    if (isNaN(dayNum) || dayNum < 1 || dayNum > 31) {
-      dayNum = now.getDate();
-    }
-    
-    let year = now.getFullYear();
-    let month = now.getMonth() + 1;
-    
-    if (dayNum > now.getDate() && now.getDate() < 7) {
-      month = month - 1;
-      if (month === 0) {
-        month = 12;
-        year = year - 1;
-      }
-    }
-    
-    const strMonth = month.toString().padStart(2, '0');
-    const strDay = dayNum.toString().padStart(2, '0');
-    
-    return `${year}-${strMonth}-${strDay}`;
-  }
-
-  let hours = 0;
-  let minutes = 0;
-  let cleanText = rawText.toString().trim().toLowerCase().replace(/[.:\- ]/g, " ");
-  let parts = cleanText.split(/\s+/).filter(p => p.length > 0);
-
-  if (parts.length >= 2) {
-    hours = parseInt(parts[0], 10) || 0;
-    minutes = parseInt(parts[1], 10) || 0;
-  } else if (parts.length === 1 && !isNaN(parts[0])) {
-    let num = parts[0];
-    if (num.length === 3) {
-      hours = parseInt(num.substring(0, 1), 10);
-      minutes = parseInt(num.substring(1), 10);
-    } else if (num.length === 4) {
-      hours = parseInt(num.substring(0, 2), 10);
-      minutes = parseInt(num.substring(2), 10);
-    } else {
-      hours = parseInt(num, 10) || 0;
-      minutes = 0;
-    }
-  } else {
-    hours = now.getHours();
-    minutes = now.getMinutes();
-  }
-
-  hours = Math.min(Math.max(hours, 0), 23);
-  minutes = Math.min(Math.max(minutes, 0), 59);
-
-  if (intervalStr === "M5") {
-    minutes = Math.floor(minutes / 5) * 5;
-  } else if (intervalStr === "M15") {
-    minutes = Math.floor(minutes / 15) * 15;
-  } else if (intervalStr === "H1") {
-    minutes = 0;
-  }
-
-  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-}
-
-function handleRecognized(text) {
-  switch (currentStep) {
-    case 0: tempRecord.ticker = text.toUpperCase().replace(/\s+/g, ""); break;
-    case 1: tempRecord.interval = normalizeInterval(text); break;
-    case 2: tempRecord.time = parseAndAlignTime(text, tempRecord.interval); break;
-    case 3: tempRecord.open = extractNumber(text); break;
-    case 4: tempRecord.high = extractNumber(text); break;
-    case 5: tempRecord.low = extractNumber(text); break;
-    case 6: tempRecord.close = extractNumber(text); break;
-    case 7: tempRecord.volume = extractNumber(text); break;
-    case 8: tempRecord.ma20 = extractNumber(text); break;
-    case 9: tempRecord.dema9 = extractNumber(text); break;
-    case 10: tempRecord.rsi = extractNumber(text); break;
-  }
-  currentStep++;
-}
-
-function extractNumber(text) {
-  if (!text) return 0;
-  text = text.toString().trim().toLowerCase()
-    .replaceAll("kropka", ".").replaceAll("przecinek", ".");
-  text = text.replace(/\s+/g, "");
-  const num = parseFloat(text);
-  return isFinite(num) ? num : 0;
-}
-
-function normalizeInterval(tf) {
-  tf = tf.toUpperCase().trim();
-  if (tf === "5" || tf === "M5") return "M5";
-  if (tf === "15" || tf === "M15") return "M15";
-  if (tf === "H1" || tf === "1H" || tf === "60") return "H1";
-  if (tf === "D1" || tf === "D" || tf === "1D" || tf === "DZIENNY") return "D1";
-  return tf;
-}
-
-async function finalizeRecord() {
-  if (isFetching) return;
-  isFetching = true;
-  
-  if (!tempRecord.time) {
-    tempRecord.time = parseAndAlignTime("", tempRecord.interval);
-  }
-  
-  const t = tempRecord.ticker;
-  if (tickers[t] && tickers[t].globalEntry) {
-    tempRecord.entry = parseFloat(tickers[t].globalEntry);
-  } else {
-    tempRecord.entry = null;
-  }
-
-  document.getElementById("comment").textContent = "⏳ Analiza 8.1 Hybrid...";
-  document.getElementById("parsed").textContent = `Bufor JSON: ${JSON.stringify(tempRecord)}`;
-  
-  try {
-    const response = await fetch(`${backend}?t=${Date.now()}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(tempRecord)
-    });
-    const data = await response.json();
-    handleBackendData(data);
-    document.getElementById("comment").textContent = "✔️ Analiza gotowa";
-  } catch (err) {
-    document.getElementById("comment").textContent = "❌ Błąd połączenia";
-  } finally {
-    tempRecord = {};
-    currentStep = 0;
-    isFetching = false;
-  }
-}
-
-function handleBackendData(d) {
-  const ticker = d.ticker;
-  const tf = normalizeInterval(d.interval);
-  
-  if (!tickers[ticker]) tickers[ticker] = { globalEntry: "", updatedAt: 0 };
-  
-  tickers[ticker].updatedAt = Date.now();
-  tickers[ticker].lastTF = tf;
-
-  if (d.entry !== undefined && d.entry !== null && d.entry !== "") {
-    tickers[ticker].globalEntry = d.entry.toString();
-  } else {
-    tickers[ticker].globalEntry = "";
-  }
-
-  if (!tickers[ticker][tf]) tickers[ticker][tf] = { history: [] };
-  tickers[ticker][tf].last = d;
-  
-  updateTable();
-}
-
-function updateTable() {
-  const tbody = document.getElementById("table-body");
-  tbody.innerHTML = "";
-  const sortedTickers = Object.keys(tickers).sort((a, b) => tickers[b].updatedAt - tickers[a].updatedAt);
-
-  if (sortedTickers.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="10">Oczekiwanie na dane z bazy...</td></tr>`;
-    saveTable();
-    return;
-  }
-
-  sortedTickers.forEach(ticker => {
-    const tData = tickers[ticker];
-    const tf = tData.lastTF || "M5";
-    const rec = tData[tf]?.last;
-    if (!rec) return;
-
-    const displayEntry = (tData.globalEntry && parseFloat(tData.globalEntry) > 0) ? tData.globalEntry : "—";
-
-    const row = document.createElement("tr");
-    row.className = getRowClass(rec.signal);
-    row.innerHTML = `
-      <td class="ticker-cell">${ticker}</td>
-      <td class="price-cell">${Number(rec.close).toFixed(2)}</td>
-      <td>${rec.interval} <br><small>${rec.time}</small></td>
-      <td class="entry-cell">${displayEntry}</td>
-      <td><div class="signal-box">${rec.signal}</div></td>
-      <td>${rec.widelki || "—"}</td>
-      <td class="tp-cell">${rec.tp1 || "—"}</td>
-      <td class="tp-cell">${rec.tp2 || "—"}</td>
-      <td class="tp-cell">${rec.tp3 || "—"}</td>
-      <td class="delete-cell">🗑️</td>
-    `;
-    tbody.appendChild(row);
-  });
-  saveTable();
-}
-
-// POPRAWKA: Przystosowanie klas wierszy do spolszczonych komunikatów z backendu
-function getRowClass(sig) {
-  if (!sig) return "row-czekaj";
-  if (sig.includes("PREMIUM") && sig.includes("BUY")) return "row-buy-premium";
-  if (sig.includes("BUY") || sig.includes("ACCEL") && !sig.includes("REDUKUJ")) return "row-buy";
-  if (sig.includes("EXIT") || sig.includes("REDUKUJ") || sig.includes("SŁABNIE") || sig.includes("REALIZUJ")) return "row-sell";
-  return "row-czekaj";
-}
-
-function startSequence() {
-  if (recognizing) return;
-  
-  speechSynthesis.cancel();
-  const wakeUp = new SpeechSynthesisUtterance("");
-  speechSynthesis.speak(wakeUp);
-
-  tempRecord = {};
-  currentStep = 0;
-  recognizing = true;
-  sayStep();
-}
-
-function stopSequence() {
-  recognizing = false;
-  currentStep = 0;
-  tempRecord = {};
-  try { recognition.stop(); } catch(e) {}
-  document.getElementById("comment").textContent = "⛔ Sekwencja zatrzymana.";
-}
-
-document.addEventListener("click", async (e) => {
-  const cell = e.target.closest("td");
-  const row = e.target.closest("tr");
-  if (!cell || !row) return;
-
-  const ticker = row.querySelector(".ticker-cell")?.textContent.trim();
-  
-  if (cell.classList.contains("delete-cell")) {
-    document.getElementById("comment").textContent = `🗑️ Usuwanie ${ticker}...`;
-    
-    delete tickers[ticker];
-    updateTable();
-    
-    try {
-      await fetch(`${backend}/delete`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ticker: ticker })
-      });
-      document.getElementById("comment").textContent = "✔️ Usunięto z bazy danych";
-    } catch(err) {
-      console.log("Błąd synchronizacji serwera:", err);
-      document.getElementById("comment").textContent = "❌ Błąd czyszczenia bazy serwera";
-    }
-    return;
-  }
-  
-  if (cell.classList.contains("entry-cell")) {
-    if (cell.querySelector("input")) return;
-
-    const currentVal = tickers[ticker].globalEntry || "";
-    
-    const input = document.createElement("input");
-    input.type = "number";
-    input.step = "any";
-    input.inputMode = "decimal";
-    input.value = currentVal;
-    
-    input.style.width = "80px";
-    input.style.background = "#222";
-    input.style.color = "#ffd166";
-    input.style.border = "1px solid #ffd166";
-    input.style.borderRadius = "4px";
-    input.style.padding = "4px";
-    input.style.textAlign = "center";
-    input.style.fontSize = "16px";
-
-    cell.textContent = "";
-    cell.appendChild(input);
-    input.focus();
-    input.select();
-
-    const saveData = async () => {
-      const manual = input.value;
-      const numVal = extractNumber(manual);
-      
-      if (numVal > 0) {
-        tickers[ticker].globalEntry = numVal.toString();
-      } else {
-        tickers[ticker].globalEntry = "";
-      }
-      
-      const tf = tickers[ticker].lastTF;
-      if (tf && tickers[ticker][tf]?.last) {
-        const lastRec = tickers[ticker][tf].last;
-        const updatePayload = {
-          ticker: ticker,
-          interval: tf,
-          time: lastRec.time,
-          open: lastRec.open,
-          high: lastRec.high,
-          low: lastRec.low,
-          close: lastRec.close,
-          volume: lastRec.volume,
-          ma20: lastRec.ma20,
-          dema9: lastRec.dema9,
-          rsi: lastRec.rsi,
-          entry: numVal > 0 ? numVal : 0
-        };
-        
-        try {
-          const response = await fetch(`${backend}?t=${Date.now()}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(updatePayload)
-          });
-          const data = await response.json();
-          handleBackendData(data);
-        } catch (err) {
-          updateTable();
-        }
-      } else {
-        updateTable();
-      }
+        handleRecognized(text);
     };
 
-    input.addEventListener("blur", saveData);
-    input.addEventListener("keydown", (evt) => {
-      if (evt.key === "Enter") {
-        input.blur();
-      }
-    });
-    return;
-  }
+    rec.onend=()=>{
 
-  if (cell.classList.contains("ticker-cell")) {
-    const tf = tickers[ticker].lastTF;
-    const rec = tickers[ticker][tf]?.last;
-    if (rec && rec.comment) {
-      document.getElementById("popupBody").innerHTML = `<pre>${rec.comment}</pre>`;
-      document.getElementById("popup").style.display = "block";
-      document.getElementById("popupOverlay").style.display = "block";
-    } else {
-      alert("Brak danych komentarza");
-    }
-  }
-});
+        if(recognizing){
 
-function saveTable() { localStorage.setItem(STORAGE_KEY, JSON.stringify(tickers)); }
-function loadTable() {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw) { 
-    for (let member in tickers) delete tickers[member];
-    Object.assign(tickers, JSON.parse(raw)); 
-    updateTable(); 
-  }
+            if(currentStep < steps.length){
+
+                setTimeout(()=>{
+                    sayStep();
+                },250);
+
+            }else{
+
+                recognizing=false;
+                finalizeRecord();
+            }
+        }
+    };
+
+    rec.onerror=(e)=>{
+
+        console.log(e.error);
+
+        if(recognizing){
+
+            setTimeout(()=>{
+                sayStep();
+            },300);
+        }
+    };
+
+    return rec;
 }
 
-document.addEventListener("DOMContentLoaded", loadTable);
+recognition=initRecognition();
+
+function sayStep(){
+
+    if(currentStep >= steps.length || !recognizing) return;
+
+    speechSynthesis.cancel();
+
+    const msg=new SpeechSynthesisUtterance(steps[currentStep]);
+
+    msg.lang="pl-PL";
+    msg.rate=1.08;
+
+    msg.onend=()=>{
+
+        if(recognizing){
+
+            setTimeout(()=>{
+
+                try{
+                    recognition.start();
+                }catch(err){
+
+                    setTimeout(()=>{
+                        if(recognizing) recognition.start();
+                    },350);
+                }
+
+            },180);
+        }
+    };
+
+    speechSynthesis.speak(msg);
+}
+
+function extractNumber(text){
+
+    if(!text) return 0;
+
+    text=text.toString()
+    .toLowerCase()
+    .replaceAll("kropka",".")
+    .replaceAll("przecinek",".")
+    .replace(/\s+/g,"");
+
+    const num=parseFloat(text);
+
+    return isFinite(num) ? num : 0;
+}
+
+function normalizeInterval(tf){
+
+    tf=tf.toUpperCase().trim();
+
+    if(tf==="5" || tf==="M5") return "M5";
+    if(tf==="15" || tf==="M15") return "M15";
+    if(tf==="H1" || tf==="1H" || tf==="60") return "H1";
+    if(tf==="D1" || tf==="1D" || tf==="D") return "D1";
+
+    return tf;
+}
+
+function parseAndAlignTime(rawText, intervalStr){
+
+    const now=new Date();
+
+    if(intervalStr==="D1"){
+
+        return now.toISOString().split("T")[0];
+    }
+
+    let h=now.getHours();
+    let m=now.getMinutes();
+
+    const clean=rawText.replace(/[^\d]/g,"");
+
+    if(clean.length===4){
+
+        h=parseInt(clean.substring(0,2));
+        m=parseInt(clean.substring(2));
+
+    }else if(clean.length===3){
+
+        h=parseInt(clean.substring(0,1));
+        m=parseInt(clean.substring(1));
+    }
+
+    if(intervalStr==="M5"){
+        m=Math.floor(m/5)*5;
+    }
+
+    if(intervalStr==="M15"){
+        m=Math.floor(m/15)*15;
+    }
+
+    if(intervalStr==="H1"){
+        m=0;
+    }
+
+    return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
+}
+
+function handleRecognized(text){
+
+    switch(currentStep){
+
+        case 0:
+            tempRecord.ticker=text.toUpperCase().replace(/\s+/g,"");
+        break;
+
+        case 1:
+            tempRecord.interval=normalizeInterval(text);
+        break;
+
+        case 2:
+            tempRecord.time=parseAndAlignTime(text,tempRecord.interval);
+        break;
+
+        case 3:
+            tempRecord.open=extractNumber(text);
+        break;
+
+        case 4:
+            tempRecord.high=extractNumber(text);
+        break;
+
+        case 5:
+            tempRecord.low=extractNumber(text);
+        break;
+
+        case 6:
+            tempRecord.close=extractNumber(text);
+        break;
+
+        case 7:
+            tempRecord.volume=extractNumber(text);
+        break;
+
+        case 8:
+            tempRecord.ma20=extractNumber(text);
+        break;
+
+        case 9:
+            tempRecord.dema9=extractNumber(text);
+        break;
+
+        case 10:
+            tempRecord.rsi=extractNumber(text);
+        break;
+    }
+
+    currentStep++;
+}
+
+async function finalizeRecord(){
+
+    if(isFetching) return;
+
+    isFetching=true;
+
+    document.getElementById("comment").textContent=
+    "⏳ Analiza agresywna...";
+
+    document.getElementById("parsed").textContent=
+    JSON.stringify(tempRecord);
+
+    try{
+
+        const response=await fetch(`${backend}?t=${Date.now()}`,{
+
+            method:"POST",
+
+            headers:{
+                "Content-Type":"application/json"
+            },
+
+            body:JSON.stringify(tempRecord)
+        });
+
+        const data=await response.json();
+
+        handleBackendData(data);
+
+        document.getElementById("comment").textContent=
+        "✔️ Analiza gotowa";
+
+    }catch(err){
+
+        document.getElementById("comment").textContent=
+        "❌ Błąd połączenia";
+    }
+
+    tempRecord={};
+    currentStep=0;
+    isFetching=false;
+}
+
+function handleBackendData(d){
+
+    const ticker=d.ticker;
+    const tf=normalizeInterval(d.interval);
+
+    if(!tickers[ticker]){
+
+        tickers[ticker]={
+            globalEntry:"",
+            updatedAt:0
+        };
+    }
+
+    tickers[ticker].updatedAt=Date.now();
+    tickers[ticker].lastTF=tf;
+
+    if(!tickers[ticker][tf]){
+
+        tickers[ticker][tf]={
+            history:[]
+        };
+    }
+
+    tickers[ticker][tf].last=d;
+
+    updateTable();
+}
+
+function updateTable(){
+
+    const tbody=document.getElementById("table-body");
+
+    tbody.innerHTML="";
+
+    const sorted=Object.keys(tickers)
+    .sort((a,b)=>tickers[b].updatedAt - tickers[a].updatedAt);
+
+    if(sorted.length===0){
+
+        tbody.innerHTML=
+        `<tr><td colspan="10">Brak danych</td></tr>`;
+
+        return;
+    }
+
+    sorted.forEach(ticker=>{
+
+        const t=tickers[ticker];
+
+        const tf=t.lastTF || "M5";
+
+        const rec=t[tf]?.last;
+
+        if(!rec) return;
+
+        const row=document.createElement("tr");
+
+        row.className=getRowClass(rec.signal);
+
+        row.innerHTML=`
+        <td class="ticker-cell">${ticker}</td>
+        <td class="price-cell">${Number(rec.close).toFixed(2)}</td>
+        <td>${rec.interval}<br><small>${rec.time}</small></td>
+        <td class="entry-cell">${t.globalEntry || "—"}</td>
+        <td><div class="signal-box">${rec.signal || "BRAK"}</div></td>
+        <td>${rec.widelki || "—"}</td>
+        <td>${rec.tp1 || "—"}</td>
+        <td>${rec.tp2 || "—"}</td>
+        <td>${rec.tp3 || "—"}</td>
+        <td class="delete-cell">🗑️</td>
+        `;
+
+        tbody.appendChild(row);
+    });
+
+    saveTable();
+}
+
+/* =====================================================
+   NOWA LOGIKA 60% AGRESJA / 40% KONSERWATYWNIE
+===================================================== */
+
+function getRowClass(sig){
+
+    if(!sig) return "row-czekaj";
+
+    sig=sig.toUpperCase();
+
+    // PREMIUM
+    if(sig.includes("PREMIUM")){
+        return "row-buy-premium";
+    }
+
+    // AGRESYWNY BUY
+    if(
+        sig.includes("BUY") ||
+        sig.includes("ACCEL") ||
+        sig.includes("BREAKOUT") ||
+        sig.includes("MOCNY")
+    ){
+        return "row-buy";
+    }
+
+    // LEKKI BUY
+    if(
+        sig.includes("LONG") ||
+        sig.includes("AKUMULACJA") ||
+        sig.includes("WZROST")
+    ){
+        return "row-buy-soft";
+    }
+
+    // SELL
+    if(
+        sig.includes("EXIT") ||
+        sig.includes("SELL") ||
+        sig.includes("REDUKUJ") ||
+        sig.includes("SŁABNIE") ||
+        sig.includes("REALIZUJ")
+    ){
+        return "row-sell";
+    }
+
+    return "row-czekaj";
+}
+
+function startSequence(){
+
+    if(recognizing) return;
+
+    tempRecord={};
+
+    currentStep=0;
+
+    recognizing=true;
+
+    sayStep();
+}
+
+function stopSequence(){
+
+    recognizing=false;
+
+    currentStep=0;
+
+    tempRecord={};
+
+    try{
+        recognition.stop();
+    }catch(err){}
+
+    document.getElementById("comment").textContent=
+    "⛔ Zatrzymano";
+}
+
+document.addEventListener("click", async(e)=>{
+
+    const cell=e.target.closest("td");
+    const row=e.target.closest("tr");
+
+    if(!cell || !row) return;
+
+    const ticker=row.querySelector(".ticker-cell")?.textContent.trim();
+
+    // DELETE
+    if(cell.classList.contains("delete-cell")){
+
+        delete tickers[ticker];
+
+        updateTable();
+
+        try{
+
+            await fetch(`${backend}/delete`,{
+
+                method:"POST",
+
+                headers:{
+                    "Content-Type":"application/json"
+                },
+
+                body:JSON.stringify({
+                    ticker:ticker
+                })
+            });
+
+        }catch(err){
+
+            console.log(err);
+        }
+
+        return;
+    }
+
+    // POPUP
+    if(cell.classList.contains("ticker-cell")){
+
+        const tf=tickers[ticker].lastTF;
+
+        const rec=tickers[ticker][tf]?.last;
+
+        if(rec && rec.comment){
+
+            document.getElementById("popupBody").innerHTML=
+            `<pre>${rec.comment}</pre>`;
+
+            document.getElementById("popup").style.display="block";
+
+            document.getElementById("popupOverlay").style.display="block";
+        }
+    }
+});
+
+function saveTable(){
+
+    localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(tickers)
+    );
+}
+
+function loadTable(){
+
+    const raw=localStorage.getItem(STORAGE_KEY);
+
+    if(raw){
+
+        Object.assign(tickers,JSON.parse(raw));
+
+        updateTable();
+    }
+}
+
+document.addEventListener("DOMContentLoaded",loadTable);
+
 </script>
 
 </body>
