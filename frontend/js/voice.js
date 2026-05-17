@@ -657,7 +657,8 @@ function getRowClass(sig) {
       !sig.includes("REDUKUJ")
     ) ||
     sig.includes("MOMENTUM") ||
-    sig.includes("BREAKOUT")
+    sig.includes("BREAKOUT") ||
+    sig.includes("KOREKTA")
   ) {
     return "row-buy";
   }
@@ -981,24 +982,50 @@ function saveTable() {
   );
 }
 
-function loadTable() {
+async function loadTable() {
 
-  const raw =
-    localStorage.getItem(
-      STORAGE_KEY
-    );
+  const baseEndpoint = backend.replace("/voice-parse", "");
+  
+  try {
+    const response = await fetch(`${baseEndpoint}/memory?t=${Date.now()}`);
+    if (response.ok) {
+      const data = await response.json();
+      if (data && Object.keys(data).length > 0) {
+        for (let member in tickers) {
+          delete tickers[member];
+        }
+        
+        Object.keys(data).forEach(ticker => {
+          tickers[ticker] = {
+            globalEntry: data[ticker].global_entry || "",
+            updatedAt: Date.now()
+          };
+          
+          ["M5", "M15", "H1", "D1"].forEach(tf => {
+            if (data[ticker][tf] && data[ticker][tf].last_data && Object.keys(data[ticker][tf].last_data).length > 0) {
+              if (!tickers[ticker][tf]) {
+                tickers[ticker][tf] = { history: [] };
+              }
+              tickers[ticker][tf].last = data[ticker][tf].last_data;
+              tickers[ticker].lastTF = tf;
+            }
+          });
+        });
+        
+        updateTable();
+        return;
+      }
+    }
+  } catch (err) {
+    console.log("Blad pobierania pamieci z backendu:", err);
+  }
 
+  const raw = localStorage.getItem(STORAGE_KEY);
   if (raw) {
-
     for (let member in tickers) {
       delete tickers[member];
     }
-
-    Object.assign(
-      tickers,
-      JSON.parse(raw)
-    );
-
+    Object.assign(tickers, JSON.parse(raw));
     updateTable();
   }
 }
