@@ -610,22 +610,16 @@ function updateTable(){
     saveTable();
 }
 
-/* =====================================================
-   NOWA LOGIKA 60% AGRESJA / 40% KONSERWATYWNIE
-===================================================== */
-
 function getRowClass(sig){
 
     if(!sig) return "row-czekaj";
 
     sig=sig.toUpperCase();
 
-    // PREMIUM
     if(sig.includes("PREMIUM")){
         return "row-buy-premium";
     }
 
-    // AGRESYWNY BUY
     if(
         sig.includes("BUY") ||
         sig.includes("ACCEL") ||
@@ -637,7 +631,6 @@ function getRowClass(sig){
         return "row-buy";
     }
 
-    // LEKKI BUY
     if(
         sig.includes("LONG") ||
         sig.includes("AKUMULACJA") ||
@@ -646,7 +639,6 @@ function getRowClass(sig){
         return "row-buy-soft";
     }
 
-    // SELL
     if(
         sig.includes("EXIT") ||
         sig.includes("SELL") ||
@@ -698,7 +690,6 @@ document.addEventListener("click", async(e)=>{
 
     const ticker=row.querySelector(".ticker-cell")?.textContent.trim();
 
-    // DELETE
     if(cell.classList.contains("delete-cell")){
 
         delete tickers[ticker];
@@ -728,7 +719,6 @@ document.addEventListener("click", async(e)=>{
         return;
     }
 
-    // POPUP
     if(cell.classList.contains("ticker-cell")){
 
         const tf=tickers[ticker].lastTF;
