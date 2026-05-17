@@ -658,9 +658,19 @@ function getRowClass(sig) {
     ) ||
     sig.includes("MOMENTUM") ||
     sig.includes("BREAKOUT") ||
-    sig.includes("KOREKTA")
+    sig.includes("KOREKTA") ||
+    sig.includes("MOCNY")
   ) {
     return "row-buy";
+  }
+
+  // LEKKI BUY
+  if (
+    sig.includes("LONG") ||
+    sig.includes("AKUMULACJA") ||
+    sig.includes("WZROST")
+  ) {
+    return "row-buy-soft";
   }
 
   // SELL / EXIT
