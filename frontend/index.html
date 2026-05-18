@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>VOICE XTB 9.0 STRUCTURE ENGINE</title>
+<title>SILNIK STRUKTURALNY VOICE XTB 9.0</title>
 
 <style>
 :root{
@@ -306,14 +306,14 @@ th{
 <tr>
 <th>Ticker 📋</th>
 <th>Cena</th>
-<th>TF</th>
-<th>Entry ✏️</th>
+<th>Interwał (TF)</th>
+<th>Wejście (Entry) ✏️</th>
 <th>Sygnał</th>
 <th>Widełki</th>
 <th>TP1</th>
 <th>TP2</th>
 <th>TP3</th>
-<th>Trailing SL 🛑</th>
+<th>Kroczący SL 🛑</th>
 <th>Usuń</th>
 </tr>
 </thead>
@@ -400,7 +400,7 @@ function initRecognition(){
     };
 
     rec.onerror = (e)=>{
-        console.log("Speech error:", e.error);
+        console.log("Błąd mowy:", e.error);
         if(recognizing){
             setTimeout(()=>{
                 try{ recognition.start(); }catch(err){}
@@ -504,7 +504,7 @@ function handleRecognized(text){
 }
 
 // ======================================================
-// POPRAWIONY PARSER KOMENTARZA STRUKTURALNEGO DO POPUPU
+// PARSER KOMENTARZA STRUKTURALNEGO DO POPUPU
 // ======================================================
 function parseEngineCommentToHtml(commentText) {
     if (!commentText) return "Brak szczegółowego komentarza strukturalnego.";
@@ -711,7 +711,7 @@ document.addEventListener("click", async(e)=>{
     let rawTicker = row.querySelector(".ticker-cell")?.textContent || "";
     const ticker = rawTicker.replace("📋", "").trim().toUpperCase();
 
-    // AKCJA 1: USUWANIE REKORDÓW Z CHMURY (.TRIM() ZAMIAST WADLIWEGO .STRIP())
+    // AKCJA 1: USUWANIE REKORDÓW Z CHMURY
     if(cell.classList.contains("delete-cell")){
         delete tickers[ticker];
         updateTable();
