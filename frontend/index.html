@@ -11,11 +11,12 @@
     --card-bg:#1e1e1e;
     --text-color:#e0e0e0;
     --accent-color:#ffd166;
-    --buy-premium:#06d6a0;
-    --buy-normal:#4cc9f0;
-    --buy-soft:#72efdd;
+
+    --buy-color:#06d6a0;
+    --hold-color:#4cc9f0;
+    --reduce-color:#f4a261;
     --sell-color:#ef476f;
-    --czekaj-color:#8d99ae;
+    --wait-color:#8d99ae;
 }
 
 body{
@@ -90,6 +91,7 @@ table{
 th,td{
     padding:12px;
     border-bottom:1px solid #333;
+    text-align:center;
 }
 
 th{
@@ -97,23 +99,23 @@ th{
     color:#ffd166;
 }
 
-.row-buy-premium{
-    background:rgba(6,214,160,.22);
-}
-
 .row-buy{
-    background:rgba(76,201,240,.18);
+    background:rgba(6,214,160,.18);
 }
 
-.row-buy-soft{
-    background:rgba(114,239,221,.12);
+.row-hold{
+    background:rgba(76,201,240,.15);
+}
+
+.row-reduce{
+    background:rgba(244,162,97,.16);
 }
 
 .row-sell{
     background:rgba(239,71,111,.16);
 }
 
-.row-czekaj{
+.row-wait{
     background:transparent;
 }
 
@@ -132,20 +134,19 @@ th{
     color:#ffd166;
     font-family:monospace;
     cursor:pointer;
-    text-align:center;
 }
 
 .signal-box{
     display:inline-block;
-    padding:4px 8px;
-    border-radius:5px;
+    padding:6px 10px;
+    border-radius:6px;
     background:#2a2a2a;
     font-weight:bold;
+    min-width:85px;
 }
 
 .delete-cell{
     cursor:pointer;
-    text-align:center;
 }
 
 .popup-overlay{
@@ -198,19 +199,33 @@ pre{
 
 <header>
 <h1>VOICE XTB 8.1 HYBRID</h1>
-<div>TRYB 60% AGRESYWNY / 40% KONSERWATYWNY</div>
+<div>GPW LONG ONLY — DAYTRADING / SWING</div>
 </header>
 
 <div class="voice-panel">
-<button class="btn btn-start" onclick="startSequence()">🎙️ START</button>
-<button class="btn btn-stop" onclick="stopSequence()">⛔ STOP</button>
 
-<div id="recognized">Oczekiwanie na mikrofon...</div>
-<div id="comment">System gotowy</div>
+<button class="btn btn-start" onclick="startSequence()">
+🎙️ START
+</button>
+
+<button class="btn btn-stop" onclick="stopSequence()">
+⛔ STOP
+</button>
+
+<div id="recognized">
+Oczekiwanie na mikrofon...
+</div>
+
+<div id="comment">
+System gotowy
+</div>
+
 </div>
 
 <div class="table-container">
+
 <table>
+
 <thead>
 <tr>
 <th>Ticker</th>
@@ -227,46 +242,74 @@ pre{
 </thead>
 
 <tbody id="table-body">
+
 <tr>
-<td colspan="10">Oczekiwanie na dane...</td>
+<td colspan="10">
+Oczekiwanie na dane...
+</td>
 </tr>
+
 </tbody>
+
 </table>
-</div>
-
-<div id="parsed" style="margin-top:15px;font-family:monospace;color:#666;"></div>
 
 </div>
 
-<div id="popupOverlay" class="popup-overlay" onclick="closeModal()"></div>
+<div id="parsed"
+style="margin-top:15px;font-family:monospace;color:#666;">
+</div>
+
+</div>
+
+<div id="popupOverlay"
+class="popup-overlay"
+onclick="closeModal()">
+</div>
 
 <div id="popup" class="modal">
+
 <div class="modal-content">
-<span class="close-btn" onclick="closeModal()">&times;</span>
-<h3 style="color:#ffd166;">Raport</h3>
+
+<span class="close-btn"
+onclick="closeModal()">
+&times;
+</span>
+
+<h3 style="color:#ffd166;">
+Raport
+</h3>
+
 <div id="popupBody"></div>
+
 </div>
+
 </div>
 
 <script>
 
 function closeModal(){
+
     document.getElementById("popup").style.display="none";
+
     document.getElementById("popupOverlay").style.display="none";
 }
 
-const backend="https://voice-xtb.onrender.com/voice-parse";
-const STORAGE_KEY="xtbtablememoryv2multitf";
+const backend =
+"https://voice-xtb.onrender.com/voice-parse";
 
-let recognition=null;
-let recognizing=false;
-let currentStep=0;
-let tempRecord={};
-let isFetching=false;
+const STORAGE_KEY =
+"xtbtablememoryv2multitf";
 
-const tickers={};
+let recognition = null;
+let recognizing = false;
+let currentStep = 0;
+let tempRecord = {};
+let isFetching = false;
 
-const steps=[
+const tickers = {};
+
+const steps = [
+
 "Podaj ticker",
 "Podaj interwał",
 "Podaj czas lub dzień",
@@ -280,29 +323,36 @@ const steps=[
 "Podaj RSI"
 ];
 
+// ======================================================
+// SPEECH INIT
+// ======================================================
+
 function initRecognition(){
 
-    const SR=window.webkitSpeechRecognition || window.SpeechRecognition;
+    const SR =
+    window.webkitSpeechRecognition ||
+    window.SpeechRecognition;
 
     if(!SR) return null;
 
-    const rec=new SR();
+    const rec = new SR();
 
-    rec.lang="pl-PL";
-    rec.continuous=false;
-    rec.interimResults=false;
+    rec.lang = "pl-PL";
+    rec.continuous = false;
+    rec.interimResults = false;
 
-    rec.onresult=(e)=>{
+    rec.onresult = (e)=>{
 
-        const text=e.results[0][0].transcript.trim();
+        const text =
+        e.results[0][0].transcript.trim();
 
-        document.getElementById("recognized").textContent=
+        document.getElementById("recognized").textContent =
         `Rozpoznano: ${text}`;
 
         handleRecognized(text);
     };
 
-    rec.onend=()=>{
+    rec.onend = ()=>{
 
         if(recognizing){
 
@@ -314,13 +364,14 @@ function initRecognition(){
 
             }else{
 
-                recognizing=false;
+                recognizing = false;
+
                 finalizeRecord();
             }
         }
     };
 
-    rec.onerror=(e)=>{
+    rec.onerror = (e)=>{
 
         console.log(e.error);
 
@@ -335,31 +386,48 @@ function initRecognition(){
     return rec;
 }
 
-recognition=initRecognition();
+recognition = initRecognition();
+
+// ======================================================
+// SPEECH
+// ======================================================
 
 function sayStep(){
 
-    if(currentStep >= steps.length || !recognizing) return;
+    if(
+        currentStep >= steps.length ||
+        !recognizing
+    ) return;
 
     speechSynthesis.cancel();
 
-    const msg=new SpeechSynthesisUtterance(steps[currentStep]);
+    const msg =
+    new SpeechSynthesisUtterance(
+        steps[currentStep]
+    );
 
-    msg.lang="pl-PL";
-    msg.rate=1.08;
+    msg.lang = "pl-PL";
+    msg.rate = 1.08;
 
-    msg.onend=()=>{
+    msg.onend = ()=>{
 
         if(recognizing){
 
             setTimeout(()=>{
 
                 try{
+
                     recognition.start();
+
                 }catch(err){
 
                     setTimeout(()=>{
-                        if(recognizing) recognition.start();
+
+                        if(recognizing){
+
+                            recognition.start();
+                        }
+
                     },350);
                 }
 
@@ -370,56 +438,87 @@ function sayStep(){
     speechSynthesis.speak(msg);
 }
 
+// ======================================================
+// HELPERS
+// ======================================================
+
 function extractNumber(text){
 
     if(!text) return 0;
 
-    text=text.toString()
+    text = text.toString()
     .toLowerCase()
     .replaceAll("kropka",".")
     .replaceAll("przecinek",".")
     .replace(/\s+/g,"");
 
-    const num=parseFloat(text);
+    const num = parseFloat(text);
 
     return isFinite(num) ? num : 0;
 }
 
 function normalizeInterval(tf){
 
-    tf=tf.toUpperCase().trim();
+    tf = tf.toUpperCase().trim();
 
     if(tf==="5" || tf==="M5") return "M5";
+
     if(tf==="15" || tf==="M15") return "M15";
-    if(tf==="H1" || tf==="1H" || tf==="60") return "H1";
-    if(tf==="D1" || tf==="1D" || tf==="D") return "D1";
+
+    if(
+        tf==="H1" ||
+        tf==="1H" ||
+        tf==="60"
+    ) return "H1";
+
+    if(
+        tf==="D1" ||
+        tf==="1D" ||
+        tf==="D"
+    ) return "D1";
 
     return tf;
 }
 
-function parseAndAlignTime(rawText, intervalStr){
+function parseAndAlignTime(
+    rawText,
+    intervalStr
+){
 
-    const now=new Date();
+    const now = new Date();
 
     if(intervalStr==="D1"){
 
-        return now.toISOString().split("T")[0];
+        return now
+        .toISOString()
+        .split("T")[0];
     }
 
-    let h=now.getHours();
-    let m=now.getMinutes();
+    let h = now.getHours();
+    let m = now.getMinutes();
 
-    const clean=rawText.replace(/[^\d]/g,"");
+    const clean =
+    rawText.replace(/[^\d]/g,"");
 
     if(clean.length===4){
 
-        h=parseInt(clean.substring(0,2));
-        m=parseInt(clean.substring(2));
+        h = parseInt(
+            clean.substring(0,2)
+        );
+
+        m = parseInt(
+            clean.substring(2)
+        );
 
     }else if(clean.length===3){
 
-        h=parseInt(clean.substring(0,1));
-        m=parseInt(clean.substring(1));
+        h = parseInt(
+            clean.substring(0,1)
+        );
+
+        m = parseInt(
+            clean.substring(1)
+        );
     }
 
     if(intervalStr==="M5"){
@@ -437,171 +536,308 @@ function parseAndAlignTime(rawText, intervalStr){
     return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
 }
 
+// ======================================================
+// HANDLE RECOGNIZED
+// ======================================================
+
 function handleRecognized(text){
 
     switch(currentStep){
 
         case 0:
-            tempRecord.ticker=text.toUpperCase().replace(/\s+/g,"");
+            tempRecord.ticker =
+            text.toUpperCase()
+            .replace(/\s+/g,"");
         break;
 
         case 1:
-            tempRecord.interval=normalizeInterval(text);
+            tempRecord.interval =
+            normalizeInterval(text);
         break;
 
         case 2:
-            tempRecord.time=parseAndAlignTime(text,tempRecord.interval);
+            tempRecord.time =
+            parseAndAlignTime(
+                text,
+                tempRecord.interval
+            );
         break;
 
         case 3:
-            tempRecord.open=extractNumber(text);
+            tempRecord.open =
+            extractNumber(text);
         break;
 
         case 4:
-            tempRecord.high=extractNumber(text);
+            tempRecord.high =
+            extractNumber(text);
         break;
 
         case 5:
-            tempRecord.low=extractNumber(text);
+            tempRecord.low =
+            extractNumber(text);
         break;
 
         case 6:
-            tempRecord.close=extractNumber(text);
+            tempRecord.close =
+            extractNumber(text);
         break;
 
         case 7:
-            tempRecord.volume=extractNumber(text);
+            tempRecord.volume =
+            extractNumber(text);
         break;
 
         case 8:
-            tempRecord.ma20=extractNumber(text);
+            tempRecord.ma20 =
+            extractNumber(text);
         break;
 
         case 9:
-            tempRecord.dema9=extractNumber(text);
+            tempRecord.dema9 =
+            extractNumber(text);
         break;
 
         case 10:
-            tempRecord.rsi=extractNumber(text);
+            tempRecord.rsi =
+            extractNumber(text);
         break;
     }
 
     currentStep++;
 }
 
+// ======================================================
+// FINALIZE
+// ======================================================
+
 async function finalizeRecord(){
 
     if(isFetching) return;
 
-    isFetching=true;
+    isFetching = true;
 
-    document.getElementById("comment").textContent=
-    "⏳ Analiza agresywna...";
+    document.getElementById("comment").textContent =
+    "⏳ Analiza...";
 
-    document.getElementById("parsed").textContent=
+    document.getElementById("parsed").textContent =
     JSON.stringify(tempRecord);
 
     try{
 
-        const response=await fetch(`${backend}?t=${Date.now()}`,{
+        const response =
+        await fetch(
+            `${backend}?t=${Date.now()}`,
+            {
+                method:"POST",
 
-            method:"POST",
+                headers:{
+                    "Content-Type":"application/json"
+                },
 
-            headers:{
-                "Content-Type":"application/json"
-            },
+                body:JSON.stringify(tempRecord)
+            }
+        );
 
-            body:JSON.stringify(tempRecord)
-        });
-
-        const data=await response.json();
+        const data =
+        await response.json();
 
         handleBackendData(data);
 
-        document.getElementById("comment").textContent=
+        document.getElementById("comment").textContent =
         "✔️ Analiza gotowa";
 
     }catch(err){
 
-        document.getElementById("comment").textContent=
+        document.getElementById("comment").textContent =
         "❌ Błąd połączenia";
     }
 
-    tempRecord={};
-    currentStep=0;
-    isFetching=false;
+    tempRecord = {};
+    currentStep = 0;
+    isFetching = false;
+}
+
+// ======================================================
+// BACKEND DATA
+// ======================================================
+
+function normalizeSignal(signal){
+
+    if(!signal) return "HOLD";
+
+    const s =
+    signal.toUpperCase();
+
+    // SELL
+    if(
+        s.includes("SELL") ||
+        s.includes("EXIT")
+    ){
+        return "SELL";
+    }
+
+    // REDUKUJ
+    if(
+        s.includes("REDUKUJ") ||
+        s.includes("REALIZUJ")
+    ){
+        return "REDUKUJ";
+    }
+
+    // HOLD
+    if(
+        s.includes("HOLD") ||
+        s.includes("MOMENTUM") ||
+        s.includes("TRZYMAJ")
+    ){
+        return "HOLD";
+    }
+
+    // BUY
+    if(
+        s.includes("BUY") ||
+        s.includes("LONG") ||
+        s.includes("BREAKOUT") ||
+        s.includes("ACCEL") ||
+        s.includes("WZROST")
+    ){
+        return "BUY";
+    }
+
+    return "BUY";
 }
 
 function handleBackendData(d){
 
-    const ticker=d.ticker;
-    const tf=normalizeInterval(d.interval);
+    const ticker = d.ticker;
+
+    const tf =
+    normalizeInterval(d.interval);
+
+    d.signal =
+    normalizeSignal(d.signal);
 
     if(!tickers[ticker]){
 
-        tickers[ticker]={
+        tickers[ticker] = {
+
             globalEntry:"",
             updatedAt:0
         };
     }
 
-    tickers[ticker].updatedAt=Date.now();
-    tickers[ticker].lastTF=tf;
+    tickers[ticker].updatedAt =
+    Date.now();
+
+    tickers[ticker].lastTF = tf;
 
     if(!tickers[ticker][tf]){
 
-        tickers[ticker][tf]={
+        tickers[ticker][tf] = {
             history:[]
         };
     }
 
-    tickers[ticker][tf].last=d;
+    tickers[ticker][tf].last = d;
 
     updateTable();
 }
 
+// ======================================================
+// TABLE
+// ======================================================
+
 function updateTable(){
 
-    const tbody=document.getElementById("table-body");
+    const tbody =
+    document.getElementById("table-body");
 
-    tbody.innerHTML="";
+    tbody.innerHTML = "";
 
-    const sorted=Object.keys(tickers)
-    .sort((a,b)=>tickers[b].updatedAt - tickers[a].updatedAt);
+    const sorted =
+    Object.keys(tickers)
+    .sort(
+        (a,b)=>
+        tickers[b].updatedAt -
+        tickers[a].updatedAt
+    );
 
     if(sorted.length===0){
 
-        tbody.innerHTML=
-        `<tr><td colspan="10">Brak danych</td></tr>`;
+        tbody.innerHTML =
+        `<tr>
+            <td colspan="10">
+            Brak danych
+            </td>
+        </tr>`;
 
         return;
     }
 
     sorted.forEach(ticker=>{
 
-        const t=tickers[ticker];
+        const t = tickers[ticker];
 
-        const tf=t.lastTF || "M5";
+        const tf =
+        t.lastTF || "M5";
 
-        const rec=t[tf]?.last;
+        const rec =
+        t[tf]?.last;
 
         if(!rec) return;
 
-        const row=document.createElement("tr");
+        const row =
+        document.createElement("tr");
 
-        row.className=getRowClass(rec.signal);
+        row.className =
+        getRowClass(rec.signal);
 
-        row.innerHTML=`
-        <td class="ticker-cell">${ticker}</td>
-        <td class="price-cell">${Number(rec.close).toFixed(2)}</td>
-        <td>${rec.interval}<br><small>${rec.time}</small></td>
-        <td class="entry-cell">${t.globalEntry || "—"}</td>
-        <td><div class="signal-box">${rec.signal || "BRAK"}</div></td>
-        <td>${rec.widelki || "—"}</td>
-        <td>${rec.tp1 || "—"}</td>
-        <td>${rec.tp2 || "—"}</td>
-        <td>${rec.tp3 || "—"}</td>
-        <td class="delete-cell">🗑️</td>
+        row.innerHTML = `
+
+        <td class="ticker-cell">
+        ${ticker}
+        </td>
+
+        <td class="price-cell">
+        ${Number(rec.close).toFixed(2)}
+        </td>
+
+        <td>
+        ${rec.interval}
+        <br>
+        <small>${rec.time}</small>
+        </td>
+
+        <td class="entry-cell">
+        ${t.globalEntry || "—"}
+        </td>
+
+        <td>
+            <div class="signal-box">
+            ${rec.signal || "BRAK"}
+            </div>
+        </td>
+
+        <td>
+        ${rec.widelki || "—"}
+        </td>
+
+        <td>
+        ${rec.tp1 || "—"}
+        </td>
+
+        <td>
+        ${rec.tp2 || "—"}
+        </td>
+
+        <td>
+        ${rec.tp3 || "—"}
+        </td>
+
+        <td class="delete-cell">
+        🗑️
+        </td>
         `;
 
         tbody.appendChild(row);
@@ -610,87 +846,95 @@ function updateTable(){
     saveTable();
 }
 
+// ======================================================
+// SIGNAL COLORS
+// ======================================================
+
 function getRowClass(sig){
 
-    if(!sig) return "row-czekaj";
+    if(!sig) return "row-wait";
 
-    sig=sig.toUpperCase();
+    sig = sig.toUpperCase();
 
-    if(sig.includes("PREMIUM")){
-        return "row-buy-premium";
-    }
-
-    if(
-        sig.includes("BUY") ||
-        sig.includes("ACCEL") ||
-        sig.includes("BREAKOUT") ||
-        sig.includes("MOCNY") ||
-        sig.includes("MOMENTUM") ||
-        sig.includes("KOREKTA")
-    ){
+    if(sig==="BUY"){
         return "row-buy";
     }
 
-    if(
-        sig.includes("LONG") ||
-        sig.includes("AKUMULACJA") ||
-        sig.includes("WZROST")
-    ){
-        return "row-buy-soft";
+    if(sig==="HOLD"){
+        return "row-hold";
     }
 
-    if(
-        sig.includes("EXIT") ||
-        sig.includes("SELL") ||
-        sig.includes("REDUKUJ") ||
-        sig.includes("SŁABNIE") ||
-        sig.includes("REALIZUJ")
-    ){
+    if(sig==="REDUKUJ"){
+        return "row-reduce";
+    }
+
+    if(sig==="SELL"){
         return "row-sell";
     }
 
-    return "row-czekaj";
+    return "row-wait";
 }
+
+// ======================================================
+// START / STOP
+// ======================================================
 
 function startSequence(){
 
     if(recognizing) return;
 
-    tempRecord={};
+    tempRecord = {};
 
-    currentStep=0;
+    currentStep = 0;
 
-    recognizing=true;
+    recognizing = true;
 
     sayStep();
 }
 
 function stopSequence(){
 
-    recognizing=false;
+    recognizing = false;
 
-    currentStep=0;
+    currentStep = 0;
 
-    tempRecord={};
+    tempRecord = {};
 
     try{
         recognition.stop();
     }catch(err){}
 
-    document.getElementById("comment").textContent=
+    document.getElementById("comment").textContent =
     "⛔ Zatrzymano";
 }
 
-document.addEventListener("click", async(e)=>{
+// ======================================================
+// EVENTS
+// ======================================================
 
-    const cell=e.target.closest("td");
-    const row=e.target.closest("tr");
+document.addEventListener(
+"click",
+async(e)=>{
+
+    const cell =
+    e.target.closest("td");
+
+    const row =
+    e.target.closest("tr");
 
     if(!cell || !row) return;
 
-    const ticker=row.querySelector(".ticker-cell")?.textContent.trim();
+    const ticker =
+    row.querySelector(".ticker-cell")
+    ?.textContent.trim();
 
-    if(cell.classList.contains("delete-cell")){
+    // DELETE
+
+    if(
+        cell.classList.contains(
+            "delete-cell"
+        )
+    ){
 
         delete tickers[ticker];
 
@@ -698,18 +942,21 @@ document.addEventListener("click", async(e)=>{
 
         try{
 
-            await fetch(`${backend}/delete`,{
+            await fetch(
+                `${backend}/delete`,
+                {
+                    method:"POST",
 
-                method:"POST",
+                    headers:{
+                        "Content-Type":
+                        "application/json"
+                    },
 
-                headers:{
-                    "Content-Type":"application/json"
-                },
-
-                body:JSON.stringify({
-                    ticker:ticker
-                })
-            });
+                    body:JSON.stringify({
+                        ticker:ticker
+                    })
+                }
+            );
 
         }catch(err){
 
@@ -719,23 +966,43 @@ document.addEventListener("click", async(e)=>{
         return;
     }
 
-    if(cell.classList.contains("ticker-cell")){
+    // POPUP
 
-        const tf=tickers[ticker].lastTF;
+    if(
+        cell.classList.contains(
+            "ticker-cell"
+        )
+    ){
 
-        const rec=tickers[ticker][tf]?.last;
+        const tf =
+        tickers[ticker].lastTF;
+
+        const rec =
+        tickers[ticker][tf]?.last;
 
         if(rec && rec.comment){
 
-            document.getElementById("popupBody").innerHTML=
+            document.getElementById(
+                "popupBody"
+            ).innerHTML =
             `<pre>${rec.comment}</pre>`;
 
-            document.getElementById("popup").style.display="block";
+            document.getElementById(
+                "popup"
+            ).style.display =
+            "block";
 
-            document.getElementById("popupOverlay").style.display="block";
+            document.getElementById(
+                "popupOverlay"
+            ).style.display =
+            "block";
         }
     }
 });
+
+// ======================================================
+// STORAGE
+// ======================================================
 
 function saveTable(){
 
@@ -747,53 +1014,111 @@ function saveTable(){
 
 async function loadTable(){
 
-    const baseEndpoint = backend.replace("/voice-parse", "");
-    
-    try {
-        const response = await fetch(`${baseEndpoint}/memory?t=${Date.now()}`);
-        if (response.ok) {
-            const data = await response.json();
-            if (data && Object.keys(data).length > 0) {
-                for (let member in tickers) {
+    const baseEndpoint =
+    backend.replace(
+        "/voice-parse",
+        ""
+    );
+
+    try{
+
+        const response =
+        await fetch(
+            `${baseEndpoint}/memory?t=${Date.now()}`
+        );
+
+        if(response.ok){
+
+            const data =
+            await response.json();
+
+            if(
+                data &&
+                Object.keys(data).length > 0
+            ){
+
+                for(let member in tickers){
+
                     delete tickers[member];
                 }
-                
-                Object.keys(data).forEach(ticker => {
+
+                Object.keys(data)
+                .forEach(ticker=>{
+
                     tickers[ticker] = {
-                        globalEntry: data[ticker].global_entry || "",
-                        updatedAt: Date.now()
+
+                        globalEntry:
+                        data[ticker]
+                        .global_entry || "",
+
+                        updatedAt:
+                        Date.now()
                     };
-                    
-                    ["M5", "M15", "H1", "D1"].forEach(tf => {
-                        if (data[ticker][tf] && data[ticker][tf].last_data && Object.keys(data[ticker][tf].last_data).length > 0) {
-                            if (!tickers[ticker][tf]) {
-                                tickers[ticker][tf] = { history: [] };
+
+                    [
+                        "M5",
+                        "M15",
+                        "H1",
+                        "D1"
+                    ].forEach(tf=>{
+
+                        if(
+                            data[ticker][tf] &&
+                            data[ticker][tf].last_data &&
+                            Object.keys(
+                                data[ticker][tf].last_data
+                            ).length > 0
+                        ){
+
+                            if(!tickers[ticker][tf]){
+
+                                tickers[ticker][tf] = {
+                                    history:[]
+                                };
                             }
-                            tickers[ticker][tf].last = data[ticker][tf].last_data;
+
+                            tickers[ticker][tf].last =
+                            data[ticker][tf].last_data;
+
                             tickers[ticker].lastTF = tf;
                         }
                     });
                 });
-                
+
                 updateTable();
+
                 return;
             }
         }
-    } catch (err) {
-        console.log("Blad pobierania pamieci z backendu:", err);
+
+    }catch(err){
+
+        console.log(
+        "Blad pobierania pamieci:",
+        err
+        );
     }
 
-    const raw=localStorage.getItem(STORAGE_KEY);
+    const raw =
+    localStorage.getItem(
+        STORAGE_KEY
+    );
 
     if(raw){
 
-        Object.assign(tickers,JSON.parse(raw));
+        Object.assign(
+            tickers,
+            JSON.parse(raw)
+        );
 
         updateTable();
     }
 }
 
-document.addEventListener("DOMContentLoaded",loadTable);
+document.addEventListener(
+    "DOMContentLoaded",
+    loadTable
+);
 
 </script>
 
