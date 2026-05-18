@@ -167,8 +167,8 @@ th{
 .ticker-cell{
     font-weight:bold;
     cursor:pointer;
-    color:#fff;
-    text-decoration: underline dotted var(--accent-color);
+    color:#2196F3 !important;
+    text-decoration: underline dotted #2196F3;
 }
 
 .price-cell{
@@ -182,6 +182,7 @@ th{
     font-family:monospace;
     cursor:pointer;
     font-weight:bold;
+    text-decoration: underline dashed #ffd166;
 }
 
 .signal-box{
@@ -265,10 +266,10 @@ th{
 }
 .report-html .verdict-line {
     font-size: 1.2rem;
-    background: rgba(255,209,102,0.1);
+    background: rgba(0,255,136,0.1);
     padding: 8px;
     border-radius: 6px;
-    border-left: 4px solid var(--accent-color);
+    border-left: 4px solid #00ff88;
     margin-bottom: 15px;
 }
 .report-html .section-title {
@@ -303,21 +304,22 @@ th{
 <table>
 <thead>
 <tr>
-<th>Ticker</th>
+<th>Ticker 📋</th>
 <th>Cena</th>
 <th>TF</th>
-<th>Entry</th>
+<th>Entry ✏️</th>
 <th>Sygnał</th>
 <th>Widełki</th>
 <th>TP1</th>
 <th>TP2</th>
 <th>TP3</th>
+<th>Trailing SL 🛑</th>
 <th>Usuń</th>
 </tr>
 </thead>
 <tbody id="table-body">
 <tr>
-<td colspan="10">Oczekiwanie na dane ze struktury...</td>
+<td colspan="11">Oczekiwanie na dane ze struktury...</td>
 </tr>
 </tbody>
 </table>
@@ -400,7 +402,9 @@ function initRecognition(){
     rec.onerror = (e)=>{
         console.log("Speech error:", e.error);
         if(recognizing){
-            setTimeout(()=>{ sayStep(); },300);
+            setTimeout(()=>{
+                try{ recognition.start(); }catch(err){}
+            },400);
         }
     };
     return rec;
@@ -500,7 +504,7 @@ function handleRecognized(text){
 }
 
 // ======================================================
-// PARSER KOMENTARZA STRUKTURALNEGO Z BACKENDU NA POPUP
+// POPRAWIONY PARSER KOMENTARZA STRUKTURALNEGO DO POPUPU
 // ======================================================
 function parseEngineCommentToHtml(commentText) {
     if (!commentText) return "Brak szczegółowego komentarza strukturalnego.";
@@ -518,11 +522,11 @@ function parseEngineCommentToHtml(commentText) {
             html += `<div class="verdict-line"><strong>${line}</strong></div>`;
             return;
         }
-        if (line.startsWith("UZASADNIENIE:")) {
-            html += `<p style="font-size: 1.05rem; color: #fff;"><strong>Uzasadnienie:</strong> ${line.replace("UZASADNIENIE:", "")}</p>`;
+        if (line.startsWith("LOGIKA:")) {
+            html += `<p style="font-size: 1.05rem; color: #fff; margin-bottom: 12px;"><strong>Logika operacyjna:</strong> ${line.replace("LOGIKA:", "")}</p>`;
             return;
         }
-        if (line.startsWith("MAPA REKORDU:") || line.startsWith("CELE (TP):")) {
+        if (line.startsWith("DYNAMICZNY DOPALACZ MATEMATYCZNY:") || line.includes("D1:") || line.includes("H1:")) {
             html += `<div class="section-title">${line}</div>`;
             return;
         }
@@ -551,6 +555,11 @@ async function finalizeRecord(){
 
     document.getElementById("comment").textContent = "⏳ Analiza wielointerwałowa...";
     document.getElementById("parsed").textContent = JSON.stringify(tempRecord);
+
+    const ticker = tempRecord.ticker;
+    tempRecord.entry = (tickers[ticker] && tickers[ticker].globalEntry)
+        ? parseFloat(tickers[ticker].globalEntry)
+        : null;
 
     try{
         const response = await fetch(`${backend}?t=${Date.now()}`, {
@@ -592,6 +601,10 @@ function handleBackendData(d){
     tickers[ticker].updatedAt = Date.now();
     tickers[ticker].lastTF = tf;
 
+    if(d.entry !== undefined && d.entry !== null && d.entry !== "") {
+        tickers[ticker].globalEntry = d.entry.toString();
+    }
+
     if(!tickers[ticker][tf]){
         tickers[ticker][tf] = { history:[] };
     }
@@ -601,7 +614,7 @@ function handleBackendData(d){
 }
 
 // ======================================================
-// TABLE RENDERING
+// TABLE RENDERING (ZINTEGROWANA Z TRAILING SL)
 // ======================================================
 function updateTable(){
     const tbody = document.getElementById("table-body");
@@ -610,7 +623,7 @@ function updateTable(){
     const sorted = Object.keys(tickers).sort((a,b)=> tickers[b].updatedAt - tickers[a].updatedAt);
 
     if(sorted.length===0){
-        tbody.innerHTML = `<tr><td colspan="10">Oczekiwanie na dane ze struktury...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11">Oczekiwanie na dane ze struktury...</td></tr>`;
         return;
     }
 
@@ -626,15 +639,16 @@ function updateTable(){
         const confidenceStr = rec.confidence !== undefined ? ` (${rec.confidence}%)` : "";
 
         row.innerHTML = `
-        <td class="ticker-cell">${ticker}</td>
+        <td class="ticker-cell" style="cursor:pointer;">${ticker} 📋</td>
         <td class="price-cell">${Number(rec.close).toFixed(2)}</td>
         <td>${rec.interval}<br><small>${rec.time}</small></td>
-        <td class="entry-cell">${rec.entry || "—"}</td>
+        <td class="entry-cell">${t.globalEntry || "—"}</td>
         <td><div class="signal-box">${rec.signal || "BRAK"}${confidenceStr}</div></td>
         <td>${rec.widelki || "—"}</td>
-        <td>${rec.tp1 || "—"}</td>
-        <td>${rec.tp2 || "—"}</td>
-        <td>${rec.tp3 || "—"}</td>
+        <td style="color: #4CAF50; font-weight: bold;">${rec.tp1 || "—"}</td>
+        <td style="color: #FF9800; font-weight: bold;">${rec.tp2 || "—"}</td>
+        <td style="color: #E91E63; font-weight: bold;">${rec.tp3 || "—"}</td>
+        <td class="tsl-cell" style="color: #ff3b5c; font-weight: bold; background: rgba(255,59,92,0.06); border-radius:4px;">${rec.trailing_sl || "—"}</td>
         <td class="delete-cell">🗑️</td>
         `;
         tbody.appendChild(row);
@@ -654,6 +668,7 @@ function getRowClass(sig){
 
 function startSequence(){
     if(recognizing) return;
+    speechSynthesis.cancel();
     tempRecord = {};
     currentStep = 0;
     recognizing = true;
@@ -669,16 +684,34 @@ function stopSequence(){
 }
 
 // ======================================================
-// EVENTS - KLIKNIĘCIE TICKERA I USUWANIE Z BACKENDEM
+// MANUAL ENTRY QUICK EDIT
+// ======================================================
+function manualEditEntry(tickerName) {
+    const current = tickers[tickerName]?.globalEntry || "";
+    const val = prompt(`Wpisz lub skoryguj cenę wejścia (Entry) dla ${tickerName}:`, current);
+    if (val !== null) {
+        const num = parseFloat(val.replace(",", "."));
+        if (!isNaN(num) && num > 0) {
+            tickers[tickerName].globalEntry = num.toFixed(2);
+        } else {
+            tickers[tickerName].globalEntry = "";
+        }
+        updateTable();
+    }
+}
+
+// ======================================================
+// EVENTS - KLIKNIĘCIA STRUKTURALNE W TABELI
 // ======================================================
 document.addEventListener("click", async(e)=>{
     const cell = e.target.closest("td");
     const row = e.target.closest("tr");
     if(!cell || !row) return;
 
-    const ticker = row.querySelector(".ticker-cell")?.textContent.trim();
+    let rawTicker = row.querySelector(".ticker-cell")?.textContent || "";
+    const ticker = rawTicker.replace("📋", "").trim().toUpperCase();
 
-    // AKCJA: ASYNCHRONICZNE USUWANIE Z SERWERA
+    // AKCJA 1: USUWANIE REKORDÓW Z CHMURY (.TRIM() ZAMIAST WADLIWEGO .STRIP())
     if(cell.classList.contains("delete-cell")){
         delete tickers[ticker];
         updateTable();
@@ -688,7 +721,7 @@ document.addEventListener("click", async(e)=>{
             await fetch(`${baseEndpoint}/voice-parse/delete`, {
                 method:"POST",
                 headers:{"Content-Type":"application/json"},
-                body:JSON.stringify({ticker:ticker})
+                body:JSON.stringify({ticker: ticker})
             });
         }catch(err){ 
             console.error("Błąd podczas usuwania z chmury:", err); 
@@ -696,7 +729,13 @@ document.addEventListener("click", async(e)=>{
         return;
     }
 
-    // AKCJA: OTWIERANIE ROZBUDOWANEGO POPUPU Z NOWYM FORMATOWANIEM 9.0
+    // AKCJA 2: RĘCZNA EDYCJA CENY ENTRY PO KLIKNIĘCIU W KOMÓRKĘ
+    if(cell.classList.contains("entry-cell")){
+        manualEditEntry(ticker);
+        return;
+    }
+
+    // AKCJA 3: RAPORT SZCZEGÓŁOWY (POPU-UP MODALNY)
     if(cell.classList.contains("ticker-cell")){
         const tf = tickers[ticker].lastTF;
         const rec = tickers[ticker][tf]?.last;
