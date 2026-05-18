@@ -1,13 +1,13 @@
 // ======================================================
-//  VOICE XTB 8.1 HYBRID - AGGRESSIVE BALANCED EDITION
-//  60-65% AGRESYWNY / 35-40% KONSERWATYWNY
+//  VOICE XTB 8.1 HYBRID - SIMPLE GPW EDITION
+//  DAYTRADING / KRÓTKI SWING / LONG ONLY
 // ======================================================
 
 const backend = "https://voice-xtb.onrender.com/voice-parse";
 const STORAGE_KEY = "xtbtablememoryv2multitf";
 
 // ======================================================
-// NOWE PARAMETRY SYSTEMU HYBRYDOWEGO
+// SYSTEM
 // ======================================================
 
 const SYSTEM_MODE = {
@@ -49,12 +49,18 @@ const steps = [
 
 const tickers = {};
 
+// ======================================================
+// MIC
+// ======================================================
+
 function initRecognition() {
 
-  const SR = window.webkitSpeechRecognition || window.SpeechRecognition;
+  const SR =
+    window.webkitSpeechRecognition ||
+    window.SpeechRecognition;
 
   if (!SR) {
-    alert("Przeglądarka nie wspiera rozpoznawania mowy");
+    alert("Brak obsługi mowy");
     return null;
   }
 
@@ -67,7 +73,8 @@ function initRecognition() {
 
   rec.onresult = (e) => {
 
-    const text = e.results[0][0].transcript.trim();
+    const text =
+      e.results[0][0].transcript.trim();
 
     document.getElementById("recognized").textContent =
       `Rozpoznano: ${text}`;
@@ -92,9 +99,7 @@ function initRecognition() {
     }
   };
 
-  rec.onerror = (e) => {
-
-    console.log("Speech error:", e.error);
+  rec.onerror = () => {
 
     if (!recognizing) return;
 
@@ -102,9 +107,7 @@ function initRecognition() {
 
       try {
         recognition.start();
-      } catch (err) {
-        console.log("Restart mic error:", err);
-      }
+      } catch {}
 
     }, 500);
   };
@@ -120,15 +123,17 @@ recognition = initRecognition();
 
 function sayStep() {
 
-  if (currentStep >= steps.length || !recognizing) return;
+  if (!recognizing) return;
 
   speechSynthesis.cancel();
 
-  const msg = new SpeechSynthesisUtterance(steps[currentStep]);
+  const msg =
+    new SpeechSynthesisUtterance(
+      steps[currentStep]
+    );
 
   msg.lang = "pl-PL";
-  msg.rate = 1.08;
-  msg.pitch = 1;
+  msg.rate = 1.05;
 
   msg.onend = () => {
 
@@ -138,18 +143,7 @@ function sayStep() {
 
       try {
         recognition.start();
-      } catch (e) {
-
-        console.log("Mic restart retry...");
-
-        setTimeout(() => {
-
-          try {
-            recognition.start();
-          } catch {}
-
-        }, 400);
-      }
+      } catch {}
 
     }, 200);
   };
@@ -158,7 +152,7 @@ function sayStep() {
 }
 
 // ======================================================
-// TIME PARSER
+// TIME
 // ======================================================
 
 function parseAndAlignTime(rawText, intervalStr) {
@@ -172,63 +166,39 @@ function parseAndAlignTime(rawText, intervalStr) {
       10
     );
 
-    if (isNaN(dayNum) || dayNum < 1 || dayNum > 31) {
+    if (
+      isNaN(dayNum) ||
+      dayNum < 1 ||
+      dayNum > 31
+    ) {
       dayNum = now.getDate();
     }
 
     let year = now.getFullYear();
     let month = now.getMonth() + 1;
 
-    if (dayNum > now.getDate() && now.getDate() < 7) {
-
-      month--;
-
-      if (month === 0) {
-        month = 12;
-        year--;
-      }
-    }
-
-    return `${year}-${String(month).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+    return `${year}-${String(month).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
   }
 
   let hours = 0;
   let minutes = 0;
 
-  let cleanText = rawText
-    .toString()
-    .trim()
-    .toLowerCase()
-    .replace(/[.:\-]/g, " ");
+  let clean =
+    rawText
+      .toString()
+      .trim()
+      .replace(/[.:\-]/g, " ");
 
-  let parts = cleanText
-    .split(/\s+/)
-    .filter(p => p.length > 0);
+  const parts =
+    clean.split(/\s+/);
 
   if (parts.length >= 2) {
 
-    hours = parseInt(parts[0], 10) || 0;
-    minutes = parseInt(parts[1], 10) || 0;
+    hours =
+      parseInt(parts[0], 10) || 0;
 
-  } else if (parts.length === 1 && !isNaN(parts[0])) {
-
-    let num = parts[0];
-
-    if (num.length === 3) {
-
-      hours = parseInt(num.substring(0, 1), 10);
-      minutes = parseInt(num.substring(1), 10);
-
-    } else if (num.length === 4) {
-
-      hours = parseInt(num.substring(0, 2), 10);
-      minutes = parseInt(num.substring(2), 10);
-
-    } else {
-
-      hours = parseInt(num, 10) || 0;
-      minutes = 0;
-    }
+    minutes =
+      parseInt(parts[1], 10) || 0;
 
   } else {
 
@@ -236,26 +206,25 @@ function parseAndAlignTime(rawText, intervalStr) {
     minutes = now.getMinutes();
   }
 
-  hours = Math.min(Math.max(hours, 0), 23);
-  minutes = Math.min(Math.max(minutes, 0), 59);
-
   if (intervalStr === "M5") {
-    minutes = Math.floor(minutes / 5) * 5;
+    minutes =
+      Math.floor(minutes / 5) * 5;
   }
 
   if (intervalStr === "M15") {
-    minutes = Math.floor(minutes / 15) * 15;
+    minutes =
+      Math.floor(minutes / 15) * 15;
   }
 
   if (intervalStr === "H1") {
     minutes = 0;
   }
 
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  return `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}`;
 }
 
 // ======================================================
-// HANDLE RECOGNIZED
+// HANDLE VOICE
 // ======================================================
 
 function handleRecognized(text) {
@@ -264,7 +233,8 @@ function handleRecognized(text) {
 
     case 0:
       tempRecord.ticker =
-        text.toUpperCase().replace(/\s+/g, "");
+        text.toUpperCase()
+          .replace(/\s+/g, "");
       break;
 
     case 1:
@@ -325,7 +295,7 @@ function handleRecognized(text) {
 }
 
 // ======================================================
-// NUMBER PARSER
+// NUMBERS
 // ======================================================
 
 function extractNumber(text) {
@@ -334,48 +304,52 @@ function extractNumber(text) {
 
   text = text
     .toString()
-    .trim()
     .toLowerCase()
     .replaceAll("kropka", ".")
     .replaceAll("przecinek", ".");
 
-  text = text.replace(/\s+/g, "");
+  const num =
+    parseFloat(
+      text.replace(/\s+/g, "")
+    );
 
-  const num = parseFloat(text);
-
-  return isFinite(num) ? num : 0;
+  return isFinite(num)
+    ? num
+    : 0;
 }
 
 // ======================================================
-// INTERVAL NORMALIZER
+// TF
 // ======================================================
 
 function normalizeInterval(tf) {
 
   tf = tf.toUpperCase().trim();
 
-  if (tf === "5" || tf === "M5") return "M5";
+  if (tf === "5" || tf === "M5")
+    return "M5";
 
-  if (tf === "15" || tf === "M15") return "M15";
+  if (tf === "15" || tf === "M15")
+    return "M15";
 
   if (
     tf === "H1" ||
     tf === "1H" ||
     tf === "60"
-  ) return "H1";
+  )
+    return "H1";
 
   if (
     tf === "D1" ||
-    tf === "D" ||
-    tf === "1D" ||
-    tf === "DZIENNY"
-  ) return "D1";
+    tf === "D"
+  )
+    return "D1";
 
   return tf;
 }
 
 // ======================================================
-// FINALIZE RECORD
+// FINALIZE
 // ======================================================
 
 async function finalizeRecord() {
@@ -393,7 +367,8 @@ async function finalizeRecord() {
       );
   }
 
-  const t = tempRecord.ticker;
+  const t =
+    tempRecord.ticker;
 
   if (
     tickers[t] &&
@@ -410,67 +385,47 @@ async function finalizeRecord() {
     tempRecord.entry = null;
   }
 
-  // ======================================================
-  // AGRESYWNY BOOST
-  // ======================================================
-
-  tempRecord.hybridMode = "BALANCED_AGGRESSIVE";
-
-  tempRecord.systemConfig = {
-
-    aggression:
-      SYSTEM_MODE.aggression,
-
-    conservative:
-      SYSTEM_MODE.conservative,
-
-    fastEntry:
-      SYSTEM_MODE.allowFastEntry,
-
-    momentum:
-      SYSTEM_MODE.allowMomentumSignals,
-
-    breakout:
-      SYSTEM_MODE.allowEarlyBreakouts,
-
-    strictExit:
-      SYSTEM_MODE.strictExitConfirmation
-  };
-
-  // ======================================================
-
   document.getElementById("comment").textContent =
-    "⏳ Analiza 8.1 Hybrid...";
-
-  document.getElementById("parsed").textContent =
-    `Bufor JSON: ${JSON.stringify(tempRecord)}`;
+    "⏳ Analiza...";
 
   try {
 
-    const response = await fetch(
-      `${backend}?t=${Date.now()}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(tempRecord)
-      }
-    );
+    const response =
+      await fetch(
+        `${backend}?t=${Date.now()}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+          body:
+            JSON.stringify(tempRecord)
+        }
+      );
 
-    const data = await response.json();
+    const data =
+      await response.json();
+
+    // ==================================================
+    // PROSTA LOGIKA SYGNAŁÓW
+    // ==================================================
+
+    data.signal =
+      simplifySignal(
+        data.signal,
+        data.confidence
+      );
 
     handleBackendData(data);
 
     document.getElementById("comment").textContent =
-      "✔️ Analiza gotowa";
+      "✔️ Gotowe";
 
-  } catch (err) {
-
-    console.log(err);
+  } catch {
 
     document.getElementById("comment").textContent =
-      "❌ Błąd połączenia";
+      "❌ Błąd backendu";
 
   } finally {
 
@@ -481,13 +436,76 @@ async function finalizeRecord() {
 }
 
 // ======================================================
-// BACKEND DATA
+// SIMPLE SIGNALS
+// ======================================================
+
+function simplifySignal(signal, confidence) {
+
+  signal =
+    (signal || "")
+      .toUpperCase();
+
+  // SELL
+
+  if (
+    signal.includes("EXIT") ||
+    signal.includes("REDUKUJ") ||
+    signal.includes("SELL") ||
+    signal.includes("REALIZUJ")
+  ) {
+    return "SELL";
+  }
+
+  // HOLD
+
+  if (
+    signal.includes("ACCEL") ||
+    signal.includes("MOMENTUM") ||
+    signal.includes("STRONG")
+  ) {
+    return "HOLD";
+  }
+
+  // BUY
+
+  if (
+    signal.includes("BUY") &&
+    confidence >= 52
+  ) {
+    return "BUY";
+  }
+
+  // PRAWIE BUY
+
+  if (
+    signal.includes("BUY") ||
+    confidence >= 40
+  ) {
+    return "PRAWIE BUY";
+  }
+
+  // REDUKUJ
+
+  if (
+    confidence < 40 &&
+    signal !== "SELL"
+  ) {
+    return "REDUKUJ";
+  }
+
+  return "HOLD";
+}
+
+// ======================================================
+// HANDLE BACKEND
 // ======================================================
 
 function handleBackendData(d) {
 
   const ticker = d.ticker;
-  const tf = normalizeInterval(d.interval);
+
+  const tf =
+    normalizeInterval(d.interval);
 
   if (!tickers[ticker]) {
 
@@ -497,7 +515,9 @@ function handleBackendData(d) {
     };
   }
 
-  tickers[ticker].updatedAt = Date.now();
+  tickers[ticker].updatedAt =
+    Date.now();
+
   tickers[ticker].lastTF = tf;
 
   if (
@@ -515,6 +535,7 @@ function handleBackendData(d) {
   }
 
   if (!tickers[ticker][tf]) {
+
     tickers[ticker][tf] = {
       history: []
     };
@@ -526,7 +547,7 @@ function handleBackendData(d) {
 }
 
 // ======================================================
-// UPDATE TABLE
+// TABLE
 // ======================================================
 
 function updateTable() {
@@ -546,7 +567,7 @@ function updateTable() {
   if (sortedTickers.length === 0) {
 
     tbody.innerHTML =
-      `<tr><td colspan="10">Oczekiwanie na dane z bazy...</td></tr>`;
+      `<tr><td colspan="10">Brak danych</td></tr>`;
 
     saveTable();
 
@@ -555,7 +576,8 @@ function updateTable() {
 
   sortedTickers.forEach(ticker => {
 
-    const tData = tickers[ticker];
+    const tData =
+      tickers[ticker];
 
     const tf =
       tData.lastTF || "M5";
@@ -565,16 +587,6 @@ function updateTable() {
 
     if (!rec) return;
 
-    const displayEntry =
-      (
-        tData.globalEntry &&
-        parseFloat(
-          tData.globalEntry
-        ) > 0
-      )
-      ? tData.globalEntry
-      : "—";
-
     const row =
       document.createElement("tr");
 
@@ -582,9 +594,11 @@ function updateTable() {
       getRowClass(rec.signal);
 
     row.innerHTML = `
-      <td class="ticker-cell">${ticker}</td>
+      <td class="ticker-cell">
+        ${ticker}
+      </td>
 
-      <td class="price-cell">
+      <td>
         ${Number(rec.close).toFixed(2)}
       </td>
 
@@ -595,7 +609,7 @@ function updateTable() {
       </td>
 
       <td class="entry-cell">
-        ${displayEntry}
+        ${tData.globalEntry || "—"}
       </td>
 
       <td>
@@ -604,21 +618,10 @@ function updateTable() {
         </div>
       </td>
 
-      <td>
-        ${rec.widelki || "—"}
-      </td>
-
-      <td class="tp-cell">
-        ${rec.tp1 || "—"}
-      </td>
-
-      <td class="tp-cell">
-        ${rec.tp2 || "—"}
-      </td>
-
-      <td class="tp-cell">
-        ${rec.tp3 || "—"}
-      </td>
+      <td>${rec.widelki || "—"}</td>
+      <td>${rec.tp1 || "—"}</td>
+      <td>${rec.tp2 || "—"}</td>
+      <td>${rec.tp3 || "—"}</td>
 
       <td class="delete-cell">
         🗑️
@@ -632,57 +635,27 @@ function updateTable() {
 }
 
 // ======================================================
-// LOGIKA HYBRYDOWA
+// COLORS
 // ======================================================
 
 function getRowClass(sig) {
 
-  if (!sig) return "row-czekaj";
+  sig = (sig || "").toUpperCase();
 
-  sig = sig.toUpperCase();
-
-  // PREMIUM BUY
-  if (
-    sig.includes("PREMIUM") &&
-    sig.includes("BUY")
-  ) {
-    return "row-buy-premium";
-  }
-
-  // AGRESYWNE BUY
-  if (
-    sig.includes("BUY") ||
-    (
-      sig.includes("ACCEL") &&
-      !sig.includes("REDUKUJ")
-    ) ||
-    sig.includes("MOMENTUM") ||
-    sig.includes("BREAKOUT") ||
-    sig.includes("KOREKTA") ||
-    sig.includes("MOCNY")
-  ) {
+  if (sig === "BUY")
     return "row-buy";
-  }
 
-  // LEKKI BUY
-  if (
-    sig.includes("LONG") ||
-    sig.includes("AKUMULACJA") ||
-    sig.includes("WZROST")
-  ) {
+  if (sig === "PRAWIE BUY")
     return "row-buy-soft";
-  }
 
-  // SELL / EXIT
+  if (sig === "HOLD")
+    return "row-czekaj";
+
   if (
-    sig.includes("EXIT") ||
-    sig.includes("REDUKUJ") ||
-    sig.includes("SŁABNIE") ||
-    sig.includes("REALIZUJ") ||
-    sig.includes("SELL")
-  ) {
+    sig === "REDUKUJ" ||
+    sig === "SELL"
+  )
     return "row-sell";
-  }
 
   return "row-czekaj";
 }
@@ -696,11 +669,6 @@ function startSequence() {
   if (recognizing) return;
 
   speechSynthesis.cancel();
-
-  const wakeUp =
-    new SpeechSynthesisUtterance("");
-
-  speechSynthesis.speak(wakeUp);
 
   tempRecord = {};
   currentStep = 0;
@@ -724,261 +692,8 @@ function stopSequence() {
   } catch {}
 
   document.getElementById("comment").textContent =
-    "⛔ Sekwencja zatrzymana.";
+    "⛔ STOP";
 }
-
-// ======================================================
-// EVENTS
-// ======================================================
-
-document.addEventListener(
-  "click",
-  async (e) => {
-
-    const cell =
-      e.target.closest("td");
-
-    const row =
-      e.target.closest("tr");
-
-    if (!cell || !row) return;
-
-    const ticker =
-      row.querySelector(".ticker-cell")
-      ?.textContent.trim();
-
-    // ==================================================
-    // DELETE
-    // ==================================================
-
-    if (
-      cell.classList.contains(
-        "delete-cell"
-      )
-    ) {
-
-      document.getElementById("comment").textContent =
-        `🗑️ Usuwanie ${ticker}...`;
-
-      delete tickers[ticker];
-
-      updateTable();
-
-      try {
-
-        await fetch(
-          `${backend}/delete`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type":
-                "application/json"
-            },
-            body: JSON.stringify({
-              ticker: ticker
-            })
-          }
-        );
-
-        document.getElementById("comment").textContent =
-          "✔️ Usunięto z bazy danych";
-
-      } catch(err) {
-
-        console.log(err);
-
-        document.getElementById("comment").textContent =
-          "❌ Błąd czyszczenia bazy";
-      }
-
-      return;
-    }
-
-    // ==================================================
-    // ENTRY EDIT
-    // ==================================================
-
-    if (
-      cell.classList.contains(
-        "entry-cell"
-      )
-    ) {
-
-      if (cell.querySelector("input"))
-        return;
-
-      const currentVal =
-        tickers[ticker].globalEntry || "";
-
-      const input =
-        document.createElement("input");
-
-      input.type = "number";
-      input.step = "any";
-      input.inputMode = "decimal";
-      input.value = currentVal;
-
-      input.style.width = "80px";
-      input.style.background = "#222";
-      input.style.color = "#ffd166";
-      input.style.border =
-        "1px solid #ffd166";
-      input.style.borderRadius = "4px";
-      input.style.padding = "4px";
-      input.style.textAlign = "center";
-      input.style.fontSize = "16px";
-
-      cell.textContent = "";
-      cell.appendChild(input);
-
-      input.focus();
-      input.select();
-
-      const saveData = async () => {
-
-        const manual =
-          input.value;
-
-        const numVal =
-          extractNumber(manual);
-
-        if (numVal > 0) {
-
-          tickers[ticker].globalEntry =
-            numVal.toString();
-
-        } else {
-
-          tickers[ticker].globalEntry =
-            "";
-        }
-
-        const tf =
-          tickers[ticker].lastTF;
-
-        if (
-          tf &&
-          tickers[ticker][tf]?.last
-        ) {
-
-          const lastRec =
-            tickers[ticker][tf].last;
-
-          const updatePayload = {
-
-            ticker: ticker,
-            interval: tf,
-
-            time: lastRec.time,
-
-            open: lastRec.open,
-            high: lastRec.high,
-            low: lastRec.low,
-            close: lastRec.close,
-
-            volume: lastRec.volume,
-
-            ma20: lastRec.ma20,
-            dema9: lastRec.dema9,
-            rsi: lastRec.rsi,
-
-            entry:
-              numVal > 0
-              ? numVal
-              : 0
-          };
-
-          try {
-
-            const response =
-              await fetch(
-                `${backend}?t=${Date.now()}`,
-                {
-                  method: "POST",
-                  headers: {
-                    "Content-Type":
-                      "application/json"
-                  },
-                  body: JSON.stringify(
-                    updatePayload
-                  )
-                }
-              );
-
-            const data =
-              await response.json();
-
-            handleBackendData(data);
-
-          } catch {
-
-            updateTable();
-          }
-
-        } else {
-
-          updateTable();
-        }
-      };
-
-      input.addEventListener(
-        "blur",
-        saveData
-      );
-
-      input.addEventListener(
-        "keydown",
-        (evt) => {
-
-          if (evt.key === "Enter") {
-            input.blur();
-          }
-        }
-      );
-
-      return;
-    }
-
-    // ==================================================
-    // POPUP
-    // ==================================================
-
-    if (
-      cell.classList.contains(
-        "ticker-cell"
-      )
-    ) {
-
-      const tf =
-        tickers[ticker].lastTF;
-
-      const rec =
-        tickers[ticker][tf]?.last;
-
-      if (rec && rec.comment) {
-
-        document.getElementById(
-          "popupBody"
-        ).innerHTML =
-          `<pre>${rec.comment}</pre>`;
-
-        document.getElementById(
-          "popup"
-        ).style.display = "block";
-
-        document.getElementById(
-          "popupOverlay"
-        ).style.display = "block";
-
-      } else {
-
-        alert(
-          "Brak danych komentarza"
-        );
-      }
-    }
-  }
-);
 
 // ======================================================
 // STORAGE
@@ -994,50 +709,59 @@ function saveTable() {
 
 async function loadTable() {
 
-  const baseEndpoint = backend.replace("/voice-parse", "");
-  
-  try {
-    const response = await fetch(`${baseEndpoint}/memory?t=${Date.now()}`);
-    if (response.ok) {
-      const data = await response.json();
-      if (data && Object.keys(data).length > 0) {
-        for (let member in tickers) {
-          delete tickers[member];
-        }
-        
-        Object.keys(data).forEach(ticker => {
-          tickers[ticker] = {
-            globalEntry: data[ticker].global_entry || "",
-            updatedAt: Date.now()
-          };
-          
-          ["M5", "M15", "H1", "D1"].forEach(tf => {
-            if (data[ticker][tf] && data[ticker][tf].last_data && Object.keys(data[ticker][tf].last_data).length > 0) {
-              if (!tickers[ticker][tf]) {
-                tickers[ticker][tf] = { history: [] };
-              }
-              tickers[ticker][tf].last = data[ticker][tf].last_data;
-              tickers[ticker].lastTF = tf;
-            }
-          });
-        });
-        
-        updateTable();
-        return;
-      }
-    }
-  } catch (err) {
-    console.log("Blad pobierania pamieci z backendu:", err);
-  }
+  const baseEndpoint =
+    backend.replace(
+      "/voice-parse",
+      ""
+    );
 
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw) {
-    for (let member in tickers) {
-      delete tickers[member];
+  try {
+
+    const response =
+      await fetch(
+        `${baseEndpoint}/memory?t=${Date.now()}`
+      );
+
+    if (response.ok) {
+
+      const data =
+        await response.json();
+
+      Object.keys(data).forEach(ticker => {
+
+        tickers[ticker] = {
+          globalEntry:
+            data[ticker].global_entry || "",
+          updatedAt: Date.now()
+        };
+
+        ["M5","M15","H1","D1"]
+          .forEach(tf => {
+
+          if (
+            data[ticker][tf] &&
+            data[ticker][tf].last_data
+          ) {
+
+            if (!tickers[ticker][tf]) {
+
+              tickers[ticker][tf] = {
+                history: []
+              };
+            }
+
+            tickers[ticker][tf].last =
+              data[ticker][tf].last_data;
+
+            tickers[ticker].lastTF = tf;
+          }
+        });
+      });
+
+      updateTable();
     }
-    Object.assign(tickers, JSON.parse(raw));
-    updateTable();
-  }
+
+  } catch {}
 }
 
 // ======================================================
