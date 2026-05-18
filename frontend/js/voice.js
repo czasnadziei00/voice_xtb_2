@@ -1,6 +1,6 @@
 // ======================================================
 //  VOICE XTB 9.0 STRUCTURE ENGINE
-//  STABILIZED MULTI-TF CONSENSUS FRONTEND
+//  STABILIZED MULTI-TF CONSENSUS FRONTEND (ZINTEGROWANY)
 // ======================================================
 
 const backend = "https://voice-xtb.onrender.com/voice-parse";
@@ -11,7 +11,7 @@ const STORAGE_KEY = "xtbtablememoryv4structure";
 // ======================================================
 
 const SYSTEM_MODE = {
-  confidenceThresholdBuy: 65,  // Dostosowane do nowych progów z main.py
+  confidenceThresholdBuy: 65,  
   confidenceThresholdHold: 48
 };
 
@@ -262,7 +262,6 @@ async function finalizeRecord() {
     const data = await response.json();
     handleBackendData(data);
     
-    // Wyświetlenie nowego, zaawansowanego komentarza tekstowego z backendu w UI
     if (data.comment) {
       document.getElementById("comment").textContent = data.comment;
     } else {
@@ -308,8 +307,6 @@ function handleBackendData(d) {
   }
 
   tickers[ticker][tf].last = d;
-
-  // Wybór optymalnego interwału do prezentacji w tabeli
   tickers[ticker].lastTF = chooseBestTimeframe(tickers[ticker]);
   updateTable();
 }
@@ -319,7 +316,6 @@ function handleBackendData(d) {
 // ======================================================
 
 function chooseBestTimeframe(tData) {
-  // Priorytet struktury intraday decyzyjnej: M15 > H1 > M5 > D1
   if (tData["M15"]?.last) return "M15";
   if (tData["H1"]?.last) return "H1";
   if (tData["M5"]?.last) return "M5";
@@ -328,7 +324,7 @@ function chooseBestTimeframe(tData) {
 }
 
 // ======================================================
-// TABLE RENDERING
+// TABLE RENDERING (Z UWZGLĘDNIENIEM NOWYCH KOLUMN)
 // ======================================================
 
 function updateTable() {
@@ -342,7 +338,7 @@ function updateTable() {
   if (sortedTickers.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="10">Oczekiwanie na dane ze struktury...</td>
+        <td colspan="11">Oczekiwanie na dane ze struktury...</td>
       </tr>
     `;
     saveTable();
@@ -359,28 +355,29 @@ function updateTable() {
     const row = document.createElement("tr");
     row.className = getRowClass(rec.signal);
 
-    // Dynamiczne pobieranie pewności procentowej przeliczonej przez backend
     const confidenceStr = rec.confidence !== undefined ? ` (${rec.confidence}%)` : "";
 
+    // POPRAWIONE: Pełna synchronizacja kolumn z backendem wraz z nową komórką Trailing SL
     row.innerHTML = `
-      <td class="ticker-cell">${ticker}</td>
+      <td class="ticker-cell" onclick="showReport('${ticker}', '${tf}')" style="cursor:pointer; font-weight:bold; color:#2196F3;">${ticker} 📋</td>
       <td class="price-cell">${Number(rec.close).toFixed(2)}</td>
       <td>
         ${rec.interval}
         <br>
         <small>${rec.time}</small>
       </td>
-      <td class="entry-cell">${tData.globalEntry || "—"}</td>
+      <td class="entry-cell" onclick="manualEditEntry('${ticker}')" style="cursor:pointer; text-decoration:underline;">${tData.globalEntry || "—"}</td>
       <td>
         <div class="signal-box">
           ${rec.signal}${confidenceStr}
         </div>
       </td>
       <td>${rec.widelki || "—"}</td>
-      <td>${rec.tp1 || "—"}</td>
-      <td>${rec.tp2 || "—"}</td>
-      <td>${rec.tp3 || "—"}</td>
-      <td class="delete-cell" onclick="deleteTickerData('${ticker}')">🗑️</td>
+      <td style="color: #4CAF50; font-weight: bold;">${rec.tp1 || "—"}</td>
+      <td style="color: #FF9800; font-weight: bold;">${rec.tp2 || "—"}</td>
+      <td style="color: #E91E63; font-weight: bold;">${rec.tp3 || "—"}</td>
+      <td class="tsl-cell" style="color: #f44336; font-weight: bold; background: rgba(244,67,54,0.05);">${rec.trailing_sl || "—"}</td>
+      <td class="delete-cell" onclick="event.stopPropagation(); deleteTickerData('${ticker}')" style="cursor:pointer; text-align:center;">🗑️</td>
     `;
 
     tbody.appendChild(row);
@@ -403,23 +400,56 @@ function getRowClass(sig) {
 }
 
 // ======================================================
-// MANUAL DELETE TRIGGER
+// MANUAL DELETE TRIGGER (POPRAWIONY CRASH .STRIP)
 // ======================================================
 
 async function deleteTickerData(tickerName) {
   const baseEndpoint = backend.replace("/voice-parse", "");
+  const cleanName = tickerName.toUpperCase().trim(); // POPRAWIONE: .trim() zamiast .strip()
+  
   try {
     const response = await fetch(`${baseEndpoint}/voice-parse/delete`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ticker: tickerName })
+      body: JSON.stringify({ ticker: cleanName })
     });
     if (response.ok) {
-      delete tickers[tickerName.toUpperCase().strip()];
+      delete tickers[cleanName];
       updateTable();
     }
   } catch(err) {
     console.error("Błąd usuwania rekordu z pamięci serwera:", err);
+  }
+}
+
+// ======================================================
+// MANUAL ENTRY QUICK EDIT
+// ======================================================
+
+function manualEditEntry(ticker) {
+  const current = tickers[ticker]?.globalEntry || "";
+  const val = prompt(`Wpisz lub zmień cenę wejścia (Entry) dla ${ticker}:`, current);
+  if (val !== null) {
+    const num = parseFloat(val.replace(",", "."));
+    if (!isNaN(num) && num > 0) {
+      tickers[ticker].globalEntry = num.toFixed(2);
+    } else {
+      tickers[ticker].globalEntry = "";
+    }
+    updateTable();
+  }
+}
+
+// ======================================================
+// SHOW COMPLEX ENGINE REPORT
+// ======================================================
+
+function showReport(ticker, tf) {
+  const rec = tickers[ticker]?.[tf]?.last;
+  if (rec && rec.comment) {
+    alert(rec.comment);
+  } else {
+    alert(`Brak szczegółowego raportu dla ${ticker} [${tf}].`);
   }
 }
 
@@ -481,6 +511,7 @@ async function loadTable() {
               if (!tickers[ticker][tf]) {
                 tickers[ticker][tf] = { history: [] };
               }
+              // Mapowanie pełnej struktury zwrotnej z backendu
               tickers[ticker][tf].last = data[ticker][tf].last_data;
             }
           });
@@ -496,7 +527,6 @@ async function loadTable() {
     console.log("Praca offline lub brak odpowiedzi z pamięci serwera -> localStorage fallback");
   }
 
-  // FALLBACK DO LOCALSTORAGE
   const raw = localStorage.getItem(STORAGE_KEY);
   if (raw) {
     Object.assign(tickers, JSON.parse(raw));
