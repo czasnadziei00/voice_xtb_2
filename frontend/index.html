@@ -3,10 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>VOICE XTB 8.3 HYBRID PURE SIGNAL</title>
+<title>VOICE XTB 9.0 STRUCTURE ENGINE</title>
 
 <style>
-
 :root{
     --bg-color:#121212;
     --card-bg:#1e1e1e;
@@ -79,6 +78,12 @@ h1{
 #comment{
     margin-top:5px;
     font-weight:bold;
+    white-space: pre-line;
+    line-height: 1.4;
+    background: rgba(0,0,0,0.2);
+    padding: 10px;
+    border-radius: 6px;
+    border-left: 3px solid var(--accent-color);
 }
 
 .table-container{
@@ -107,105 +112,63 @@ th{
 /* =========================================
    JASKRAWE PEŁNE WIERSZE
 ========================================= */
-
 .row-buy{
-    background:linear-gradient(
-        90deg,
-        rgba(0,255,136,.55),
-        rgba(0,255,136,.32)
-    ) !important;
+    background:linear-gradient(90deg, rgba(0,255,136,.45), rgba(0,255,136,.22)) !important;
 }
-
 .row-buy td{
     color:#ffffff;
     font-weight:700;
     border-bottom:1px solid rgba(255,255,255,.12);
 }
-
 .row-buy:hover{
-    background:linear-gradient(
-        90deg,
-        rgba(0,255,136,.72),
-        rgba(0,255,136,.48)
-    ) !important;
+    background:linear-gradient(90deg, rgba(0,255,136,.60), rgba(0,255,136,.35)) !important;
 }
 
 .row-hold{
-    background:linear-gradient(
-        90deg,
-        rgba(0,207,255,.50),
-        rgba(0,207,255,.28)
-    ) !important;
+    background:linear-gradient(90deg, rgba(0,207,255,.40), rgba(0,207,255,.20)) !important;
 }
-
 .row-hold td{
     color:#ffffff;
     font-weight:700;
     border-bottom:1px solid rgba(255,255,255,.10);
 }
-
 .row-hold:hover{
-    background:linear-gradient(
-        90deg,
-        rgba(0,207,255,.68),
-        rgba(0,207,255,.40)
-    ) !important;
+    background:linear-gradient(90deg, rgba(0,207,255,.55), rgba(0,207,255,.30)) !important;
 }
 
 .row-reduce{
-    background:linear-gradient(
-        90deg,
-        rgba(255,179,71,.50),
-        rgba(255,179,71,.28)
-    ) !important;
+    background:linear-gradient(90deg, rgba(255,179,71,.40), rgba(255,179,71,.20)) !important;
 }
-
 .row-reduce td{
     color:#ffffff;
     font-weight:700;
     border-bottom:1px solid rgba(255,255,255,.10);
 }
-
 .row-reduce:hover{
-    background:linear-gradient(
-        90deg,
-        rgba(255,179,71,.70),
-        rgba(255,179,71,.42)
-    ) !important;
+    background:linear-gradient(90deg, rgba(255,179,71,.55), rgba(255,179,71,.30)) !important;
 }
 
 .row-sell{
-    background:linear-gradient(
-        90deg,
-        rgba(255,59,92,.60),
-        rgba(255,59,92,.34)
-    ) !important;
+    background:linear-gradient(90deg, rgba(255,59,92,.45), rgba(255,59,92,.22)) !important;
 }
-
 .row-sell td{
     color:#ffffff;
     font-weight:700;
     border-bottom:1px solid rgba(255,255,255,.12);
 }
-
 .row-sell:hover{
-    background:linear-gradient(
-        90deg,
-        rgba(255,59,92,.78),
-        rgba(255,59,92,.50)
-    ) !important;
+    background:linear-gradient(90deg, rgba(255,59,92,.60), rgba(255,59,92,.35)) !important;
 }
 
 .row-wait{
     background:rgba(255,255,255,.02);
 }
 
-/* ========================================= */
-
 .ticker-cell{
     font-weight:bold;
     cursor:pointer;
     color:#fff;
+    text-decoration: underline dotted var(--accent-color);
 }
 
 .price-cell{
@@ -225,10 +188,10 @@ th{
     display:inline-block;
     padding:7px 12px;
     border-radius:8px;
-    background:rgba(0,0,0,.30);
+    background:rgba(0,0,0,.40);
     border:1px solid rgba(255,255,255,.12);
     font-weight:800;
-    min-width:95px;
+    min-width:105px;
     letter-spacing:.3px;
     backdrop-filter:blur(4px);
 }
@@ -236,13 +199,14 @@ th{
 .delete-cell{
     cursor:pointer;
     font-size:18px;
+    user-select: none;
 }
 
 .popup-overlay{
     display:none;
     position:fixed;
     inset:0;
-    background:rgba(0,0,0,.75);
+    background:rgba(0,0,0,.80);
     z-index:999;
 }
 
@@ -265,7 +229,8 @@ th{
     border-radius:12px;
     border:1px solid #ffd166;
     color:#fff;
-    box-shadow:0 10px 30px rgba(0,0,0,0.5);
+    box-shadow:0 10px 30px rgba(0,0,0,0.6);
+    position: relative;
 }
 
 .close-btn{
@@ -282,72 +247,37 @@ th{
 }
 
 /* =========================================
-   RAPORT
+   ROZBUDOWANY RAPORT MODALNY
 ========================================= */
-
 .report-html{
     font-family:system-ui,-apple-system,sans-serif;
     line-height:1.6;
 }
-
-.report-html h2{
-    color:#ffd166;
-    border-bottom:1px solid #444;
-    padding-bottom:6px;
-    margin-top:15px;
-    font-size:1.3rem;
+.report-html p {
+    margin: 8px 0;
 }
-
-.report-html hr{
-    border:0;
-    border-top:1px dashed #555;
-    margin:15px 0;
+.report-html ul {
+    margin: 5px 0;
+    padding-left: 20px;
 }
-
-.report-html ul{
-    padding-left:20px;
-    margin:10px 0;
+.report-html li {
+    margin-bottom: 4px;
 }
-
-.report-html li{
-    margin-bottom:6px;
+.report-html .verdict-line {
+    font-size: 1.2rem;
+    background: rgba(255,209,102,0.1);
+    padding: 8px;
+    border-radius: 6px;
+    border-left: 4px solid var(--accent-color);
+    margin-bottom: 15px;
 }
-
-.report-html strong{
-    color:#fff;
-}
-
-.report-table{
-    width:100%;
-    margin:15px 0;
-    border-collapse:collapse;
-    background:#111;
-    border-radius:6px;
-    overflow:hidden;
-}
-
-.report-table th{
-    background:#292929;
-    color:#ffd166;
-    font-weight:bold;
-    padding:10px;
-    font-size:0.9rem;
-}
-
-.report-table td{
-    padding:10px;
-    border-bottom:1px solid #222;
-    font-size:0.95rem;
-}
-
-.report-summary-footer{
-    background:#252525;
-    padding:10px;
-    border-radius:6px;
-    font-size:0.85rem;
-    color:#ccc;
-    margin-top:15px;
-    border-left:4px solid #ffd166;
+.report-html .section-title {
+    color: var(--accent-color);
+    margin-top: 15px;
+    margin-bottom: 5px;
+    font-weight: bold;
+    border-bottom: 1px dashed #444;
+    padding-bottom: 3px;
 }
 </style>
 </head>
@@ -357,34 +287,20 @@ th{
 <div class="container">
 
 <header>
-<h1>VOICE XTB 8.3 HYBRID</h1>
-<div>GPW LONG ONLY — DAYTRADING / SWING</div>
+<h1>VOICE XTB 9.0 STRUCTURE</h1>
+<div>GPW STRUKTURA WIELO-INTERWAŁOWA — SYSTEM KONSENSUSU</div>
 </header>
 
 <div class="voice-panel">
+<button class="btn btn-start" onclick="startSequence()">🎙️ START</button>
+<button class="btn btn-stop" onclick="stopSequence()">⛔ STOP</button>
 
-<button class="btn btn-start" onclick="startSequence()">
-🎙️ START
-</button>
-
-<button class="btn btn-stop" onclick="stopSequence()">
-⛔ STOP
-</button>
-
-<div id="recognized">
-Oczekiwanie na mikrofon...
-</div>
-
-<div id="comment">
-System gotowy
-</div>
-
+<div id="recognized">Oczekiwanie na mikrofon...</div>
+<div id="comment">System gotowy do pracy</div>
 </div>
 
 <div class="table-container">
-
 <table>
-
 <thead>
 <tr>
 <th>Ticker</th>
@@ -399,60 +315,36 @@ System gotowy
 <th>Usuń</th>
 </tr>
 </thead>
-
 <tbody id="table-body">
-
 <tr>
-<td colspan="10">
-Oczekiwanie na dane...
-</td>
+<td colspan="10">Oczekiwanie na dane ze struktury...</td>
 </tr>
-
 </tbody>
-
 </table>
-
 </div>
 
-<div id="parsed"
-style="margin-top:15px;font-family:monospace;color:#666;">
+<div id="parsed" style="margin-top:15px;font-family:monospace;color:#555;font-size:11px;word-break:break-all;"></div>
 </div>
 
-</div>
-
-<div id="popupOverlay"
-class="popup-overlay"
-onclick="closeModal()">
-</div>
-
+<div id="popupOverlay" class="popup-overlay" onclick="closeModal()"></div>
 <div id="popup" class="modal">
-
 <div class="modal-content">
-
-<span class="close-btn"
-onclick="closeModal()">
-&times;
-</span>
-
-<h3 style="color:#ffd166; margin-top: 0; border-bottom: 2px solid #ffd166; padding-bottom: 8px;">
-📊 INTELIGENTNY PROFILOWANY KOMENTARZ RYNKOWY
+<span class="close-btn" onclick="closeModal()">&times;</span>
+<h3 style="color:#ffd166; margin-top:0; border-bottom:2px solid #ffd166; padding-bottom:8px;">
+📊 DYNAMICZNY RAPORT STRUKTURALNY SYGNAŁU
 </h3>
-
 <div id="popupBody"></div>
-
 </div>
-
 </div>
 
 <script>
-
 function closeModal(){
     document.getElementById("popup").style.display="none";
     document.getElementById("popupOverlay").style.display="none";
 }
 
 const backend = "https://voice-xtb.onrender.com/voice-parse";
-const STORAGE_KEY = "xtbtablememoryv2multitf";
+const STORAGE_KEY = "xtbtablememoryv4structure";
 
 let recognition = null;
 let recognizing = false;
@@ -479,9 +371,8 @@ const steps = [
 // ======================================================
 // SPEECH INIT
 // ======================================================
-
 function initRecognition(){
-    const SR = window.webkitSpeechRecognition || window.webkitSpeechRecognition;
+    const SR = window.webkitSpeechRecognition || window.SpeechRecognition;
     if(!SR) return null;
 
     const rec = new SR();
@@ -507,7 +398,7 @@ function initRecognition(){
     };
 
     rec.onerror = (e)=>{
-        console.log(e.error);
+        console.log("Speech error:", e.error);
         if(recognizing){
             setTimeout(()=>{ sayStep(); },300);
         }
@@ -520,7 +411,6 @@ recognition = initRecognition();
 // ======================================================
 // SPEECH OUTPUT
 // ======================================================
-
 function sayStep(){
     if(currentStep >= steps.length || !recognizing) return;
 
@@ -546,7 +436,6 @@ function sayStep(){
 // ======================================================
 // HELPERS / PARSERS
 // ======================================================
-
 function extractNumber(text){
     if(!text) return 0;
     text = text.toString()
@@ -586,7 +475,7 @@ function parseAndAlignTime(rawText, intervalStr){
         m = parseInt(clean.substring(1));
     }
 
-    if(intervalStr==="M5") h=Math.floor(m/5)*5;
+    if(intervalStr==="M5") m=Math.floor(m/5)*5;
     if(intervalStr==="M15") m=Math.floor(m/15)*15;
     if(intervalStr==="H1") m=0;
 
@@ -611,86 +500,56 @@ function handleRecognized(text){
 }
 
 // ======================================================
-// PARSER MARKDOWN NA CZYSTY HTML DO OKNA POPUP
+// PARSER KOMENTARZA STRUKTURALNEGO Z BACKENDU NA POPUP
 // ======================================================
-function parseMarkdownToHtml(md) {
-    if (!md) return "";
-    let lines = md.split("\n");
+function parseEngineCommentToHtml(commentText) {
+    if (!commentText) return "Brak szczegółowego komentarza strukturalnego.";
+    
+    let lines = commentText.split("\n");
     let html = '<div class="report-html">';
-    let inTable = false;
-
+    
     lines.forEach(line => {
         line = line.trim();
         if (!line) return;
 
-        // Wykrywanie tabeli logicznej
-        if (line.startsWith("|")) {
-            if (line.includes(":---")) return; // pomiń separator tabeli
-            if (!inTable) {
-                html += '<table class="report-table">';
-                inTable = true;
-                
-                // Nagłówek tabeli
-                let cols = line.split("|").map(c => c.trim()).filter(c => c !== "");
-                html += "<thead><tr>";
-                cols.forEach(c => html += `<th>${c}</th>`);
-                html += "</tr></thead><tbody>";
-            } else {
-                // Wiersz tabeli danych
-                let cols = line.split("|").map(c => c.trim()).filter(c => c !== "");
-                html += "<tr>";
-                cols.forEach(c => html += `<td>${c}</td>`);
-                html += "</tr>";
-            }
-            return;
-        } else if (inTable) {
-            html += "</tbody></table>";
-            inTable = false;
-        }
+        if (line.startsWith("=== RAPORT SYSTEMU")) return;
 
-        // Tytuły i sekcje
-        if (line.startsWith("---") && line.endsWith("---")) {
-            return; // Usuń separator główny backendu
+        if (line.startsWith("WERDYKT:")) {
+            html += `<div class="verdict-line"><strong>${line}</strong></div>`;
+            return;
         }
-        if (line.startsWith("###") || line.startsWith("📌") || line.startsWith("⭐")) {
-            html += `<h2>${line}</h2>`;
+        if (line.startsWith("UZASADNIENIE:")) {
+            html += `<p style="font-size: 1.05rem; color: #fff;"><strong>Uzasadnienie:</strong> ${line.replace("UZASADNIENIE:", "")}</p>`;
+            return;
+        }
+        if (line.startsWith("MAPA REKORDU:") || line.startsWith("CELE (TP):")) {
+            html += `<div class="section-title">${line}</div>`;
+            return;
+        }
+        if (line.startsWith("•") || line.startsWith("-")) {
+            html += `<ul><li>${line.substring(1).trim()}</li></ul>`;
+            return;
+        }
+        if (line.startsWith("-----------------------------------------")) {
+            html += `<hr style="border:0; border-top: 1px dashed #444; margin:10px 0;">`;
             return;
         }
 
-        // Listy interwałów (od myślników)
-        if (line.startsWith("*")) {
-            let content = line.substring(1).trim();
-            // Przetwarzanie pogrubienia **tekst**
-            content = content.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-            html += `<ul><li>${content}</li></ul>`;
-            return;
-        }
-
-        // Dół raportu (podsumowanie układu średnich)
-        if (line.startsWith("Układ średnich:")) {
-            html += `<div class="report-summary-footer">${line}</div>`;
-            return;
-        }
-
-        // Reszta standardowych bloków tekstu i pogrubienia wniosków
-        let txt = line.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-        html += `<p>${txt}</p>`;
+        html += `<p>${line}</p>`;
     });
 
-    if (inTable) html += "</tbody></table>";
-    html += "</div>";
+    html += '</div>';
     return html;
 }
 
 // ======================================================
 // FINALIZE RECORD
 // ======================================================
-
 async function finalizeRecord(){
     if(isFetching) return;
     isFetching = true;
 
-    document.getElementById("comment").textContent = "⏳ Analiza...";
+    document.getElementById("comment").textContent = "⏳ Analiza wielointerwałowa...";
     document.getElementById("parsed").textContent = JSON.stringify(tempRecord);
 
     try{
@@ -702,9 +561,15 @@ async function finalizeRecord(){
 
         const data = await response.json();
         handleBackendData(data);
-        document.getElementById("comment").textContent = "✔️ Analiza gotowa";
+        
+        if(data.comment) {
+            document.getElementById("comment").textContent = data.comment;
+        } else {
+            document.getElementById("comment").textContent = `✔️ Analiza gotowa. Werdykt: ${data.signal}`;
+        }
     }catch(err){
-        document.getElementById("comment").textContent = "❌ Błąd połączenia";
+        document.getElementById("comment").textContent = "❌ Błąd połączenia z serwerem";
+        console.error(err);
     }
 
     tempRecord = {};
@@ -712,25 +577,15 @@ async function finalizeRecord(){
     isFetching = false;
 }
 
-function normalizeSignal(signal){
-    if(!signal) return "HOLD";
-    const s = signal.toUpperCase();
-    if(s.includes("SELL") || s.includes("EXIT")) return "SELL";
-    if(s.includes("REDUKUJ") || s.includes("REALIZUJ")) return "REDUKUJ";
-    if(s.includes("HOLD") || s.includes("MOMENTUM") || s.includes("TRZYMAJ")) return "HOLD";
-    if(s.includes("BUY") || s.includes("LONG") || s.includes("BREAKOUT") || s.includes("ACCEL")) return "BUY";
-    return "BUY";
-}
-
 function handleBackendData(d){
     const ticker = d.ticker;
     const tf = normalizeInterval(d.interval);
-    d.signal = normalizeSignal(d.signal);
 
     if(!tickers[ticker]){
         tickers[ticker] = {
             globalEntry:"",
-            updatedAt:0
+            updatedAt:0,
+            lastTF: tf
         };
     }
 
@@ -748,7 +603,6 @@ function handleBackendData(d){
 // ======================================================
 // TABLE RENDERING
 // ======================================================
-
 function updateTable(){
     const tbody = document.getElementById("table-body");
     tbody.innerHTML = "";
@@ -756,7 +610,7 @@ function updateTable(){
     const sorted = Object.keys(tickers).sort((a,b)=> tickers[b].updatedAt - tickers[a].updatedAt);
 
     if(sorted.length===0){
-        tbody.innerHTML = `<tr><td colspan="10">Oczekiwanie na dane...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10">Oczekiwanie na dane ze struktury...</td></tr>`;
         return;
     }
 
@@ -769,12 +623,14 @@ function updateTable(){
         const row = document.createElement("tr");
         row.className = getRowClass(rec.signal);
 
+        const confidenceStr = rec.confidence !== undefined ? ` (${rec.confidence}%)` : "";
+
         row.innerHTML = `
         <td class="ticker-cell">${ticker}</td>
         <td class="price-cell">${Number(rec.close).toFixed(2)}</td>
         <td>${rec.interval}<br><small>${rec.time}</small></td>
-        <td class="entry-cell">${t.globalEntry || "—"}</td>
-        <td><div class="signal-box">${rec.signal || "BRAK"}</div></td>
+        <td class="entry-cell">${rec.entry || "—"}</td>
+        <td><div class="signal-box">${rec.signal || "BRAK"}${confidenceStr}</div></td>
         <td>${rec.widelki || "—"}</td>
         <td>${rec.tp1 || "—"}</td>
         <td>${rec.tp2 || "—"}</td>
@@ -789,10 +645,10 @@ function updateTable(){
 function getRowClass(sig){
     if(!sig) return "row-wait";
     sig = sig.toUpperCase();
-    if(sig==="BUY") return "row-buy";
-    if(sig==="HOLD") return "row-hold";
-    if(sig==="REDUKUJ") return "row-reduce";
-    if(sig==="SELL") return "row-sell";
+    if(sig.includes("BUY")) return "row-buy";
+    if(sig.includes("HOLD")) return "row-hold";
+    if(sig.includes("REDUKUJ")) return "row-reduce";
+    if(sig.includes("SELL")) return "row-sell";
     return "row-wait";
 }
 
@@ -813,9 +669,8 @@ function stopSequence(){
 }
 
 // ======================================================
-// EVENTS - KLIKNIĘCIE TICKERA I GENEROWANIE POPUPU HTML
+// EVENTS - KLIKNIĘCIE TICKERA I USUWANIE Z BACKENDEM
 // ======================================================
-
 document.addEventListener("click", async(e)=>{
     const cell = e.target.closest("td");
     const row = e.target.closest("tr");
@@ -823,28 +678,31 @@ document.addEventListener("click", async(e)=>{
 
     const ticker = row.querySelector(".ticker-cell")?.textContent.trim();
 
-    // AKCJA: USUWANIE
+    // AKCJA: ASYNCHRONICZNE USUWANIE Z SERWERA
     if(cell.classList.contains("delete-cell")){
         delete tickers[ticker];
         updateTable();
+        
+        const baseEndpoint = backend.replace("/voice-parse", "");
         try{
-            await fetch(`${backend}/delete`, {
+            await fetch(`${baseEndpoint}/voice-parse/delete`, {
                 method:"POST",
                 headers:{"Content-Type":"application/json"},
                 body:JSON.stringify({ticker:ticker})
             });
-        }catch(err){ console.log(err); }
+        }catch(err){ 
+            console.error("Błąd podczas usuwania z chmury:", err); 
+        }
         return;
     }
 
-    // AKCJA: OTWIERANIE ROZBUDOWANEGO POPUPU
+    // AKCJA: OTWIERANIE ROZBUDOWANEGO POPUPU Z NOWYM FORMATOWANIEM 9.0
     if(cell.classList.contains("ticker-cell")){
         const tf = tickers[ticker].lastTF;
         const rec = tickers[ticker][tf]?.last;
 
         if(rec && rec.comment){
-            // Zamiana surowego tekstu z backendu na piękny HTML dla laika
-            const formattedHtml = parseMarkdownToHtml(rec.comment);
+            const formattedHtml = parseEngineCommentToHtml(rec.comment);
             
             document.getElementById("popupBody").innerHTML = formattedHtml;
             document.getElementById("popup").style.display = "block";
@@ -854,9 +712,8 @@ document.addEventListener("click", async(e)=>{
 });
 
 // ======================================================
-// LOCAL STORAGE & CLOUD MEMORY LOAD
+// LOCAL STORAGE & CLOUD MEMORY SYNC
 // ======================================================
-
 function saveTable(){
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tickers));
 }
@@ -888,7 +745,9 @@ async function loadTable(){
                 return;
             }
         }
-    }catch(err){ console.log("Blad pobierania pamieci z chmury:", err); }
+    }catch(err){ 
+        console.log("Brak odpowiedzi z chmury, ładowanie z localStorage fallback...", err); 
+    }
 
     const raw = localStorage.getItem(STORAGE_KEY);
     if(raw){
